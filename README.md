@@ -1,119 +1,124 @@
+<p align="center">
+  <a href="README.md"><img src="docs/readme-assets/lang-en-active.svg" alt="English" height="32" /></a>
+  <a href="README.zh-CN.md"><img src="docs/readme-assets/lang-zh-default.svg" alt="中文" height="32" /></a>
+</p>
+
 <div align="center">
-  <img src="AionUi/packages/desktop/src/renderer/assets/logos/brand/otter-avatar.png" width="96" alt="AIPM工作台 Logo：蓝绒獭" />
-  <h1>AIPM工作台</h1>
-  <p>让好想法，成为好产品。</p>
-  <p>帮助产品团队把零散想法整理成清楚的需求，写好 PRD，准备好评审。</p>
-  <p>作者：yuling</p>
+  <img src="AionUi/packages/desktop/src/renderer/assets/logos/brand/otter-avatar.png" width="96" alt="AIPM Workbench logo: the blue otter" />
+  <h1>AIPM Workbench</h1>
+  <p>Turn great ideas into great products.</p>
+  <p>Help product teams turn scattered ideas into clear requirements, draft PRDs, and prepare for reviews.</p>
+  <p>Created by yuling</p>
   <p>
-    <a href="#它解决什么问题">解决什么问题</a> ·
-    <a href="#能为产品团队带来什么">团队价值</a> ·
-    <a href="#哪些时候适合使用">使用场景</a> ·
-    <a href="#开始使用">开始使用</a>
+    <a href="#the-problem-it-solves">The problem</a> ·
+    <a href="#how-it-helps-product-teams">Team value</a> ·
+    <a href="#when-to-use-it">Use cases</a> ·
+    <a href="#getting-started">Get started</a>
   </p>
 </div>
 
-![AIPM工作台：蓝绒獭陪你整理需求、编写 PRD、准备需求评审](docs/readme-assets/aipm-product-intro.png)
+![AIPM Workbench: your blue otter companion for organizing requirements, drafting PRDs, and preparing reviews](docs/readme-assets/aipm-product-intro-en.png)
 
-## 它解决什么问题
+## The problem it solves
 
-产品经理的工作不只是写一份 PRD。更多时间花在整理信息、确认规则和反复沟通上：会议里提过的想法散落在聊天记录中，文档写出了正常流程却遗漏异常情况，需求改了几次以后，研发和测试又需要重新确认执行哪个版本。
+Product management involves more than writing a PRD. Much of the work goes into organizing information, confirming rules, and keeping people aligned. Ideas from meetings get buried in chat histories. Documents describe the happy path but miss exceptions. After several changes, engineers and testers need to check which version to follow.
 
-AIPM工作台把 AI 助手、项目资料、需求卡、体检和版本记录放在一起，帮助使用者把材料整理成有依据、能讨论、可核对的需求内容。
+AIPM Workbench brings AI assistants, project materials, requirement cards, checks, and version records together. It helps you turn source materials into requirements that have a clear basis, can be discussed, and can be verified.
 
-你可以让 AI 先起草，再补充业务规则、核对来源、处理待确认问题，最后把评审稿交给团队讨论。PRD 指产品需求文档；它的作用是让大家清楚要解决什么问题、做哪些内容，以及怎样判断结果符合要求。
+Let AI prepare a first draft, then add business rules, verify sources, and resolve open questions before sharing it for review. A PRD is a product requirements document: it explains the problem to solve, what to build, and how to judge whether the result meets the requirements.
 
-## 能为产品团队带来什么
+## How it helps product teams
 
-| 工作中遇到的问题 | 工作台怎样帮助处理 | 对团队的价值 |
+| A common challenge | How the workbench helps | Value for the team |
 | --- | --- | --- |
-| PRD 从空白开始写，反复整理背景、流程和规则 | 使用产品经理助手和快捷提示词，围绕已有材料组织文档草稿，再由使用者补充和核对 | 把起草工作变得更有章法，让产品经理把精力放在目标、范围与优先级上 |
-| 讨论记录分散，需求依据说不清楚 | 将材料或聊天消息整理成需求卡，保留来源，把未知信息列为待确认事项 | 评审时可以追溯依据，区分已经决定的内容与仍需确认的问题 |
-| 需求只写正常流程，异常和验收条件容易遗漏 | 补齐结构化字段，运行规则体检，或使用已配置模型进行 AI 体检 | 产品、研发和测试可以围绕具体规则、异常与验收标准讨论 |
-| 需求反复修改，记不清改了什么、影响了哪些资料 | 保存需求版本，比较差异，并在需求变化后提示核对关联文档 | 方便识别需要重新讨论的决定和需要人工更新的资料 |
-| 评审与交接材料需要反复整理 | 将需求、来源、待确认问题和体检结果整理为当前版本的 Markdown 评审稿 | 给评审参与者一份可核对的内容快照，让交接有明确的讨论对象 |
-| 模型回答差异大，凭印象难以选择 | 使用相同提示词与材料比较 2～4 个模型，分别查看回答并保存记录 | 便于按业务准确性、遗漏情况和内容完整度判断模型是否适合任务 |
+| Starting every PRD from a blank page and repeatedly organizing background, flows, and rules | Use the product manager assistant and quick prompts to draft from existing materials, then complete and verify the content | Give drafting a clear structure so product managers can focus on goals, scope, and priorities |
+| Scattered discussions and unclear reasons behind requirements | Turn materials or chat messages into requirement cards, retain sources, and list missing information as open questions | Trace the basis for a requirement and distinguish decisions from questions that still need answers |
+| Requirements cover the happy path but miss exceptions and acceptance criteria | Complete structured fields and run rule-based checks or AI checks with a configured model | Discuss specific rules, exceptions, and acceptance criteria with engineering and testing |
+| Repeated changes make it hard to remember what changed and which documents need attention | Save requirement versions, compare changes, and check linked documents after a requirement changes | Identify decisions that need another review and documents that need manual updates |
+| Review and handoff materials must be assembled repeatedly | Export requirements, sources, open questions, and check results as a Markdown review draft for the current version | Give reviewers a verifiable snapshot and a clear basis for handoff discussions |
+| Model responses vary, making it hard to choose based on memory alone | Compare 2–4 models with the same prompt and materials, inspect each response, and save the results | Assess a model's suitability based on business accuracy, omissions, and completeness |
 
-这些能力可以用于不同角色的工作：
+Different team members can use these capabilities in their work:
 
-- 产品经理：从材料和讨论中整理需求，起草 PRD，保留每项需求的依据与待确认问题。
-- 研发同学：围绕业务规则、异常情况和版本差异，确认实现范围与需要澄清的细节。
-- 测试同学：从需求中的验收标准和异常流程出发，讨论测试覆盖与判断条件。
-- 项目负责人：拿到包含问题、规则与变更信息的评审材料，组织讨论并确认下一步。
+- Product managers: organize requirements from materials and discussions, draft PRDs, and retain sources and open questions for each requirement.
+- Engineers: use business rules, exceptions, and version changes to clarify implementation scope and unresolved details.
+- Testers: discuss test coverage and pass criteria using acceptance criteria and exception flows.
+- Project leads: use review materials containing issues, rules, and changes to guide discussions and decide the next steps.
 
-团队可以围绕导出的评审稿和需求内容开展讨论；需求卡与版本记录保存在使用者本机。
+Teams can discuss exported review drafts and requirement content together. Requirement cards and version records are stored locally on the user's computer.
 
-## 哪些时候适合使用
+## When to use it
 
-### 收到一堆材料，需要先把需求整理清楚
+### You have a pile of materials and need to clarify the requirements
 
-会议纪要、聊天记录、产品想法和文档，都可以作为整理材料。在首页选择产品经理助手与模型，添加背景和材料，点击“整理需求”。
+Meeting notes, chat histories, product ideas, and documents can all serve as input. On the home screen, select the product manager assistant and a model, add background and materials, and choose the requirement-organizing shortcut.
 
-快捷卡会把提示词补入输入框。检查并发送后，让助手协助梳理目标用户、使用场景、业务规则和待确认问题，再保存为需求卡。
+The shortcut inserts a prompt into the input box. Review and send it, then ask the assistant to help identify target users, scenarios, business rules, and open questions. Save the result as a requirement card.
 
-### 要写 PRD，或者准备开需求评审
+### You need to draft a PRD or prepare for a requirement review
 
-把已有需求交给助手，通过“编写 PRD”入口组织草稿。补齐范围、规则、异常情况和验收标准后，再运行需求体检。
+Give the assistant your existing requirements and use the PRD-writing shortcut to organize a draft. Complete the scope, rules, exceptions, and acceptance criteria, then run requirement checks.
 
-将仍需确认的问题带到评审中，处理后导出 Markdown 评审稿。团队讨论可以围绕具体内容展开，而不只是逐页阅读文档。
+Bring unresolved questions to the review. Once addressed, export a Markdown review draft so the discussion can focus on specific content.
 
-### 需求发生变化，需要重新确认影响
+### A requirement changes and you need to check the impact
 
-查看需求的两个版本，比较哪些内容发生了变化，再核对关联文档。已确认的需求修改后，需要重新评审。
+Compare two versions of a requirement to see what changed, then check linked documents. Changes to confirmed requirements need another review.
 
-工作台记录文档引用和核对状态，外部文件由使用者更新，便于把变更核对这一步纳入日常工作。
+The workbench records document references and verification status. You update external files yourself, making change verification part of your regular workflow.
 
-### 要比较不同模型对同一个任务的表现
+### You want to compare models on the same task
 
-将同一份提示词和材料交给 2～4 个已配置的模型。比较回答是否准确、是否遗漏业务条件、是否适合继续编辑，并保存结果供后续参考。
+Give the same prompt and materials to 2–4 configured models. Compare their accuracy, coverage of business conditions, and usefulness for further editing. Save the results for future reference.
 
-## 工作台中的主要能力
+## Main capabilities
 
-| 能力 | 可以完成的工作 |
+| Capability | What you can do |
 | --- | --- |
-| AI 产品助手 | 围绕材料梳理问题、组织需求与 PRD 草稿，辅助检查遗漏 |
-| 项目资料与对话 | 将本地项目文件夹加入对话，让讨论围绕实际资料展开 |
-| 结构化需求卡 | 保存目标用户、场景、问题、目标、范围、规则、异常、验收标准与来源 |
-| 需求体检 | 检查需求完整性，呈现待确认事项，记录问题处理依据 |
-| 版本与变更核对 | 查看需求历史、比较内容差异、核对关联文档 |
-| 评审稿导出 | 导出 Markdown 内容，用于团队评审与交接 |
-| 模型对比 | 对比多个已配置模型的回答，停止、重试并保存记录 |
+| AI product assistant | Clarify problems from materials, organize requirement and PRD drafts, and check for omissions |
+| Project materials and conversations | Add local project folders to conversations to keep discussions grounded in actual materials |
+| Structured requirement cards | Record target users, scenarios, problems, goals, scope, rules, exceptions, acceptance criteria, and sources |
+| Requirement checks | Check completeness, show open questions, and record the reasoning used to resolve issues |
+| Version and change verification | View requirement history, compare content changes, and check linked documents |
+| Review draft export | Export Markdown content for team reviews and handoffs |
+| Model comparison | Compare responses from configured models, stop or retry runs, and save results |
 
-![AIPM工作台首页：任务输入区、工作流快捷卡与最近项目（示例内容）](docs/ui-design/01-主界面/01-首页.png)
+![Home screen design (sample content)](docs/readme-assets/aipm-home-en.png)
 
-首页集中提供想法输入、材料添加、助手与模型选择，以及最近项目入口。蓝绒獭是产品的陪伴形象，也可以在设置中作为桌面宠物启用。
+The home screen brings together idea input, materials, assistant and model selection, and recent projects. The blue otter is the product's companion character and can also be enabled as a desktop pet in Settings.
 
-## 开始使用
+## Getting started
 
-### 安装 Mac 应用
+### Install the Mac app
 
-Apple 芯片 Mac 用户可以在[下载页](https://github.com/yuling170916/aipm-workbench/releases/tag/aipm-2026.10.10)获取安装包、源码包与完整 UI 设计包。
+Apple silicon Mac users can get the installer, source package, and complete UI design package from the [download page](https://github.com/yuling170916/aipm-workbench/releases/tag/aipm-2026.10.10).
 
-下载并打开 `AIPM-workbench-mac-arm64.dmg`，将 `AIPM工作台.app` 拖入「应用程序」，然后双击启动。本地交付的同一安装包名为 `AIPM工作台-Mac-Apple芯片.dmg`。
+Download and open `AIPM-workbench-mac-arm64.dmg`, drag the app into Applications, and launch it.
 
-### 完成第一份需求
+### Create your first requirement
 
-启动应用后，先用一份真实需求材料试一次：
+Start with real requirement materials:
 
-1. 在“设置 → 模型”中配置支持的模型服务与自己的 API Key。
-2. 回到首页，分别选择产品经理助手和模型，输入想法或添加材料。
-3. 点击“整理需求”，检查补入的草稿，补充业务背景后发送。
-4. 点击聊天消息旁的“整理为需求”，选择或创建目标项目。
-5. 核对并补充需求卡，点击“保存这张需求卡”，再运行体检、处理待确认问题。
-6. 导出 Markdown 评审稿，与研发、测试或其他评审参与者核对。
+1. Configure a supported model service and your own API key under Settings → Models.
+2. Return to the home screen, choose the product manager assistant and a model, and enter your idea or add materials.
+3. Use the requirement-organizing shortcut, review the inserted prompt, add business context, and send it.
+4. Use the action beside a chat message to turn it into a requirement, then select or create a destination project.
+5. Verify and complete the requirement card, save it, run checks, and resolve open questions.
+6. Export a Markdown review draft and discuss it with engineers, testers, or other reviewers.
 
-也可以直接进入需求工作区，选择或创建项目，手工填写需求卡，或粘贴材料后使用 AI 整理。
+You can also open the requirement workspace, select or create a project, and fill in a card manually or paste materials for AI-assisted organization.
 
-需求手工编辑、规则体检、版本记录与导出可以直接使用。AI 能力需要可用的模型服务。产品经理助手和产品开发助手使用内置 Aion CLI 与已配置模型；外部 Agent 可能还需要对应 CLI、登录或授权。
+Manual requirement editing, rule-based checks, version records, and export can be used directly. AI features require an available model service. The product manager and product development assistants use the built-in Aion CLI and configured models. External agents may also need their own CLI, sign-in, or authorization.
 
-调用模型时，任务所需的提示词和材料会交给所配置的服务处理。AI 生成的内容需要人工核对；确认需求表示核对了内容，开发完成与测试通过仍需另行验收。
+When a model is called, the prompts and materials needed for the task are sent to the configured service. AI-generated content requires human verification. Confirming a requirement means its content has been checked; implementation and testing still need their own acceptance checks.
 
-完整操作步骤与练习示例见[使用手册](docs/使用手册.pdf)，也提供[Word 版本](docs/使用手册.docx)。
+For detailed steps and practice examples, see the [user manual (Chinese PDF)](docs/%E4%BD%BF%E7%94%A8%E6%89%8B%E5%86%8C.pdf) or the [editable manual (Chinese Word document)](docs/%E4%BD%BF%E7%94%A8%E6%89%8B%E5%86%8C.docx).
 
-### 从源码启动
+### Run from source
 
-以下命令面向 Apple 芯片 Mac。准备 Node.js 22～24、Bun、Rust 和 macOS 命令行开发工具；Rust 版本以 `AionCore/rust-toolchain.toml` 为准。
+These commands are intended for an Apple silicon Mac. Install Node.js 22–24, Bun, Rust, and the macOS command line developer tools. Use the Rust version specified in `AionCore/rust-toolchain.toml`.
 
-克隆[源码仓库](https://github.com/yuling170916/aipm-workbench)，或从下载页获取 `AIPM-workbench-yuling-source.zip` 并解压。在 `aipm-workbench` 目录打开终端；目录中直接包含 `AionUi`、`AionCore` 和 `docs`。依次运行：
+Clone the [source repository](https://github.com/yuling170916/aipm-workbench), or download and extract `AIPM-workbench-yuling-source.zip` from the download page. Open a terminal in `aipm-workbench`, where `AionUi`, `AionCore`, and `docs` are directly accessible. Run these commands in order:
 
 ```bash
 cd AionCore
@@ -123,14 +128,14 @@ bun install --frozen-lockfile
 AIONUI_BACKEND_BIN="../AionCore/target/debug/aioncore" bun run start
 ```
 
-首次安装若提示 `better-sqlite3` 与 Electron 版本不匹配，在 `AionUi` 中运行 `bunx electron-builder install-app-deps` 后重启。完整启动和构建步骤见[开发指南](docs/开发与GitHub上传.md)。
+If the initial installation reports a version mismatch between `better-sqlite3` and Electron, run `bunx electron-builder install-app-deps` in `AionUi` and restart. See the [development guide (Chinese)](docs/%E5%BC%80%E5%8F%91%E4%B8%8EGitHub%E4%B8%8A%E4%BC%A0.md) for full startup and build instructions.
 
-API Key、登录信息和私人材料保存在本机使用环境中，不应提交到 GitHub。
+Keep API keys, sign-in details, and private materials out of GitHub. They belong in your local usage environment.
 
-## 作者与开源许可
+## Author and open-source licenses
 
-yuling — 产品设计、开发与维护。
+yuling — product design, development, and maintenance.
 
-开源基础来自 [AionUi](https://github.com/iOfficeAI/AionUi) 与 [AionCore](https://github.com/iOfficeAI/AionCore)。本项目保留上游及第三方许可证和版权声明。
+The open-source foundation comes from [AionUi](https://github.com/iOfficeAI/AionUi) and [AionCore](https://github.com/iOfficeAI/AionCore). This project retains upstream and third-party licenses and copyright notices.
 
 [Apache-2.0](LICENSE) · [NOTICE](NOTICE)

@@ -1,6 +1,8 @@
 # AIPM工作台 README
 
-[阅读正式 README](README.md)：了解产品解决的问题、对团队的价值、适用场景与开始使用的方法。
+[阅读中文版 README](README.zh-CN.md)：了解产品解决的问题、对团队的价值、适用场景与开始使用的方法。
+
+[Read the English README](README.md)
 
 [GitHub 项目主页](https://github.com/yuling170916/aipm-workbench) · [应用与源码下载](https://github.com/yuling170916/aipm-workbench/releases/tag/aipm-2026.10.10)
 
