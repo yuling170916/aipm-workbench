@@ -1,0 +1,594 @@
+#![allow(clippy::disallowed_types)]
+
+use axum::extract::ws::{Message, WebSocket};
+use axum::extract::{Extension, Multipart, State, WebSocketUpgrade};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::routing::{get, post};
+use axum::{Json, Router};
+use futures_util::{SinkExt, StreamExt};
+use tokio::sync::mpsc;
+
+use aionui_api_types::{
+    ApiResponse, CheckToolInstalledRequest, CheckToolInstalledResponse, OpenExternalRequest, OpenFileRequest,
+    OpenFolderWithRequest, ShowItemInFolderRequest, SpeechToTextConfig, SttStreamServerMessage,
+};
+use aionui_auth::CurrentUser;
+use aionui_common::ApiError;
+use aionui_system::ClientPrefService;
+
+use crate::error::{ShellError, SttError};
+use crate::state::ShellRouterState;
+use crate::stt_stream::{ClientFrame, run_stream_session};
+use crate::stt_stream_provider::ProviderUpstreamFactory;
+
+impl From<ShellError> for ApiError {
+    fn from(err: ShellError) -> Self {
+        match err {
+            // These routes take `file_path` from the client, so echoing it back
+            // discloses nothing it did not already send. The path is interpolated
+            // here rather than coming from `Display`, which omits it precisely
+            // because identity-addressed callers must not leak a server-resolved
+            // path (see `ShellError::FileNotFound`).
+            ShellError::FileNotFound(path) => ApiError::BadRequest(format!("file not found: {path}")),
+            ShellError::DirectoryNotFound(path) => ApiError::BadRequest(format!("directory not found: {path}")),
+            ShellError::InvalidUrl(msg) => ApiError::BadRequest(format!("invalid URL: {msg}")),
+            ShellError::ToolNotInstalled(tool) => ApiError::BadRequest(format!("tool not installed: {tool}")),
+            ShellError::CommandFailed(msg) => ApiError::Internal(format!("command failed: {msg}")),
+            ShellError::Io(e) => ApiError::Internal(format!("IO error: {e}")),
+        }
+    }
+}
+
+impl From<SttError> for ApiError {
+    fn from(err: SttError) -> Self {
+        match &err {
+            SttError::Disabled | SttError::OpenaiNotConfigured | SttError::DeepgramNotConfigured => {
+                ApiError::BadRequest(err.to_string())
+            }
+            SttError::RequestFailed(_) => ApiError::BadGateway(err.to_string()),
+            SttError::Unknown(_) => ApiError::Internal(err.to_string()),
+            SttError::StreamUnsupported | SttError::StreamProtocol(_) => ApiError::BadRequest(err.to_string()),
+        }
+    }
+}
+
+pub fn shell_routes(state: ShellRouterState) -> Router {
+    Router::new()
+        .route("/api/shell/open-file", post(open_file))
+        .route("/api/shell/show-item-in-folder", post(show_item_in_folder))
+        .route("/api/shell/open-external", post(open_external))
+        .route("/api/shell/check-tool-installed", post(check_tool_installed))
+        .route("/api/shell/open-folder-with", post(open_folder_with))
+        .route("/api/stt", post(speech_to_text))
+        .route("/api/stt/stream", get(speech_to_text_stream))
+        .with_state(state)
+}
+
+async fn open_file(
+    State(state): State<ShellRouterState>,
+    body: Result<Json<OpenFileRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    state.shell_service.open_file(&req.file_path).await?;
+    Ok(Json(ApiResponse::success()))
+}
+
+async fn show_item_in_folder(
+    State(state): State<ShellRouterState>,
+    body: Result<Json<ShowItemInFolderRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    state.shell_service.show_item_in_folder(&req.file_path).await?;
+    Ok(Json(ApiResponse::success()))
+}
+
+async fn open_external(
+    State(state): State<ShellRouterState>,
+    body: Result<Json<OpenExternalRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    state.shell_service.open_external(&req.url).await?;
+    Ok(Json(ApiResponse::success()))
+}
+
+async fn check_tool_installed(
+    State(state): State<ShellRouterState>,
+    body: Result<Json<CheckToolInstalledRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<ApiResponse<CheckToolInstalledResponse>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    let installed = state.shell_service.check_tool_installed(req.tool).await;
+    Ok(Json(ApiResponse::ok(CheckToolInstalledResponse { installed })))
+}
+
+async fn open_folder_with(
+    State(state): State<ShellRouterState>,
+    body: Result<Json<OpenFolderWithRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<ApiResponse<()>>, ApiError> {
+    let Json(req) = body.map_err(ApiError::from)?;
+    state.shell_service.open_folder_with(&req.folder_path, req.tool).await?;
+    Ok(Json(ApiResponse::success()))
+}
+
+struct SttMultipartFields {
+    file_data: Vec<u8>,
+    file_name: String,
+    mime_type: String,
+    language_hint: Option<String>,
+}
+
+async fn extract_stt_multipart(mut multipart: Multipart) -> Result<SttMultipartFields, ApiError> {
+    let mut file_data: Option<Vec<u8>> = None;
+    let mut file_name: Option<String> = None;
+    let mut mime_type: Option<String> = None;
+    let mut language_hint: Option<String> = None;
+
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| ApiError::BadRequest(format!("multipart error: {e}")))?
+    {
+        let name = field.name().unwrap_or("").to_owned();
+        match name.as_str() {
+            "file" | "audio" => {
+                if file_name.is_none()
+                    && let Some(name) = field.file_name().filter(|name| !name.is_empty())
+                {
+                    file_name = Some(name.to_owned());
+                }
+                if mime_type.is_none()
+                    && let Some(content_type) = field.content_type().filter(|value| !value.is_empty())
+                {
+                    mime_type = Some(content_type.to_owned());
+                }
+                file_data = Some(
+                    field
+                        .bytes()
+                        .await
+                        .map_err(|e| ApiError::BadRequest(format!("failed to read file: {e}")))?
+                        .to_vec(),
+                );
+            }
+            "fileName" => {
+                file_name = Some(
+                    field
+                        .text()
+                        .await
+                        .map_err(|e| ApiError::BadRequest(format!("failed to read fileName: {e}")))?,
+                );
+            }
+            "mimeType" => {
+                mime_type = Some(
+                    field
+                        .text()
+                        .await
+                        .map_err(|e| ApiError::BadRequest(format!("failed to read mimeType: {e}")))?,
+                );
+            }
+            "languageHint" => {
+                let text = field
+                    .text()
+                    .await
+                    .map_err(|e| ApiError::BadRequest(format!("failed to read languageHint: {e}")))?;
+                if !text.is_empty() {
+                    language_hint = Some(text);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let file_data = file_data.ok_or_else(|| ApiError::BadRequest("missing 'file' field".to_owned()))?;
+    let file_name = file_name.ok_or_else(|| ApiError::BadRequest("missing 'fileName' field".to_owned()))?;
+    let mime_type = mime_type.ok_or_else(|| ApiError::BadRequest("missing 'mimeType' field".to_owned()))?;
+
+    Ok(SttMultipartFields {
+        file_data,
+        file_name,
+        mime_type,
+        language_hint,
+    })
+}
+
+async fn speech_to_text(
+    State(state): State<ShellRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    multipart: Multipart,
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, Json<serde_json::Value>)> {
+    let fields = extract_stt_multipart(multipart).await.map_err(|e| {
+        let status = e.status_code();
+        let body = serde_json::json!({
+            "success": false,
+            "error": e.to_string(),
+            "code": e.error_code(),
+        });
+        (status, Json(body))
+    })?;
+
+    let config = load_stt_config(&state.client_pref_service, &user.id)
+        .await
+        .map_err(|e| {
+            let e = ApiError::from(e);
+            let status = e.status_code();
+            let body = serde_json::json!({
+                "success": false,
+                "error": e.to_string(),
+                "code": e.error_code(),
+            });
+            (status, Json(body))
+        })?;
+
+    let result = state
+        .stt_service
+        .transcribe(
+            fields.file_data,
+            &fields.file_name,
+            &fields.mime_type,
+            fields.language_hint.as_deref(),
+            &config,
+        )
+        .await
+        .map_err(|e| stt_error_response(&e))?;
+
+    let body = serde_json::json!({
+        "success": true,
+        "data": result,
+    });
+    Ok((StatusCode::OK, Json(body)))
+}
+
+fn stt_error_response(err: &SttError) -> (StatusCode, Json<serde_json::Value>) {
+    let status = StatusCode::from_u16(err.status_code()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    let body = serde_json::json!({
+        "success": false,
+        "error": err.to_string(),
+        "code": err.error_code(),
+    });
+    (status, Json(body))
+}
+
+/// Load the stored STT config from client preferences.
+///
+/// Key mismatch fix: the AionUI frontend stores the config under
+/// "tools.speechToText" while older backends used "speechToText"; both keys
+/// are queried and the namespaced key wins. A missing or malformed config
+/// falls back to a disabled default so callers surface a uniform
+/// `STT_DISABLED` error.
+pub(crate) async fn load_stt_config(
+    client_pref_service: &ClientPrefService,
+    user_id: &str,
+) -> Result<SpeechToTextConfig, aionui_system::SystemError> {
+    let prefs = client_pref_service
+        .get_preferences(user_id, Some(&["speechToText", "tools.speechToText"]))
+        .await?;
+    Ok(prefs
+        .get("tools.speechToText")
+        .or_else(|| prefs.get("speechToText"))
+        .and_then(|v| match serde_json::from_value(v.clone()) {
+            Ok(config) => Some(config),
+            Err(e) => {
+                // Fall back to disabled, but leave a trace — a silent fallback
+                // makes a malformed config indistinguishable from a missing one.
+                tracing::warn!("ignoring malformed speechToText config: {e}");
+                None
+            }
+        })
+        .unwrap_or(SpeechToTextConfig {
+            enabled: false,
+            provider: aionui_api_types::SpeechToTextProvider::Openai,
+            auto_send: None,
+            openai: None,
+            deepgram: None,
+        }))
+}
+
+/// Per-direction frame buffer for the streaming session channels. Audio
+/// chunks arrive every ~100ms, so 32 frames of backpressure is ample.
+const STT_STREAM_CHANNEL_CAPACITY: usize = 32;
+
+/// `GET /api/stt/stream` — WebSocket endpoint for streaming transcription.
+///
+/// The upgrade is accepted unconditionally (auth already ran in middleware):
+/// config loading and validation happen after the upgrade so every failure
+/// reaches the client as a uniform `{"type":"error",...}` WS frame
+/// (`STT_DISABLED`, `STT_*_NOT_CONFIGURED`, ...) emitted by the session,
+/// instead of a mix of HTTP handshake statuses and protocol frames.
+async fn speech_to_text_stream(
+    State(state): State<ShellRouterState>,
+    Extension(user): Extension<CurrentUser>,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| speech_to_text_stream_socket(socket, state, user.id))
+}
+
+/// Pump WebSocket frames in/out of the transport-agnostic streaming session.
+///
+/// This stays a pure frame adapter: all protocol and business logic lives in
+/// `stt_stream::run_stream_session`.
+async fn speech_to_text_stream_socket(socket: WebSocket, state: ShellRouterState, user_id: String) {
+    let (mut ws_tx, mut ws_rx) = socket.split();
+
+    let config = match load_stt_config(&state.client_pref_service, &user_id).await {
+        Ok(config) => config,
+        Err(e) => {
+            tracing::error!(error = %e, "stt stream: failed to load config");
+            let frame = SttStreamServerMessage::Error {
+                code: "STT_UNKNOWN".to_owned(),
+                msg: "failed to load speech-to-text configuration".to_owned(),
+            };
+            if let Ok(text) = serde_json::to_string(&frame) {
+                let _ = ws_tx.send(Message::Text(text.into())).await;
+            }
+            let _ = ws_tx.send(Message::Close(None)).await;
+            return;
+        }
+    };
+
+    let (client_tx, client_rx) = mpsc::channel(STT_STREAM_CHANNEL_CAPACITY);
+    let (server_tx, mut server_rx) = mpsc::channel(STT_STREAM_CHANNEL_CAPACITY);
+
+    // Inbound pump: WS messages → ClientFrame, ending with `Closed` when the
+    // client goes away. A send failure means the session already returned.
+    let read_task = tokio::spawn(async move {
+        while let Some(msg) = ws_rx.next().await {
+            let frame = match msg {
+                Ok(Message::Text(text)) => ClientFrame::Text(text.to_string()),
+                Ok(Message::Binary(bytes)) => ClientFrame::Binary(bytes.to_vec()),
+                Ok(Message::Close(_)) | Err(_) => break,
+                Ok(_) => continue, // ping/pong are answered by axum itself
+            };
+            if client_tx.send(frame).await.is_err() {
+                return;
+            }
+        }
+        let _ = client_tx.send(ClientFrame::Closed).await;
+    });
+
+    // Outbound pump: server frames → WS text, then a clean close once the
+    // session drops its sender.
+    let write_task = tokio::spawn(async move {
+        while let Some(msg) = server_rx.recv().await {
+            let Ok(text) = serde_json::to_string(&msg) else {
+                break;
+            };
+            if ws_tx.send(Message::Text(text.into())).await.is_err() {
+                return;
+            }
+        }
+        let _ = ws_tx.send(Message::Close(None)).await;
+    });
+
+    run_stream_session(client_rx, server_tx, config, &ProviderUpstreamFactory).await;
+    // `server_tx` was moved into the session and dropped on return: the write
+    // pump drains any remaining frames and closes the socket cleanly.
+    let _ = write_task.await;
+    // The session no longer reads `client_rx`; stop the reader (abort is safe
+    // mid-await — the WS read half is simply dropped).
+    read_task.abort();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use http_body_util::BodyExt;
+    use std::sync::Arc;
+    use tower::ServiceExt;
+
+    fn make_state() -> ShellRouterState {
+        use crate::opener::NoopSystemOpener;
+        use crate::shell::ShellService;
+        use crate::stt::SttService;
+
+        let pool = sqlx::SqlitePool::connect_lazy("sqlite::memory:").unwrap();
+        let repo = Arc::new(aionui_db::SqliteClientPreferenceRepository::new(pool));
+        let client_pref_service = aionui_system::ClientPrefService::new(repo);
+
+        ShellRouterState {
+            shell_service: Arc::new(ShellService::new(Arc::new(NoopSystemOpener))),
+            stt_service: Arc::new(SttService::new(reqwest::Client::new())),
+            client_pref_service,
+        }
+    }
+
+    fn make_router() -> Router {
+        shell_routes(make_state())
+    }
+
+    async fn body_json(resp: axum::response::Response) -> serde_json::Value {
+        let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    #[tokio::test]
+    async fn open_file_missing_body_returns_400() {
+        let app = make_router();
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/shell/open-file")
+            .header("content-type", "application/json")
+            .body(Body::from("{}"))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn open_file_nonexistent_returns_400() {
+        let app = make_router();
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/shell/open-file")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"filePath":"/nonexistent/file.txt"}"#))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let json = body_json(resp).await;
+        assert_eq!(json["success"], false);
+    }
+
+    #[tokio::test]
+    async fn open_external_invalid_url_returns_400() {
+        let app = make_router();
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/shell/open-external")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"url":"; rm -rf /"}"#))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn open_external_file_scheme_returns_400() {
+        let app = make_router();
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/shell/open-external")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"url":"file:///etc/passwd"}"#))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn check_tool_terminal_returns_installed_true() {
+        let app = make_router();
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/shell/check-tool-installed")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"tool":"terminal"}"#))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let json = body_json(resp).await;
+        assert_eq!(json["success"], true);
+        assert_eq!(json["data"]["installed"], true);
+    }
+
+    #[tokio::test]
+    async fn check_tool_explorer_returns_installed_true() {
+        let app = make_router();
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/shell/check-tool-installed")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"tool":"explorer"}"#))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let json = body_json(resp).await;
+        assert_eq!(json["success"], true);
+        assert_eq!(json["data"]["installed"], true);
+    }
+
+    #[tokio::test]
+    async fn open_folder_with_nonexistent_dir_returns_400() {
+        let app = make_router();
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/shell/open-folder-with")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"folderPath":"/nonexistent/dir","tool":"explorer"}"#))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn show_item_in_folder_nonexistent_returns_400() {
+        let app = make_router();
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/shell/show-item-in-folder")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"filePath":"/nonexistent/path"}"#))
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn file_not_found_maps_to_bad_request() {
+        let err = ApiError::from(ShellError::FileNotFound("/tmp/missing.txt".into()));
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("/tmp/missing.txt")));
+    }
+
+    #[test]
+    fn directory_not_found_maps_to_bad_request() {
+        let err = ApiError::from(ShellError::DirectoryNotFound("/tmp/nodir".into()));
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("/tmp/nodir")));
+    }
+
+    #[test]
+    fn invalid_url_maps_to_bad_request() {
+        let err = ApiError::from(ShellError::InvalidUrl("not a url".into()));
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("not a url")));
+    }
+
+    #[test]
+    fn tool_not_installed_maps_to_bad_request() {
+        let err = ApiError::from(ShellError::ToolNotInstalled("vscode".into()));
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("vscode")));
+    }
+
+    #[test]
+    fn command_failed_maps_to_internal() {
+        let err = ApiError::from(ShellError::CommandFailed("exit code 1".into()));
+        assert!(matches!(err, ApiError::Internal(msg) if msg.contains("exit code 1")));
+    }
+
+    #[test]
+    fn io_error_maps_to_internal() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+        let err = ApiError::from(ShellError::Io(io_err));
+        assert!(matches!(err, ApiError::Internal(msg) if msg.contains("permission denied")));
+    }
+
+    #[test]
+    fn stt_disabled_maps_to_bad_request() {
+        let err = ApiError::from(SttError::Disabled);
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("not enabled")));
+    }
+
+    #[test]
+    fn stt_openai_not_configured_maps_to_bad_request() {
+        let err = ApiError::from(SttError::OpenaiNotConfigured);
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("OpenAI")));
+    }
+
+    #[test]
+    fn stt_deepgram_not_configured_maps_to_bad_request() {
+        let err = ApiError::from(SttError::DeepgramNotConfigured);
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("Deepgram")));
+    }
+
+    #[test]
+    fn stt_request_failed_maps_to_bad_gateway() {
+        let err = ApiError::from(SttError::RequestFailed("HTTP 401".into()));
+        assert!(matches!(err, ApiError::BadGateway(msg) if msg.contains("HTTP 401")));
+    }
+
+    #[test]
+    fn stt_unknown_maps_to_internal() {
+        let err = ApiError::from(SttError::Unknown("unexpected".into()));
+        assert!(matches!(err, ApiError::Internal(msg) if msg.contains("unexpected")));
+    }
+
+    #[test]
+    fn stt_stream_unsupported_maps_to_bad_request() {
+        let err = ApiError::from(SttError::StreamUnsupported);
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("not supported")));
+    }
+
+    #[test]
+    fn stt_stream_protocol_maps_to_bad_request() {
+        let err = ApiError::from(SttError::StreamProtocol("bad frame".into()));
+        assert!(matches!(err, ApiError::BadRequest(msg) if msg.contains("bad frame")));
+    }
+}

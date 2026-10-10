@@ -1,0 +1,357 @@
+use aionui_api_types::TeamRunTargetRole;
+use aionui_common::TimestampMs;
+
+use crate::work_source::WorkSource;
+
+/// How many times a single mailbox message may fail delivery before it is
+/// abandoned and its slot paused.
+///
+/// Counted in memory, per slot: a process restart resets the count. That is
+/// deliberate — a restart is exactly the kind of change that can make a
+/// previously failing delivery succeed, so carrying the count across it would
+/// abandon messages that would now go through.
+pub(crate) const MAX_MESSAGE_DELIVERY_FAILURES: u8 = 3;
+
+/// What retiring a batch means for the delivery retry counters of the mailbox
+/// messages it claimed. The only behavioural difference between the terminal
+/// paths (`complete` / `cancel` / `fail`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DeliveryOutcome {
+    /// Delivery was not attempted, or it succeeded — the messages did not burn a
+    /// retry. Clears their counters so a later genuine failure starts from zero.
+    NotFailed,
+    /// Delivery was attempted and failed. Increments each claimed message's
+    /// counter and reports the ones that have now exhausted
+    /// `MAX_MESSAGE_DELIVERY_FAILURES`, whose slot is then paused.
+    Failed,
+}
+
+/// Lane a queued work intent sits in. Declared highest-priority first; the
+/// authoritative claim order lives in `SlotWorkCoordinator::next`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum WorkPriority {
+    /// User-driven work. Always wins.
+    Foreground,
+    /// Shutdown request / rejection. Ranked above `Directed` because it is
+    /// low-volume and must not be pushed behind continuous teammate traffic.
+    Control,
+    /// Messages addressed to this slot by another agent.
+    Directed,
+    /// System notifications, welcomes, membership changes, idle nudges.
+    Background,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum RuntimeConstraint {
+    Ready,
+    Starting {
+        operation_id: u64,
+    },
+    Failed {
+        operation_id: u64,
+        classification: &'static str,
+    },
+    Removing {
+        operation_id: u64,
+    },
+    SessionStopped,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RuntimeRestartGate {
+    pub(crate) operation_id: u64,
+    pub(crate) previous_constraint: RuntimeConstraint,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RuntimeRestartRejection {
+    Busy,
+    Removing,
+    SessionStopped,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SlotPhase {
+    Idle,
+    Queued,
+    Starting,
+    Running,
+    Paused,
+    Blocked,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum WorkIntentState {
+    Queued,
+    Starting {
+        batch_id: String,
+        operation_id: u64,
+    },
+    Running {
+        batch_id: String,
+        operation_id: u64,
+        turn_id: String,
+    },
+    Completed,
+    Failed {
+        classification: &'static str,
+    },
+    Cancelled {
+        classification: &'static str,
+    },
+}
+
+impl WorkIntentState {
+    pub(super) fn is_terminal(&self) -> bool {
+        matches!(self, Self::Completed | Self::Failed { .. } | Self::Cancelled { .. })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WorkIntent {
+    pub(crate) intent_id: String,
+    pub(crate) session_generation: String,
+    pub(crate) slot_id: String,
+    pub(crate) role: TeamRunTargetRole,
+    pub(crate) source: WorkSource,
+    pub(crate) priority: WorkPriority,
+    pub(crate) mailbox_message_id: Option<String>,
+    pub(crate) team_run_id: Option<String>,
+    pub(crate) created_at_ms: TimestampMs,
+    pub(crate) state: WorkIntentState,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum CausalBinding {
+    UserVisible,
+    InheritRunningBatch {
+        caller_slot_id: String,
+    },
+    // `ActiveRunOrBackground` and `Background` no longer have production
+    // callers now that all system/lifecycle wakes go through `SystemInitiated`
+    // (which never leaves a turn run-less). They are intentionally retained as
+    // documented binding semantics and remain exercised by regression tests, so
+    // silence the lib-only dead-code lint rather than dropping the variants.
+    #[allow(dead_code)]
+    ActiveRunOrBackground,
+    #[allow(dead_code)]
+    Background,
+    /// System/lifecycle wake that must still run inside a team run. Resolution
+    /// order: inherit the caller's running batch run (when `inherit_from` is
+    /// set and that caller has one) → attach to the team's active run → open a
+    /// new `SystemLifecycle` run. Never leaves the turn run-less.
+    SystemInitiated {
+        inherit_from: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct EnqueueRequest {
+    pub(crate) slot_id: String,
+    pub(crate) role: TeamRunTargetRole,
+    pub(crate) source: WorkSource,
+    pub(crate) binding: CausalBinding,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct EnqueueLease {
+    pub(crate) lease_id: String,
+    pub(crate) session_generation: String,
+    pub(crate) slot_id: String,
+    pub(crate) role: TeamRunTargetRole,
+    pub(crate) source: WorkSource,
+    pub(crate) team_run_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct WorkBatch {
+    pub(crate) batch_id: String,
+    pub(crate) session_generation: String,
+    pub(crate) slot_id: String,
+    pub(crate) intent_ids: Vec<String>,
+    pub(crate) mailbox_message_ids: Vec<String>,
+    /// Unread mailbox rows exposed through `team_read_messages` while this
+    /// batch owns the active turn. These rows are acknowledged only when the
+    /// turn completes successfully; failed or cancelled turns leave them
+    /// unread for the normal recovery path.
+    pub(crate) observed_message_ids: Vec<String>,
+    pub(crate) highest_priority: WorkPriority,
+    pub(crate) team_run_ids: Vec<String>,
+    pub(crate) operation_id: u64,
+    /// True when this batch is a single recognized user slash command
+    /// (`WorkSource::UserCommand`). The wake path sends the bare command as the
+    /// turn's first content block instead of wrapping it in a wake payload
+    /// (ELECTRON-3RN). A command is always batched alone (never merged with
+    /// other unread messages).
+    pub(crate) is_command: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ReconcileDecision {
+    Claim(WorkBatch),
+    WaitingForCompletion,
+    Blocked(RuntimeConstraint),
+    SettleSignals(Vec<String>),
+    Quiescent,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum CommitResult {
+    Committed,
+    StaleOwner,
+    Rejected,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct BatchFailureResult {
+    pub(crate) commit_result: CommitResult,
+    pub(crate) exhausted_message_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum StartCommitResult {
+    Accepted,
+    CancelImmediately,
+    StaleOwner,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum EnqueueDisposition {
+    Accepted,
+    Queued,
+    BlockedRuntimeStarting,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct EnqueueCommit {
+    pub(crate) intent_id: String,
+    pub(crate) team_run_id: Option<String>,
+    pub(crate) disposition: EnqueueDisposition,
+    pub(crate) slot: SlotWorkSnapshot,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SlotWorkSnapshot {
+    pub(crate) slot_id: String,
+    pub(crate) role: TeamRunTargetRole,
+    pub(crate) state: SlotPhase,
+    pub(crate) queued_foreground_count: usize,
+    pub(crate) queued_background_count: usize,
+    pub(crate) active_batch: Option<WorkBatch>,
+    pub(crate) active_turn_id: Option<String>,
+    pub(crate) active_turn_started_at_ms: Option<TimestampMs>,
+    pub(crate) runtime_constraint: RuntimeConstraint,
+    pub(crate) team_run_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RunWorkSummary {
+    pub(crate) team_run_id: String,
+    pub(crate) queued_intent_count: usize,
+    pub(crate) starting_batch_count: usize,
+    pub(crate) running_batch_count: usize,
+    pub(crate) active_enqueue_lease_count: usize,
+    pub(crate) paused_intent_count: usize,
+    pub(crate) failed_intent_count: usize,
+    pub(crate) slots: Vec<SlotWorkSnapshot>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CoordinatorSnapshot {
+    pub(crate) session_generation: String,
+    pub(crate) slots: Vec<SlotWorkSnapshot>,
+    pub(crate) active_run_summary: Option<RunWorkSummary>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ReconcileProjection {
+    pub(crate) created_recovery_intent_ids: Vec<String>,
+    pub(crate) retained_intent_ids: Vec<String>,
+    pub(crate) cleared_stale_intent_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct BatchCancelTarget {
+    pub(crate) batch: WorkBatch,
+    pub(crate) turn_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ObserveMessagesResult {
+    pub(crate) batch_id: Option<String>,
+    pub(crate) observed_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct BatchCompletionResult {
+    pub(crate) commit_result: CommitResult,
+    pub(crate) ack_message_ids: Vec<String>,
+    pub(crate) team_run_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum McpRefreshDisposition {
+    Unchanged,
+    RestartNow,
+    Deferred,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct BatchInterruptMetadata {
+    pub(crate) reason: Option<String>,
+    pub(crate) replacement_message_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct InterruptBatchResult {
+    pub(crate) commit_result: CommitResult,
+    pub(crate) terminal_message_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PauseWorkResult {
+    pub(crate) cancel_target: Option<BatchCancelTarget>,
+    pub(crate) slot: SlotWorkSnapshot,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RemoveWorkResult {
+    pub(crate) cancel_target: Option<BatchCancelTarget>,
+    pub(crate) terminal_message_ids: Vec<String>,
+    pub(crate) affected_run_summaries: Vec<RunWorkSummary>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CancelRunWorkResult {
+    pub(crate) cancel_targets: Vec<BatchCancelTarget>,
+    pub(crate) terminal_message_ids: Vec<String>,
+    pub(crate) summary: RunWorkSummary,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RuntimeConstraintUpdate {
+    pub(crate) slot: SlotWorkSnapshot,
+    pub(crate) terminal_message_ids: Vec<String>,
+    pub(crate) affected_run_summaries: Vec<RunWorkSummary>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RunBinding {
+    pub(crate) team_run_id: Option<String>,
+    pub(crate) created_new_run: bool,
+    pub(crate) user_intervention: bool,
+}
+
+pub(crate) trait RunCausalityPort: Send + Sync {
+    fn bind_enqueue(&self, request: &EnqueueRequest) -> RunBinding;
+    /// Bind a system/lifecycle enqueue: attach to the team's active run when one
+    /// exists, otherwise open a new `SystemLifecycle` run. Never sets
+    /// `user_intervention` (the key difference from a user enqueue).
+    fn bind_system_enqueue(&self, request: &EnqueueRequest) -> RunBinding;
+    fn abort_binding(&self, binding: &RunBinding);
+    fn apply_work_summary(&self, summary: RunWorkSummary);
+    /// Broadcast a single slot's current work snapshot, independent of any team
+    /// run. Emitted on every slot work-state transition so the frontend clears
+    /// per-slot state even for run-less work (see `TeamSlotWorkChangedPayload`).
+    fn publish_slot_work(&self, snapshot: SlotWorkSnapshot);
+}

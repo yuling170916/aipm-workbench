@@ -1,0 +1,989 @@
+/* Arco Design custom overrides - non-theme related */
+
+/*
+ * Arco Spin 垂直居中修正。
+ *
+ * 现象：「思考过程」「执行步骤」这类标题栏，加载中显示 <Spin size={12} />，完成后换成
+ * icon-park 的静态图标。实测加载中的转圈圈比相邻文字、以及完成后的静态图标低 3.5px，
+ * 看起来整体偏下、切换状态时还会跳一下。
+ *
+ * 成因有三层叠加（数值均为 Chromium 实测）：
+ *   1. Arco 给所有 `.arco-icon` 设了 `vertical-align: -2px`，SVG 被强行下移；
+ *   2. `.arco-spin-icon` 是 inline-block，SVG 按文字基线排布，行盒被撑到 23px
+ *      （只为容纳 12px 的图标），底部留下大段基线间隙；
+ *   3. `.arco-spin` 自身也是 inline-block，行盒 13.58px 容纳 12px 图标，再贡献 0.78px。
+ *
+ * 修正：让这两层都变成居中的 inline-flex 并清掉基线偏移 —— 与 base.css 里的 `.i-icon`
+ * 修正同一思路。实测偏移由 3.5px 精确归零，与静态图标像素级对齐。
+ *
+ * 为何改 `.arco-spin` 是安全的（已实测验证）：
+ *   - 包裹式用法 `<Spin loading>内容</Spin>`：display 由 inline-block 变 inline-flex，
+ *     但被包裹内容尺寸、遮罩层圈圈的居中、后续兄弟元素位置均零变化（`.arco-spin-children`
+ *     是唯一的流内子元素，遮罩层为绝对定位）。
+ *   - 传了自定义 flex 类的用法（如 `<Spin loading className='flex flex-1 …'/>`）：
+ *     行内/工具类 display 优先级更高，不受影响。
+ *   - 图标只匹配 `.arco-spin` 的直接子级，包裹式用法的图标嵌在
+ *     `.arco-spin-loading-layer-inner` 内，不会被这条规则命中。
+ */
+.arco-spin,
+.arco-spin > .arco-spin-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.arco-spin > .arco-spin-icon > .arco-icon {
+  display: block;
+  vertical-align: middle;
+}
+
+/* Centralized font tokens. --font-mono is inherited (custom properties cross
+   the shadow DOM boundary), so Markdown rendered in shadow roots can reference it.
+   集中的字体 token。--font-mono 会被继承（自定义属性可穿透 Shadow DOM 边界），
+   因此 Shadow DOM 内渲染的 Markdown 也能引用它。 */
+:root {
+  /* Code-region font. applyFontFamilies sets --code-font-family only when the
+     user picks a code font (empty otherwise), so --font-mono resolves to the
+     chosen font or falls back to the built-in stack. Every existing
+     var(--font-mono) site (markdown code, editors, chat shadow) follows the
+     selection for free — no need to touch those call sites. */
+  --font-mono: var(
+    --code-font-family,
+    ui-monospace,
+    'SF Mono',
+    SFMono-Regular,
+    Menlo,
+    'Cascadia Code',
+    'Roboto Mono',
+    Consolas,
+    'Liberation Mono',
+    monospace
+  );
+  /* Code-region font weight, mirroring --font-mono. applyFontWeights sets
+     --code-font-weight only when the user picks a code weight (empty otherwise),
+     so this falls back to `inherit`, keeping the built-in weight. Every
+     var(--font-mono) site declares font-weight: var(--font-mono-weight) next to
+     it, so the code-region weight follows the selection for free. */
+  --font-mono-weight: var(--code-font-weight, inherit);
+  --code-font-size: 13px;
+  --aion-overlay-bg: var(--surface-elevated);
+  --aion-overlay-text: var(--text-primary);
+  --aion-overlay-border: var(--border-base);
+  --aion-overlay-shadow: var(--shadow-popover);
+}
+
+html[data-theme='dark'],
+body[arco-theme='dark'] {
+  --aion-overlay-bg: var(--surface-elevated);
+  --aion-overlay-text: var(--text-primary);
+  --aion-overlay-border: var(--border-base);
+  --aion-overlay-shadow: var(--shadow-popover);
+}
+
+/* Arco's arco.css puts 'Inter' first in font-family, which causes very thin
+   text on systems that have Inter installed. Override to use system fonts. */
+html,
+body {
+  /* Global ("app") region font. --app-font-family is set by applyFontFamilies
+     when a global font is chosen (empty otherwise), so this falls back to the
+     built-in system stack — keeping default rendering unchanged. Regions that
+     pick no font of their own inherit this global font. */
+  font-family: var(
+    --app-font-family,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    'Noto Sans',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    sans-serif
+  );
+  /* Global ("app") region font size. --app-font-size defaults to 14px (Arco's
+     base), so the whole app scales with the global size, while regions with
+     their own size var (chat/markdown/code) still override within their scope. */
+  font-size: var(--app-font-size, 14px);
+  /* Global ("app") region font weight. --app-font-weight is set by
+     applyFontWeights when a global weight is chosen (empty otherwise), so this
+     falls back to `normal`, keeping default rendering unchanged. Only text that
+     sets no weight of its own inherits it (headings/strong/buttons keep theirs). */
+  font-weight: var(--app-font-weight, normal);
+  /* 根元素必须自己铺底色。Electron 窗口底色是固定的白色，html/body 若保持透明，
+     任何布局缝隙都会漏出白色 —— 深色模式下就是刺眼的白边。
+     The root must paint its own background. The Electron window's own background
+     is a fixed white, so if html/body stay transparent any layout gap leaks white
+     through — glaringly so in dark mode. */
+  background-color: var(--bg-1);
+}
+
+html body .arco-tooltip-content,
+html body .arco-popover-content,
+html body .arco-popconfirm-content {
+  background: var(--aion-overlay-bg) !important;
+  color: var(--aion-overlay-text) !important;
+  border: 1px solid var(--aion-overlay-border) !important;
+  box-shadow: var(--aion-overlay-shadow) !important;
+}
+
+html[data-theme='dark'] body .arco-tooltip-content,
+html[data-theme='dark'] body .arco-popover-content,
+html[data-theme='dark'] body .arco-popconfirm-content,
+body[arco-theme='dark'] .arco-tooltip-content,
+body[arco-theme='dark'] .arco-popover-content,
+body[arco-theme='dark'] .arco-popconfirm-content {
+  background: var(--aion-overlay-bg) !important;
+  color: var(--aion-overlay-text) !important;
+  border: 1px solid var(--aion-overlay-border) !important;
+  box-shadow: var(--aion-overlay-shadow) !important;
+}
+
+html body .arco-tooltip-content-inner,
+html body .arco-popover-title,
+html body .arco-popover-inner-content,
+html body .arco-popconfirm-title,
+html body .arco-popconfirm-inner-content {
+  color: var(--aion-overlay-text) !important;
+}
+
+html body .arco-trigger-arrow.arco-tooltip-arrow,
+html body .arco-popover-arrow.arco-trigger-arrow,
+html body .arco-popconfirm-arrow.arco-trigger-arrow {
+  background: var(--aion-overlay-bg) !important;
+  border: 1px solid var(--aion-overlay-border) !important;
+}
+
+/* Override Arco Design component backgrounds to white in light mode */
+/* 覆盖 Arco Design 组件背景色为白色（浅色模式） */
+/* .arco-input,
+.arco-textarea,
+.arco-select-view,
+.arco-picker,
+.arco-input-number,
+.arco-cascader-view,
+.arco-tree-select-view,
+.arco-auto-complete-view,
+.arco-mentions-view {
+  background-color: #ffffff !important;
+}
+
+.arco-input-wrapper {
+  background-color: #ffffff !important;
+}
+
+.arco-select-popup .arco-select-option {
+  &:hover {
+    background-color: #fafafa !important;
+  }
+} */
+
+.arco-btn {
+  &.arco-btn-outline {
+    border-color: var(--border-special);
+    color: var(--text-secondary);
+  }
+}
+
+.arco-collapse {
+  border: none;
+  border-radius: var(--radius-control);
+  .arco-collapse-item-header {
+    border-bottom: none;
+  }
+}
+
+/* Arco Tag dark mode styles - enhance contrast with semi-transparent backgrounds */
+/* Arco Tag 深色模式样式 - 使用半透明背景增强对比度 */
+body[arco-theme='dark'] .arco-tag-checked.arco-tag-blue {
+  background-color: color-mix(in srgb, var(--primary) 16%, transparent) !important;
+  color: var(--primary) !important;
+}
+
+body[arco-theme='dark'] .arco-tag-checked.arco-tag-green {
+  background-color: color-mix(in srgb, var(--success) 16%, transparent) !important;
+  color: var(--success) !important;
+}
+
+body[arco-theme='dark'] .arco-tag-checked.arco-tag-red {
+  background-color: color-mix(in srgb, var(--danger) 16%, transparent) !important;
+  color: var(--danger) !important;
+}
+
+body[arco-theme='dark'] .arco-tag-checked.arco-tag-orange {
+  background-color: color-mix(in srgb, var(--warning) 16%, transparent) !important;
+  color: var(--warning) !important;
+}
+
+body[arco-theme='dark'] .arco-tag-checked.arco-tag-gray {
+  background-color: var(--bg-2) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* AionUi Steps wrapper styles */
+.aionui-steps .arco-steps-item-process .arco-steps-item-icon {
+  background-color: var(--aou-6-brand) !important;
+  border-color: var(--aou-6-brand) !important;
+}
+
+.aionui-steps .arco-steps-item-finish .arco-steps-item-icon {
+  background-color: var(--brand-light) !important;
+  border-color: var(--brand-light) !important;
+  border-radius: 50% !important;
+}
+
+.aionui-steps .arco-steps-item-finish .arco-steps-item-icon .arco-steps-icon {
+  line-height: 28px !important;
+}
+
+/* AionUi Modal wrapper styles */
+.aionui-modal .arco-modal-content {
+  background: var(--dialog-fill-0) !important;
+  border: 1px solid var(--border-base) !important;
+  border-radius: var(--radius-card) !important;
+  box-shadow: var(--shadow-popover);
+}
+
+/* standard 变体：清除 Arco content 默认内边距，让三段（标题/内容/按钮）铺满到弹窗边框，
+   分隔线得以贯穿全宽，三段背景统一、无“盒子”割裂感。
+   注意：内边距清零后不能在此处 overflow:hidden —— Select/下拉等 popup 会挂在
+   .arco-modal-content 下（在内层 wrapper 之外），一旦这里裁剪就会遮住下拉。
+   圆角裁剪改到内层 .aionui-modal-wrapper 上（见下），popup 作为其兄弟节点不受影响。 */
+.aionui-modal-standard .arco-modal-content {
+  padding: 0 !important;
+}
+
+/* 圆角裁剪落在内层 wrapper：只裁三段（标题/内容/按钮），让它们的直角贴合弹窗圆角；
+   下拉 popup 挂在 wrapper 之外，因此不会被裁掉、能正常浮出弹窗。
+   同时给内层 wrapper 设视口上限并裁掉溢出：内容过多时，标题区/按钮区固定，
+   中间内容区（flex-1 + overflow-y:auto）自动缩短并滚动，整窗不会超出屏幕。
+   弹窗自身不设固定高度时按内容自适应，因此短内容不会留白、长内容会滚动。 */
+.aionui-modal-standard .aionui-modal-wrapper {
+  overflow: hidden !important;
+  border-radius: var(--radius-card) !important;
+  max-height: calc(100vh - 64px);
+}
+
+/* 三段只保留一条分隔线：标题区仅下边线、按钮区仅上边线，其余边框一律清零，
+   避免外部样式给这些容器叠加多余边框而形成“盒子”。 */
+.aionui-modal-standard .aionui-modal-wrapper > * {
+  border: 0 !important;
+}
+.aionui-modal-standard .aionui-modal-std-header {
+  border-bottom: 1px solid var(--bg-3) !important;
+}
+.aionui-modal-standard .aionui-modal-std-footer {
+  border-top: 1px solid var(--bg-3) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-content {
+  background-color: var(--dialog-fill-0) !important;
+  border: 1px solid var(--border-base) !important;
+}
+
+body[arco-theme='dark'] .arco-modal {
+  background-color: var(--dialog-fill-0) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-header {
+  background-color: var(--dialog-fill-0) !important;
+  border-bottom-color: var(--border-base) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-body,
+body[arco-theme='dark'] .arco-modal-footer {
+  background-color: var(--dialog-fill-0) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-footer {
+  border-top-color: var(--border-base) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-title {
+  color: var(--text-primary) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-body,
+body[arco-theme='dark'] .arco-modal-confirm-title,
+body[arco-theme='dark'] .arco-modal-confirm-content {
+  color: var(--text-primary) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-close-icon {
+  color: var(--text-secondary) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-close-icon:hover {
+  color: var(--text-primary) !important;
+  background-color: var(--color-fill-1) !important;
+}
+
+body[arco-theme='dark'] .arco-modal-confirm-icon {
+  color: var(--warning) !important;
+}
+
+/* Modal form controls need visible idle outlines so fields don't disappear into the dialog surface. */
+.arco-modal
+  .arco-input:not(.arco-input-disabled):not(.arco-input-error):not(.arco-input-warning):not(.arco-input-focus):not(
+    :focus
+  ),
+.arco-modal
+  .arco-input-inner-wrapper:not(.arco-input-inner-wrapper-disabled):not(.arco-input-inner-wrapper-error):not(
+    .arco-input-inner-wrapper-warning
+  ):not(.arco-input-inner-wrapper-focus),
+.arco-modal
+  .arco-textarea:not(.arco-textarea-disabled):not(.arco-textarea-error):not(.arco-textarea-warning):not(
+    .arco-textarea-focus
+  ):not(:focus),
+.arco-modal
+  .arco-select:not(.arco-select-disabled):not(.arco-select-error):not(.arco-select-warning):not(.arco-select-focused)
+  .arco-select-view,
+.arco-modal
+  .arco-cascader:not(.arco-cascader-disabled):not(.arco-cascader-error):not(.arco-cascader-warning):not(
+    .arco-cascader-focused
+  )
+  .arco-cascader-view,
+.arco-modal
+  .arco-tree-select:not(.arco-tree-select-disabled):not(.arco-tree-select-error):not(.arco-tree-select-warning):not(
+    .arco-tree-select-focused
+  )
+  .arco-tree-select-view,
+.arco-modal
+  .arco-picker:not(.arco-picker-disabled):not(.arco-picker-error):not(.arco-picker-warning):not(.arco-picker-focused) {
+  border-color: var(--border-base) !important;
+}
+
+.arco-modal
+  .arco-input:not(.arco-input-disabled):not(.arco-input-error):not(.arco-input-warning):not(.arco-input-focus):hover,
+.arco-modal
+  .arco-input-inner-wrapper:not(.arco-input-inner-wrapper-disabled):not(.arco-input-inner-wrapper-error):not(
+    .arco-input-inner-wrapper-warning
+  ):not(.arco-input-inner-wrapper-focus):hover,
+.arco-modal
+  .arco-textarea:not(.arco-textarea-disabled):not(.arco-textarea-error):not(.arco-textarea-warning):not(
+    .arco-textarea-focus
+  ):hover,
+.arco-modal
+  .arco-select:not(.arco-select-disabled):not(.arco-select-error):not(.arco-select-warning):not(
+    .arco-select-focused
+  ):hover
+  .arco-select-view,
+.arco-modal
+  .arco-cascader:not(.arco-cascader-disabled):not(.arco-cascader-error):not(.arco-cascader-warning):not(
+    .arco-cascader-focused
+  ):hover
+  .arco-cascader-view,
+.arco-modal
+  .arco-tree-select:not(.arco-tree-select-disabled):not(.arco-tree-select-error):not(.arco-tree-select-warning):not(
+    .arco-tree-select-focused
+  ):hover
+  .arco-tree-select-view,
+.arco-modal
+  .arco-picker:not(.arco-picker-disabled):not(.arco-picker-error):not(.arco-picker-warning):not(
+    .arco-picker-focused
+  ):hover {
+  border-color: var(--bg-4) !important;
+}
+
+.aionui-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+}
+
+.aionui-modal-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.aionui-modal-close-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  transition: background-color 0.2s;
+  cursor: pointer;
+  border: 1px solid var(--button-default-border);
+  background: var(--button-default-bg);
+  color: var(--button-icon);
+  padding: 0;
+}
+
+.aionui-modal-close-btn:hover {
+  border-color: var(--button-primary-bg);
+}
+
+.aionui-modal-close-btn .i-icon {
+  width: var(--button-icon-slot);
+  height: var(--button-icon-slot);
+}
+
+.aionui-modal-close-btn svg {
+  width: var(--button-icon-size);
+  height: var(--button-icon-size);
+}
+
+/* Arco Message custom styles */
+.arco-message {
+  color: var(--text-primary);
+  border: 1px solid var(--border-base) !important;
+  border-radius: var(--radius-card) !important;
+  background: var(--surface-elevated) !important;
+  box-shadow: var(--shadow-popover);
+}
+
+/* Workspace tree: full-row hover & selection backgrounds (VSCode-style).
+   Paint the whole node row, not the narrower title block. */
+.workspace-tree .arco-tree-node {
+  transition: background-color 0.12s ease;
+}
+
+/* 对齐基准线（与 ExplorerContainer.tsx / SearchPanel.tsx 保持一致）：
+   节点行外框从 12px 起，行内首个元素（展开箭头）从 20px 起。
+   arco 把所有层级的节点都渲染成 .arco-tree 的直接子元素，靠行内的缩进块表示层级，
+   所以这 8px 对每一层是同一个常量偏移，不会随深度累加。
+
+   Alignment baseline (kept in sync with ExplorerContainer.tsx / SearchPanel.tsx):
+   the node row's outer box starts at 12px and its first inner element (the expand
+   arrow) at 20px. arco renders nodes at every depth as direct children of .arco-tree
+   and expresses nesting with in-row indent blocks, so these 8px are a single constant
+   offset per level rather than something that accumulates with depth. */
+.workspace-tree .arco-tree-node {
+  padding-inline-start: 8px;
+}
+
+.workspace-tree .arco-tree-node:hover {
+  background-color: var(--color-fill-2);
+}
+
+.workspace-tree .arco-tree-node-selected,
+.workspace-tree .arco-tree-node-selected:hover {
+  background-color: var(--color-fill-3);
+}
+
+/* Clear Arco's title-level backgrounds (incl. its hover rule) so the full-row
+   highlight isn't doubled by a darker inner box. */
+.workspace-tree .arco-tree-node-title,
+.workspace-tree .arco-tree-node:hover .arco-tree-node-title,
+.workspace-tree .arco-tree-node-selected .arco-tree-node-title {
+  background-color: transparent !important;
+}
+
+/* Selected text keeps the normal color — the row background is the indicator. */
+.workspace-tree .arco-tree-node-selected .arco-tree-node-title {
+  color: var(--color-text-1);
+}
+
+/* Alert styles - content is now displayed below the Alert card, so these rules are no longer needed */
+/* Alert 样式 - 内容现在显示在 Alert 卡片下方，因此不再需要这些规则 */
+
+/* Settings modal mobile tabs styles */
+/* 设置弹窗移动端 Tabs 样式 */
+.settings-mobile-tabs {
+  .arco-tabs-nav {
+    border-bottom: 1px solid var(--color-border-2);
+  }
+
+  .arco-tabs-nav-tab {
+    font-size: 14px;
+    padding: 8px 0;
+    margin: 0 12px;
+    color: var(--color-text-2);
+  }
+
+  .arco-tabs-nav-tab:first-child {
+    margin-inline-start: 0;
+  }
+
+  .arco-tabs-nav-tab-active {
+    color: var(--color-text-1);
+    font-weight: 500;
+  }
+
+  .arco-tabs-nav-ink {
+    height: 2px;
+    background: var(--color-primary);
+  }
+}
+
+/* WebUI / Channels tabs in Remote settings */
+.settings-remote-tabs {
+  .arco-tabs-nav {
+    border-bottom: 1px solid var(--color-border-2);
+  }
+
+  .arco-tabs-nav-tab {
+    color: var(--color-text-2);
+    padding: 8px 0;
+  }
+
+  .arco-tabs-nav-tab:hover {
+    color: var(--color-text-1);
+  }
+
+  .arco-tabs-nav-tab-active {
+    color: var(--color-text-1);
+    font-weight: 600;
+  }
+
+  .arco-tabs-nav-ink {
+    height: 2px;
+    background: var(--color-primary);
+  }
+}
+
+/* Guid (homepage) mobile: cap model / permission pills so long values
+ * truncate instead of pushing the `+` and send buttons off-screen.
+ * Driven by LayoutContext.isMobile (data-mobile attribute) so it fires
+ * even when CSS media queries don't — Electron windows can report widths
+ * wider than 768px while still being shaped like mobile. Lives here in
+ * the global stylesheet because the homepage doesn't import sendbox.css. */
+[data-mobile='true'] .agent-mode-compact-pill,
+[data-mobile='true'] [data-testid='guid-model-selector'],
+[data-mobile='true'] [data-testid='mode-selector'] {
+  max-width: 130px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+[data-mobile='true'] .agent-mode-compact-pill .arco-btn-content {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Inside the guid model selector, only the label text shrinks/truncates;
+ * the leading brain icon and trailing down chevron stay at their natural
+ * size so the dropdown affordance never disappears. The button's direct
+ * child is a flex span containing [icon, label, chevron]. */
+[data-mobile='true'] [data-testid='guid-model-selector'] > span {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+[data-mobile='true'] [data-testid='guid-model-selector'] > span > span:nth-child(2) {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+/* Tighten the gap between model and mode pills on mobile by trimming
+ * each pill's horizontal padding — Arco's round buttons default to
+ * ~12px each side, leaving a visible ~24px chasm even with gap:0. */
+[data-mobile='true'] [data-testid='guid-model-selector'].arco-btn-shape-round,
+[data-mobile='true'] [data-testid='mode-selector'] .arco-btn-shape-round {
+  padding-inline-start: 4px !important;
+  padding-inline-end: 4px !important;
+}
+
+/* Searchable dropdown lists (RuntimeSelectorModelList, DropdownSearchList) own
+ * their own scroll container (`.dropdown-search-scroll`), with the search box
+ * fixed above it outside the scroll area. Any Arco popup that hosts such a list
+ * — top-level dropdown OR a flyout submenu, grouped or flat — must therefore
+ * NOT scroll or cap its own height, or there'd be a second scrollbar and the
+ * search box would scroll away. Keyed off `:has(.dropdown-search-scroll)` so it
+ * applies wherever the list is, and never touches other menus. */
+.arco-dropdown-menu:has(.dropdown-search-scroll) {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Explorer file-tree right-click menu: show every item, no height cap / scroll.
+   Arco caps .arco-dropdown-menu at 200px (overflow:auto), so a 6+ item menu
+   (add-to-chat / reveal / copy rel / copy abs / rename / delete) grows a
+   scrollbar. This menu has few, fixed items and the user wants them all
+   visible. Scoped by the `explorer-context-menu` class on <Menu> so other
+   200px-capped dropdowns keep their scroll. Higher specificity than the base
+   rule, so no !important is needed. */
+.arco-dropdown-menu.explorer-context-menu {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Divider between the menu's action sections (add-to-chat | locate/copy |
+   create/rename/delete). A plain <div role='separator'> emitted by ExplorerPanel
+   between two non-empty sections; theme-aware border token so it adapts to dark
+   mode. Vertical margin gives the sections breathing room without item padding. */
+.arco-dropdown-menu.explorer-context-menu .explorer-context-menu-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background-color: var(--color-border-2);
+}
+
+/* Provider group titles pin to the top of the inner scroll container. It has no
+ * top padding, so top:0 hugs the edge with no gap for items to peek through.
+ * Only relevant for the grouped (aionrs) list; harmless for flat lists. */
+.dropdown-search-scroll .arco-dropdown-menu-group-title {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-top: 0;
+  padding-top: 6px;
+  padding-bottom: 2px;
+  background-color: var(--color-bg-popup);
+}
+
+/* Keep Arco surfaces in the same palette as the workbench and user themes. */
+:root,
+body,
+body[arco-theme='dark'] {
+  --color-text-1: var(--text-primary);
+  --color-text-2: var(--text-secondary);
+  --color-text-3: var(--text-muted);
+  --color-text-4: var(--text-disabled);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--surface-card);
+  --color-bg-3: var(--surface-elevated);
+  --color-bg-4: var(--surface-elevated);
+  --color-bg-5: var(--surface-elevated);
+  --color-bg-popup: var(--surface-elevated);
+  --color-border: var(--border-base);
+  --color-border-1: var(--border-light);
+  --color-border-2: var(--border-base);
+  --color-border-3: var(--border-special);
+  --color-fill-1: var(--bg-1);
+  --color-fill-2: var(--bg-hover);
+  --color-fill-3: var(--bg-active);
+  --color-fill-4: var(--bg-3);
+  --color-secondary: var(--surface-card);
+  --color-secondary-hover: var(--bg-hover);
+  --color-secondary-active: var(--bg-active);
+  --color-primary: var(--primary);
+  --color-primary-6: var(--primary);
+  --color-primary-hover: var(--brand-hover);
+  --color-primary-light-1: var(--brand-light);
+  --color-primary-light-2: var(--bg-active);
+}
+
+/* Shared button geometry and visual families. Action buttons retain their events;
+   only primary actions and real selected options use the filled family. */
+:where(html body) .arco-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--button-gap) !important;
+  min-height: 36px;
+  height: var(--button-height);
+  padding-inline: 16px;
+  border: 1px solid var(--button-default-border);
+  border-radius: var(--radius-control) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 22px;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+/* The fallback stays weaker than component layout/selection classes. Arco's
+   built-in visual types need explicit overrides, excluding persistent selection
+   states so a local active navigation rule can own its filled appearance. */
+:where(html body) .arco-btn:where(:not(.arco-btn-primary)),
+:where(html body)
+  .arco-btn:is(.arco-btn-secondary, .arco-btn-text, .arco-btn-outline, .arco-btn-dashed):where(
+    :not([aria-current='page'], [aria-selected='true'], [aria-pressed='true'])
+  ),
+:where(html body)
+  .arco-btn:is(
+    .arco-btn-secondary,
+    .arco-btn-text,
+    .arco-btn-outline,
+    .arco-btn-dashed
+  )[class*='arco-btn-status-']:where(:not([aria-current='page'], [aria-selected='true'], [aria-pressed='true'])),
+:where(html body)
+  .arco-btn:is(.arco-btn-secondary, .arco-btn-text, .arco-btn-outline, .arco-btn-dashed):not(.arco-btn-disabled):not(
+    .arco-btn-loading
+  ):is(:hover, :active):where(:not([aria-current='page'], [aria-selected='true'], [aria-pressed='true'])),
+:where(html body)
+  .arco-btn:is(.arco-btn-secondary, .arco-btn-text, .arco-btn-outline, .arco-btn-dashed)[class*='arco-btn-status-']:not(
+    .arco-btn-disabled
+  ):not(.arco-btn-loading):is(:hover, :active):where(
+    :not([aria-current='page'], [aria-selected='true'], [aria-pressed='true'])
+  ) {
+  color: var(--button-default-text);
+  background: var(--button-default-bg);
+  border-color: var(--button-default-border);
+}
+
+:where(html) body .arco-btn.arco-btn-primary[class],
+:where(html) body .arco-btn.arco-btn-primary[class]:not(.arco-btn-loading):hover,
+:where(html) body .arco-btn.arco-btn-primary[class]:not(.arco-btn-loading):active {
+  color: var(--button-primary-text);
+  background: var(--button-primary-bg);
+  border-color: var(--button-primary-bg);
+}
+
+:where(html body) .arco-btn:where(:not(.arco-btn-disabled):not(.arco-btn-loading)):hover {
+  border-color: color-mix(in srgb, var(--button-primary-bg) 35%, var(--button-default-border));
+}
+
+:where(html) body .arco-btn.arco-btn-primary[class]:not(.arco-btn-disabled):not(.arco-btn-loading):hover {
+  background: color-mix(in srgb, var(--button-primary-bg) 94%, var(--button-primary-text));
+  border-color: var(--button-primary-bg);
+}
+
+:where(html body) .arco-btn:where(:not(.arco-btn-disabled):not(.arco-btn-loading)):active {
+  box-shadow: inset 0 1px 3px color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+
+:where(html) body .arco-btn.arco-btn-disabled {
+  opacity: 0.42;
+}
+
+:where(html) body .arco-btn.arco-btn-icon-only,
+:where(html) body .arco-btn.arco-btn-shape-circle {
+  width: var(--button-height);
+  padding-inline: 0;
+}
+
+:where(html body) .arco-btn :where(.i-icon) {
+  width: var(--button-icon-slot);
+  height: var(--button-icon-slot);
+  flex: none;
+  color: var(--button-icon);
+}
+
+:where(html) body .arco-btn-primary .i-icon {
+  color: var(--button-primary-text);
+}
+
+:where(html) body .arco-btn .i-icon svg,
+:where(html) body .arco-btn > .arco-icon {
+  width: var(--button-icon-size) !important;
+  height: var(--button-icon-size) !important;
+}
+
+:where(html) body .arco-btn > svg + span,
+:where(html) body .arco-btn > span + svg,
+:where(html) body .arco-btn-two-chinese-chars > *:not(svg) {
+  margin-inline: 0 !important;
+  letter-spacing: normal !important;
+}
+
+:where(html) body .arco-btn > .arco-btn-content,
+:where(html) body .arco-btn > span:has(> .i-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--button-gap) !important;
+}
+
+:where(html body) .arco-btn:not(.arco-btn-disabled):focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+:where(html body)
+  :is(
+    .arco-input,
+    .arco-input-inner-wrapper,
+    .arco-textarea,
+    .arco-select-view,
+    .arco-picker,
+    .arco-cascader-view,
+    .arco-tree-select-view
+  ) {
+  border-radius: var(--radius-control);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+/* Exclude stateful controls, including views nested inside an Arco state wrapper. */
+:where(html body)
+  :is(
+    .arco-input,
+    .arco-input-inner-wrapper,
+    .arco-textarea,
+    .arco-select-view,
+    .arco-picker,
+    .arco-cascader-view,
+    .arco-tree-select-view
+  ):not(
+    :where(
+      [class*='-disabled'],
+      [class*='-disabled'] *,
+      [class*='-error'],
+      [class*='-error'] *,
+      [class*='-warning'],
+      [class*='-warning'] *
+    )
+  ) {
+  color: var(--text-primary);
+  background-color: var(--surface-card);
+  border-color: var(--border-base);
+}
+
+:where(html body)
+  :is(.arco-input, .arco-input-inner-wrapper, .arco-textarea, .arco-select-view):hover:not(
+    :where(
+      [class*='-disabled'],
+      [class*='-disabled'] *,
+      [class*='-error'],
+      [class*='-error'] *,
+      [class*='-warning'],
+      [class*='-warning'] *
+    )
+  ) {
+  border-color: var(--border-special);
+}
+
+:where(html body)
+  :is(
+    .arco-input:focus,
+    .arco-input-inner-wrapper-focus,
+    .arco-textarea:focus,
+    .arco-textarea-focus,
+    .arco-select-focused .arco-select-view
+  ):not(
+    :where(
+      [class*='-disabled'],
+      [class*='-disabled'] *,
+      [class*='-error'],
+      [class*='-error'] *,
+      [class*='-warning'],
+      [class*='-warning'] *
+    )
+  ) {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+:where(html body) .arco-input-inner-wrapper .arco-input {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:where(html body) .arco-input::placeholder,
+:where(html body) .arco-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+:where(html body) .arco-dropdown-menu,
+:where(html body) .arco-select-popup,
+:where(html body) .arco-trigger-popup .arco-menu,
+:where(html body) .arco-picker-container {
+  background: var(--surface-elevated);
+  border-color: var(--border-base);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-popover);
+}
+
+:where(html body) .arco-dropdown-menu-item,
+:where(html body) .arco-select-option {
+  border-radius: 8px;
+}
+
+:where(html body) .arco-tag {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+:where(html body) .arco-card {
+  color: var(--text-primary);
+  background: var(--surface-card);
+  border-color: var(--border-base);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+:where(html body) .arco-card-header {
+  border-bottom-color: var(--border-light);
+}
+
+:where(html body) .arco-modal-title,
+:where(html body) .arco-form-label-item {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+:where(html) body .arco-tabs-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--button-gap);
+  min-height: 38px;
+  margin: 0 8px 0 0;
+  padding: 7px 16px;
+  border: 1px solid var(--button-default-border);
+  border-radius: var(--radius-control);
+  background: var(--button-default-bg);
+  color: var(--button-default-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+:where(html) body .arco-tabs-header-title-active,
+:where(html) body .arco-tabs-header-title-active:hover {
+  color: var(--button-primary-text);
+  background: var(--button-primary-bg);
+  border-color: var(--button-primary-bg);
+}
+
+:where(html) body .arco-tabs-header-title .i-icon {
+  width: var(--button-icon-slot);
+  height: var(--button-icon-slot);
+  flex: none;
+  color: var(--button-icon);
+}
+
+:where(html) body .arco-tabs-header-title .i-icon svg {
+  width: var(--button-icon-size);
+  height: var(--button-icon-size);
+}
+
+:where(html) body .arco-tabs-header-title-active .i-icon {
+  color: var(--button-primary-text);
+}
+
+:where(html) body .arco-radio-group-type-button {
+  display: inline-flex;
+  gap: var(--button-gap);
+  padding: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+}
+
+:where(html) body .arco-radio-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--button-height);
+  margin: 0;
+  border: 1px solid var(--button-default-border);
+  border-radius: var(--radius-control);
+  color: var(--button-default-text);
+  background: var(--button-default-bg);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+:where(html) body .arco-radio-button::before,
+:where(html) body .arco-radio-button::after {
+  display: none;
+}
+
+:where(html) body .arco-radio-button.arco-radio-checked[class],
+:where(html) body .arco-radio-button.arco-radio-checked[class]:hover {
+  color: var(--button-primary-text);
+  background: var(--button-primary-bg);
+  border-color: var(--button-primary-bg);
+}
+
+:where(html) body .arco-radio-button.arco-radio-disabled {
+  opacity: 0.42;
+}
+
+:where(html body) .arco-tabs-header-ink {
+  display: none;
+}

@@ -1,0 +1,204 @@
+/* Base styles - theme-independent */
+
+:root {
+  --app-min-width: 360px;
+  --titlebar-height: 36px;
+  /* Internal presentation aliases inherit the user's theme colors. */
+  --surface-card: var(--bg-base);
+  --surface-elevated: var(--dialog-fill-0);
+  --text-muted: var(--bg-6);
+  --button-primary-text: var(--text-white);
+  --button-primary-bg: var(--primary);
+  --button-default-bg: var(--surface-card);
+  --button-default-text: var(--text-primary);
+  --button-default-border: var(--border-base);
+  --button-icon: var(--text-muted);
+  --button-height: 38px;
+  --button-icon-size: 16px;
+  --button-icon-slot: 22px;
+  --button-gap: 8px;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+  --radius-control: 12px;
+  --radius-card: 18px;
+}
+
+.app-shell {
+  min-height: 0;
+  color: var(--text-primary);
+}
+
+html,
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--primary) 18%, var(--bg-base));
+}
+
+html,
+body,
+#root,
+.layout,
+.layout-content {
+  min-width: var(--app-min-width); /* prevent layout collapse on very small screens */
+}
+
+/*
+ * icon-park 图标修正：其外层 `span.i-icon` 默认为 inline，SVG 按文字基线排布、
+ * 底部留基线间隙，导致图标视觉整体偏上（尤其在 flex 容器里与文字/其它元素并排时）。
+ * 统一改为居中的 inline-flex，让图标真正垂直居中，不再上飘。全局一处修，治本。
+ */
+.i-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.loading {
+  animation: loading 1s linear infinite;
+}
+
+.bg-animate {
+  animation: bg-animate 1s alternate infinite;
+}
+
+/* Mobile base: prevent text size adjustment */
+@media (max-width: 767px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+@keyframes bg-animate {
+  0% {
+    background-color: var(--bg-2);
+  }
+  100% {
+    background-color: var(--bg-3);
+  }
+}
+
+@keyframes team-tab-breathe {
+  0%,
+  100% {
+    opacity: 1;
+    background-color: transparent;
+    box-shadow: none;
+  }
+  50% {
+    opacity: 0.85;
+    background-color: color-mix(in srgb, var(--primary) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+}
+
+@keyframes loading {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 团队 warmup 进度条：无确定进度时来回扫动 */
+@keyframes team-warmup-sweep {
+  0% {
+    width: 20%;
+    margin-inline-start: 0;
+  }
+  50% {
+    width: 60%;
+    margin-inline-start: 40%;
+  }
+  100% {
+    width: 20%;
+    margin-inline-start: 0;
+  }
+}
+
+.team-warmup-sweep {
+  animation: team-warmup-sweep 1.4s ease-in-out infinite;
+}
+
+/* 团队 warmup 头像「唤醒中」：pending 成员轻柔呼吸 */
+@keyframes team-warmup-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.team-warmup-breathe {
+  animation: team-warmup-breathe 1.6s ease-in-out infinite;
+}
+
+.collapsed {
+  .collapsed-hidden {
+    display: none;
+  }
+  .\!collapsed-hidden {
+    display: none !important;
+  }
+}
+
+/* Safe area utilities for mobile devices */
+/* iOS 17+ Chrome, Safari need env() in CSS, not inline styles */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-muted) 55%, transparent);
+}
+
+/* Hide scrollbar while keeping scroll behavior */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 30%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .team-warmup-breathe,
+  .team-warmup-sweep,
+  .bg-animate {
+    animation: none;
+  }
+}

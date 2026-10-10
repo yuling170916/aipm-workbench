@@ -1,0 +1,226 @@
+/* GPU-friendly: transform applies to the + SVG only (see Sider.tsx), not the padded row or icon frame */
+
+.newChatTrigger {
+  position: relative;
+}
+
+.newChatIcon {
+  transform: translateZ(0);
+  transition: transform 0.14s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.newChatTrigger:hover .newChatIcon {
+  transform: scale(0.92) translateZ(0);
+}
+
+.newChatTrigger:active .newChatIcon {
+  transform: scale(0.84) translateZ(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .newChatIcon {
+    transition: none;
+  }
+
+  .newChatTrigger:hover .newChatIcon,
+  .newChatTrigger:active .newChatIcon {
+    transform: translateZ(0);
+  }
+}
+
+/* Overlay-style scroll area: scrollbar takes zero layout width so icons in the
+   fixed top nav and the scrollable list stay on the same vertical center line.
+   Mimics macOS native overlay scrollbars. */
+.scrollArea {
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollArea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Pinned sidebar row — reserve a dedicated 28px slot on the right for the
+   pushpin indicator so it never overlaps the row title. When the row is
+   hovered, the three-dot menu takes over that slot and the text reclaims
+   the gap (18px), matching non-pinned rows. */
+.pinnedTextSlot {
+  padding-inline-end: 28px;
+}
+
+:global(.group):hover .pinnedTextSlot {
+  padding-inline-end: 18px;
+}
+
+.navEntry,
+.navEntry:global(.arco-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  background: var(--bg-base);
+  color: var(--sidebar-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  text-align: start;
+  text-decoration: none;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.navEntry:hover,
+.navEntry:global(.arco-btn):hover {
+  color: var(--sidebar-text);
+  background: var(--bg-base);
+  border-color: var(--button-primary-bg, var(--primary));
+}
+
+.navEntry:focus-visible {
+  outline: 2px solid var(--button-primary-bg, var(--primary));
+  outline-offset: 2px;
+}
+
+.navEntry:global(.arco-btn) :global(.arco-btn-icon),
+.navEntry:global(.arco-btn) :global(.i-icon),
+.navIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  color: var(--sidebar-muted);
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.navIcon svg,
+.navEntry:global(.arco-btn) :global(.arco-btn-icon svg),
+.navEntry:global(.arco-btn) :global(.i-icon svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.navLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 22px;
+  color: inherit;
+}
+
+.activeNav,
+.activeNav:hover,
+.activeNav:active,
+.activeNav:global(.arco-btn),
+.navEntry.activeNav:global(.arco-btn:not(.arco-btn-disabled)):hover,
+.navEntry.activeNav:global(.arco-btn:not(.arco-btn-disabled)):active {
+  color: var(--button-primary-text);
+  background: var(--button-primary-bg, var(--primary));
+  border-color: var(--button-primary-bg, var(--primary));
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.activeNav .navIcon,
+.activeNav:global(.arco-btn) :global(.arco-btn-icon),
+.activeNav:global(.arco-btn) :global(.i-icon),
+.activeNav :global(.text-t-primary),
+.activeNav :global(.text-t-secondary),
+.activeNav :global(svg) {
+  color: inherit;
+}
+
+.activeNav :global(svg [stroke]) {
+  stroke: currentColor;
+}
+
+.collapsedNav {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.iconButton:global(.arco-btn) {
+  width: 40px;
+  flex: 0 0 40px;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.navigationList,
+.settingsNavigation {
+  gap: 6px;
+}
+
+.settingsGroup {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  min-height: 28px;
+  padding-inline: 10px;
+  margin-top: 16px;
+  color: var(--sidebar-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  user-select: none;
+}
+
+.petIcon {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+:global(.layout-sider [data-testid='team-section-toggle']) {
+  height: 36px;
+  min-height: 36px;
+}
+
+:global(.layout-sider [data-testid='team-create-btn']) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  margin-inline-end: 0;
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  background: var(--bg-base);
+  color: var(--sidebar-muted);
+}
+
+:global(.layout-sider [data-testid='team-create-btn']:hover) {
+  background: var(--bg-base);
+  border-color: var(--button-primary-bg, var(--primary));
+  color: var(--sidebar-muted);
+}
+
+:global(.layout-sider [data-testid='team-create-btn'] svg) {
+  width: 16px;
+  height: 16px;
+}
+
+:global(.layout-sider [data-testid='team-create-btn'] .i-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}

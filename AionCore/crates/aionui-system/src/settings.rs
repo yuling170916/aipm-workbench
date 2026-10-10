@@ -1,0 +1,282 @@
+use std::sync::Arc;
+
+use aionui_api_types::{SystemSettingsResponse, UpdateSettingsRequest};
+use aionui_db::ISettingsRepository;
+
+use crate::error::SystemError;
+
+/// Supported BCP 47 language codes.
+const SUPPORTED_LANGUAGES: &[&str] = &[
+    "en-US", "zh-CN", "zh-TW", "ja-JP", "ko-KR", "fr-FR", "de-DE", "es-ES", "pt-BR", "ru-RU", "ar-SA", "it-IT",
+    "nl-NL", "pl-PL", "tr-TR", "vi-VN", "th-TH", "id-ID",
+];
+
+/// Business logic for system settings (language, notifications, etc.).
+#[derive(Clone)]
+pub struct SettingsService {
+    repo: Arc<dyn ISettingsRepository>,
+}
+
+impl SettingsService {
+    pub fn new(repo: Arc<dyn ISettingsRepository>) -> Self {
+        Self { repo }
+    }
+
+    /// Get current system settings, falling back to defaults if not yet persisted.
+    pub async fn get_settings(&self, user_id: &str) -> Result<SystemSettingsResponse, SystemError> {
+        let row = self
+            .repo
+            .get_settings(user_id)
+            .await
+            .map_err(|e| SystemError::Internal(format!("Failed to get settings: {e}")))?;
+
+        Ok(
+            row.map_or_else(SystemSettingsResponse::default, |s| SystemSettingsResponse {
+                language: s.language,
+                notification_enabled: s.notification_enabled,
+                cron_notification_enabled: s.cron_notification_enabled,
+                command_queue_enabled: s.command_queue_enabled,
+                save_upload_to_workspace: s.save_upload_to_workspace,
+                cross_session_message_enabled: s.cross_session_message_enabled,
+            }),
+        )
+    }
+
+    /// Partially update system settings. Only fields present in the request are changed.
+    pub async fn update_settings(
+        &self,
+        user_id: &str,
+        req: UpdateSettingsRequest,
+    ) -> Result<SystemSettingsResponse, SystemError> {
+        if let Some(ref lang) = req.language {
+            validate_language(lang)?;
+        }
+
+        // Merge with current settings (or defaults)
+        let current = self.get_settings(user_id).await?;
+
+        let language = req.language.unwrap_or(current.language);
+        let notification_enabled = req.notification_enabled.unwrap_or(current.notification_enabled);
+        let cron_notification_enabled = req
+            .cron_notification_enabled
+            .unwrap_or(current.cron_notification_enabled);
+        let command_queue_enabled = req.command_queue_enabled.unwrap_or(current.command_queue_enabled);
+        let save_upload_to_workspace = req.save_upload_to_workspace.unwrap_or(current.save_upload_to_workspace);
+        let cross_session_message_enabled = req
+            .cross_session_message_enabled
+            .unwrap_or(current.cross_session_message_enabled);
+
+        let row = self
+            .repo
+            .upsert_settings(
+                user_id,
+                &language,
+                notification_enabled,
+                cron_notification_enabled,
+                command_queue_enabled,
+                save_upload_to_workspace,
+                cross_session_message_enabled,
+            )
+            .await
+            .map_err(|e| SystemError::Internal(format!("Failed to update settings: {e}")))?;
+
+        Ok(SystemSettingsResponse {
+            language: row.language,
+            notification_enabled: row.notification_enabled,
+            cron_notification_enabled: row.cron_notification_enabled,
+            command_queue_enabled: row.command_queue_enabled,
+            save_upload_to_workspace: row.save_upload_to_workspace,
+            cross_session_message_enabled: row.cross_session_message_enabled,
+        })
+    }
+}
+
+fn validate_language(lang: &str) -> Result<(), SystemError> {
+    if SUPPORTED_LANGUAGES.contains(&lang) {
+        Ok(())
+    } else {
+        Err(SystemError::BadRequest(format!("Unsupported language code: '{lang}'")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_USER_ID: &str = "user-1";
+    use aionui_db::{SqliteSettingsRepository, init_database_memory};
+
+    async fn setup() -> SettingsService {
+        let db = init_database_memory().await.unwrap();
+        sqlx::query(
+            "INSERT INTO users (id, user_type, username, password_hash, status, session_generation, created_at, updated_at) \
+             VALUES (?, 'local', ?, '', 'active', 0, 1, 1)",
+        )
+        .bind(TEST_USER_ID)
+        .bind(TEST_USER_ID)
+        .execute(db.pool())
+        .await
+        .unwrap();
+        let repo = Arc::new(SqliteSettingsRepository::new(db.pool().clone()));
+        // Leak the db handle so the pool stays alive for the test
+        std::mem::forget(db);
+        SettingsService::new(repo)
+    }
+
+    #[test]
+    fn validate_language_accepts_supported() {
+        assert!(validate_language("en-US").is_ok());
+        assert!(validate_language("zh-CN").is_ok());
+        assert!(validate_language("ja-JP").is_ok());
+    }
+
+    #[test]
+    fn validate_language_rejects_unsupported() {
+        assert!(validate_language("invalid").is_err());
+        assert!(validate_language("").is_err());
+        assert!(validate_language("xx-YY").is_err());
+    }
+
+    #[tokio::test]
+    async fn get_settings_returns_defaults_when_empty() {
+        let svc = setup().await;
+        let settings = svc.get_settings(TEST_USER_ID).await.unwrap();
+        assert_eq!(settings, SystemSettingsResponse::default());
+    }
+
+    #[tokio::test]
+    async fn update_single_field() {
+        let svc = setup().await;
+        let req = UpdateSettingsRequest {
+            language: Some("zh-CN".into()),
+            ..Default::default()
+        };
+        let result = svc.update_settings(TEST_USER_ID, req).await.unwrap();
+        assert_eq!(result.language, "zh-CN");
+        // Other fields stay at defaults
+        assert!(result.notification_enabled);
+        assert!(!result.cron_notification_enabled);
+    }
+
+    #[tokio::test]
+    async fn update_multiple_fields() {
+        let svc = setup().await;
+        let req = UpdateSettingsRequest {
+            notification_enabled: Some(false),
+            command_queue_enabled: Some(true),
+            ..Default::default()
+        };
+        let result = svc.update_settings(TEST_USER_ID, req).await.unwrap();
+        assert!(!result.notification_enabled);
+        assert!(result.command_queue_enabled);
+        assert_eq!(result.language, "en-US");
+    }
+
+    #[tokio::test]
+    async fn update_empty_request_returns_current() {
+        let svc = setup().await;
+        let result = svc
+            .update_settings(TEST_USER_ID, UpdateSettingsRequest::default())
+            .await
+            .unwrap();
+        assert_eq!(result, SystemSettingsResponse::default());
+    }
+
+    #[tokio::test]
+    async fn update_invalid_language_rejected() {
+        let svc = setup().await;
+        let req = UpdateSettingsRequest {
+            language: Some("invalid-lang".into()),
+            ..Default::default()
+        };
+        let err = svc.update_settings(TEST_USER_ID, req).await.unwrap_err();
+        assert!(matches!(err, SystemError::BadRequest(_)));
+    }
+
+    #[tokio::test]
+    async fn update_then_get_reflects_changes() {
+        let svc = setup().await;
+        svc.update_settings(
+            TEST_USER_ID,
+            UpdateSettingsRequest {
+                language: Some("ja-JP".into()),
+                save_upload_to_workspace: Some(true),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        let settings = svc.get_settings(TEST_USER_ID).await.unwrap();
+        assert_eq!(settings.language, "ja-JP");
+        assert!(settings.save_upload_to_workspace);
+    }
+
+    // ── Cross-session messaging master switch (spec §6.9.2) ─────────
+
+    #[tokio::test]
+    async fn cross_session_messaging_defaults_to_enabled() {
+        // Positive wording, default on (spec §5.7). A user who never touched
+        // the setting must have the feature available.
+        let svc = setup().await;
+        let settings = svc.get_settings(TEST_USER_ID).await.unwrap();
+        assert!(settings.cross_session_message_enabled);
+    }
+
+    #[tokio::test]
+    async fn cross_session_messaging_can_be_turned_off_and_survives_a_reread() {
+        // The panic button must not quietly come back — spec §11 requires the
+        // state to persist. A re-read through a fresh get is the persistence
+        // assertion at this layer.
+        let svc = setup().await;
+        svc.update_settings(
+            TEST_USER_ID,
+            UpdateSettingsRequest {
+                cross_session_message_enabled: Some(false),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        let settings = svc.get_settings(TEST_USER_ID).await.unwrap();
+        assert!(!settings.cross_session_message_enabled);
+    }
+
+    #[tokio::test]
+    async fn updating_an_unrelated_setting_does_not_reset_the_cross_session_toggle() {
+        let svc = setup().await;
+        svc.update_settings(
+            TEST_USER_ID,
+            UpdateSettingsRequest {
+                cross_session_message_enabled: Some(false),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+        svc.update_settings(
+            TEST_USER_ID,
+            UpdateSettingsRequest {
+                language: Some("zh-CN".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+        let settings = svc.get_settings(TEST_USER_ID).await.unwrap();
+        assert!(!settings.cross_session_message_enabled, "merge must preserve it");
+    }
+
+    #[tokio::test]
+    async fn turning_the_cross_session_toggle_off_is_not_an_empty_update() {
+        // `is_empty()` short-circuits no-op PATCHes, so forgetting the new
+        // field there would make the panic button silently do nothing.
+        let request = UpdateSettingsRequest {
+            cross_session_message_enabled: Some(false),
+            ..Default::default()
+        };
+        assert!(!request.is_empty());
+    }
+}

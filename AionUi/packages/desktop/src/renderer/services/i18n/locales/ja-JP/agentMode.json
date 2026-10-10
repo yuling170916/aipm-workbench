@@ -1,0 +1,22 @@
+{
+  "plan": "プランモード",
+  "default": "デフォルト",
+  "acceptEdits": "編集を自動承認",
+  "autoEdit": "自動編集",
+  "auto_edit": "自動編集",
+  "read-only": "読み取り専用",
+  "full-access": "フルアクセス",
+  "yolo": "全自動",
+  "yoloNoSandbox": "全自動（サンドボックスなし）",
+  "auto": "自動",
+  "dontAsk": "事前承認のみ",
+  "bypass": "チェックをバイパス",
+  "bypassPermissions": "全自動",
+  "smart": "スマート",
+  "build": "ビルドモード",
+  "permission": "権限",
+  "switchMode": "権限モード",
+  "switchSuccess": "モードを切り替えました",
+  "switchPendingNextTurn": "次のターンから有効になります",
+  "switchFailed": "モードの切り替えに失敗しました"
+}

@@ -1,0 +1,401 @@
+use aionui_api_types::AgentMetadata;
+
+pub(crate) const CODEX_CANONICAL_FULL_ACCESS_MODE: &str = "agent-full-access";
+pub(crate) const CODEX_LEGACY_FULL_ACCESS_MODE: &str = "full-access";
+
+pub(crate) fn normalize_requested_mode(metadata: &AgentMetadata, mode: &str) -> String {
+    let trimmed = mode.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    if is_codex(metadata) && is_codex_full_access_semantic_value(trimmed) {
+        return metadata
+            .yolo_id
+            .clone()
+            .unwrap_or_else(|| CODEX_CANONICAL_FULL_ACCESS_MODE.to_owned());
+    }
+
+    // AionUi persists the legacy aliases `yolo` / `yoloNoSandbox` while
+    // ACP backends expect their native mode id (e.g. `full-access` for
+    // Codex). Resolution is data-driven: the mapping lives on each
+    // catalog row's top-level `yolo_id` column. Backends without a
+    // `yolo_id` have no equivalent, so the alias passes through
+    // unchanged and `session/set_mode` gets the caller's original
+    // value.
+    if matches!(trimmed, "yolo" | "yoloNoSandbox")
+        && let Some(native) = metadata.yolo_id.as_deref()
+    {
+        return native.to_owned();
+    }
+
+    // Codex has legacy `default`/`autoEdit` aliases that map to its
+    // native `auto` mode. Keep the mapping data-driven by keying on the
+    // vendor backend label rather than re-introducing an AcpBackend
+    // enum variant.
+    if is_codex(metadata) && matches!(trimmed, "default" | "autoEdit") {
+        return "auto".to_owned();
+    }
+
+    trimmed.to_owned()
+}
+
+pub(crate) fn normalize_requested_mode_for_available_values<'a>(
+    metadata: &AgentMetadata,
+    mode: &str,
+    available_values: impl IntoIterator<Item = &'a str>,
+) -> String {
+    let trimmed = mode.trim();
+    if is_codex(metadata) && is_codex_full_access_semantic_value(trimmed) {
+        let mut has_canonical = false;
+        let mut has_legacy = false;
+        for value in available_values {
+            match value {
+                CODEX_CANONICAL_FULL_ACCESS_MODE => has_canonical = true,
+                CODEX_LEGACY_FULL_ACCESS_MODE => has_legacy = true,
+                _ => {}
+            }
+        }
+        if has_canonical {
+            return CODEX_CANONICAL_FULL_ACCESS_MODE.to_owned();
+        }
+        if has_legacy {
+            return CODEX_LEGACY_FULL_ACCESS_MODE.to_owned();
+        }
+    }
+
+    normalize_requested_mode(metadata, mode)
+}
+
+/// Outcome of resolving a cron full-auto request against a backend's live
+/// mode catalog. `Apply` carries the backend-native YOLO id to set; `Skip`
+/// carries the resolved id that was NOT selectable (look-before-leap: skip
+/// the override and keep the session's already-resolved mode).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum RequiredFullAutoMode {
+    Apply(String),
+    Skip { resolved: String },
+}
+
+/// a-pure: a cron `required_runtime_mode` is ALWAYS a full-auto request
+/// (ELECTRON-3RQ). Ignore the incoming literal entirely; resolve "yolo" to
+/// the backend-native YOLO id (reusing the codex live-catalog alignment
+/// already in `normalize_requested_mode_for_available_values`), then
+/// look-before-leap: only `Apply` when the resolved id is actually in the
+/// advertised catalog, else `Skip`.
+pub(crate) fn resolve_required_full_auto_mode<'a>(
+    metadata: &AgentMetadata,
+    available_values: impl IntoIterator<Item = &'a str>,
+) -> RequiredFullAutoMode {
+    let values: Vec<String> = available_values.into_iter().map(ToOwned::to_owned).collect();
+    let resolved = normalize_requested_mode_for_available_values(metadata, "yolo", values.iter().map(String::as_str));
+    if values.iter().any(|v| v == &resolved) {
+        RequiredFullAutoMode::Apply(resolved)
+    } else {
+        RequiredFullAutoMode::Skip { resolved }
+    }
+}
+
+fn is_codex(metadata: &AgentMetadata) -> bool {
+    matches!(metadata.backend.as_deref(), Some("codex"))
+}
+
+fn is_codex_full_access_semantic_value(mode: &str) -> bool {
+    matches!(
+        mode,
+        CODEX_CANONICAL_FULL_ACCESS_MODE | CODEX_LEGACY_FULL_ACCESS_MODE | "yolo" | "yoloNoSandbox"
+    )
+}
+
+/// Whether the agent resumes a session by calling `session/new` again
+/// with a vendor-specific `_meta.<vendor>.options.resume` field, instead
+/// of the generic ACP `session/load` method.
+///
+/// Returns the bool on `metadata.behavior_policy` verbatim — the
+/// catalog row is the single source of truth. No backend-name
+/// sniffing, no handshake blob inspection.
+pub(super) fn agent_metadata_uses_meta_resume(metadata: &AgentMetadata) -> bool {
+    metadata.behavior_policy.session_load_via_meta_field
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aionui_api_types::AgentHandshake;
+    use aionui_common::AgentType;
+
+    fn metadata_with_yolo_id(yolo_id: Option<&str>) -> AgentMetadata {
+        use aionui_api_types::{AgentSource, AgentSourceInfo, BehaviorPolicy};
+        AgentMetadata {
+            id: "test".into(),
+            icon: None,
+            name: "Test".into(),
+            name_i18n: None,
+            description: None,
+            description_i18n: None,
+            backend: None,
+            agent_type: AgentType::Acp,
+            agent_source: AgentSource::Builtin,
+            agent_source_info: AgentSourceInfo::default(),
+            enabled: true,
+            available: true,
+            command: None,
+            resolved_command: None,
+            args: vec![],
+            env: vec![],
+            native_skills_dirs: None,
+            skill_delivery: None,
+            behavior_policy: BehaviorPolicy::default(),
+            yolo_id: yolo_id.map(ToOwned::to_owned),
+            sort_order: 3130,
+            team_capable: false,
+            last_check_status: None,
+            last_check_kind: None,
+            last_check_error_code: None,
+            last_check_error_message: None,
+            last_check_error_details: None,
+            last_check_guidance: None,
+            last_check_latency_ms: None,
+            last_check_at: None,
+            last_success_at: None,
+            last_failure_at: None,
+            handshake: AgentHandshake::default(),
+            has_command_override: false,
+            env_override_key_count: 0,
+        }
+    }
+
+    #[test]
+    fn normalize_requested_mode_rewrites_yolo_when_behavior_policy_maps_it() {
+        let meta = metadata_with_yolo_id(Some("full-access"));
+        assert_eq!(normalize_requested_mode(&meta, "yolo"), "full-access");
+        assert_eq!(normalize_requested_mode(&meta, "yoloNoSandbox"), "full-access");
+    }
+
+    #[test]
+    fn normalize_requested_mode_rewrites_codex_full_access_alias_to_metadata_yolo_id() {
+        let mut meta = metadata_with_yolo_id(Some("agent-full-access"));
+        meta.backend = Some("codex".into());
+
+        assert_eq!(normalize_requested_mode(&meta, "full-access"), "agent-full-access");
+        assert_eq!(
+            normalize_requested_mode(&meta, "agent-full-access"),
+            "agent-full-access"
+        );
+        assert_eq!(normalize_requested_mode(&meta, "yolo"), "agent-full-access");
+        assert_eq!(normalize_requested_mode(&meta, "yoloNoSandbox"), "agent-full-access");
+
+        meta.yolo_id = None;
+        assert_eq!(normalize_requested_mode(&meta, "full-access"), "agent-full-access");
+    }
+
+    #[test]
+    fn normalize_requested_mode_for_available_values_prefers_agent_full_access() {
+        let mut meta = metadata_with_yolo_id(Some("full-access"));
+        meta.backend = Some("codex".into());
+
+        assert_eq!(
+            normalize_requested_mode_for_available_values(
+                &meta,
+                "full-access",
+                ["full-access", "agent-full-access"].into_iter()
+            ),
+            "agent-full-access"
+        );
+    }
+
+    #[test]
+    fn normalize_requested_mode_for_available_values_falls_back_to_legacy_full_access() {
+        let mut meta = metadata_with_yolo_id(Some("agent-full-access"));
+        meta.backend = Some("codex".into());
+
+        assert_eq!(
+            normalize_requested_mode_for_available_values(&meta, "agent-full-access", ["full-access"].into_iter()),
+            "full-access"
+        );
+    }
+
+    #[test]
+    fn normalize_requested_mode_for_available_values_leaves_unselectable_value_for_local_error() {
+        let mut meta = metadata_with_yolo_id(Some("agent-full-access"));
+        meta.backend = Some("codex".into());
+
+        assert_eq!(
+            normalize_requested_mode_for_available_values(&meta, "full-access", ["auto", "read-only"].into_iter()),
+            "agent-full-access"
+        );
+    }
+
+    #[test]
+    fn normalize_requested_mode_for_available_values_does_not_rewrite_non_codex_full_access() {
+        let meta = metadata_with_yolo_id(Some("bypassPermissions"));
+
+        assert_eq!(
+            normalize_requested_mode_for_available_values(
+                &meta,
+                "full-access",
+                ["agent-full-access", "full-access"].into_iter()
+            ),
+            "full-access"
+        );
+    }
+
+    #[test]
+    fn normalize_requested_mode_passes_through_when_no_yolo_id() {
+        let meta = metadata_with_yolo_id(None);
+        // No mapping configured — aliases flow through unchanged.
+        assert_eq!(normalize_requested_mode(&meta, "yolo"), "yolo");
+        assert_eq!(normalize_requested_mode(&meta, "yoloNoSandbox"), "yoloNoSandbox");
+    }
+
+    #[test]
+    fn normalize_requested_mode_passes_through_non_yolo_modes() {
+        let meta = metadata_with_yolo_id(Some("full-access"));
+        assert_eq!(normalize_requested_mode(&meta, "default"), "default");
+        assert_eq!(normalize_requested_mode(&meta, "read-only"), "read-only");
+        assert_eq!(
+            normalize_requested_mode(&meta, "bypassPermissions"),
+            "bypassPermissions"
+        );
+    }
+
+    /// Vendor-specific yolo rewrites are entirely data-driven by
+    /// `metadata.yolo_id`. Rebuild fixtures with the seed values
+    /// `006_agent_metadata.sql` would hydrate, then assert both yolo
+    /// aliases hit the native mode id for each vendor.
+    #[test]
+    fn normalize_requested_mode_rewrites_yolo_for_builtin_vendors() {
+        // Claude / Codebuddy → bypassPermissions.
+        let claude_like = metadata_with_yolo_id(Some("bypassPermissions"));
+        assert_eq!(normalize_requested_mode(&claude_like, "yolo"), "bypassPermissions");
+        assert_eq!(
+            normalize_requested_mode(&claude_like, "yoloNoSandbox"),
+            "bypassPermissions"
+        );
+        // Opencode → build.
+        let opencode_like = metadata_with_yolo_id(Some("build"));
+        assert_eq!(normalize_requested_mode(&opencode_like, "yolo"), "build");
+        // Cursor → agent.
+        let cursor_like = metadata_with_yolo_id(Some("agent"));
+        assert_eq!(normalize_requested_mode(&cursor_like, "yolo"), "agent");
+        // When a row has no yolo_id the alias flows through unchanged.
+        let gemini_like = metadata_with_yolo_id(None);
+        assert_eq!(normalize_requested_mode(&gemini_like, "yolo"), "yolo");
+    }
+
+    /// Codex's legacy `default` / `autoEdit` aliases should rewrite to
+    /// its native `auto` mode when the row's backend label is "codex".
+    /// Other backends must leave `default` / `autoEdit` untouched.
+    #[test]
+    fn normalize_requested_mode_rewrites_codex_default_and_auto_edit() {
+        let mut codex_meta = metadata_with_yolo_id(Some("agent-full-access"));
+        codex_meta.backend = Some("codex".into());
+        assert_eq!(normalize_requested_mode(&codex_meta, "default"), "auto");
+        assert_eq!(normalize_requested_mode(&codex_meta, "autoEdit"), "auto");
+
+        let other = metadata_with_yolo_id(None);
+        assert_eq!(normalize_requested_mode(&other, "default"), "default");
+        assert_eq!(normalize_requested_mode(&other, "autoEdit"), "autoEdit");
+    }
+
+    #[test]
+    fn uses_meta_resume_true_when_policy_flag_set() {
+        use aionui_api_types::BehaviorPolicy;
+        let mut meta = metadata_with_yolo_id(None);
+        meta.backend = Some("claude".into());
+        meta.behavior_policy = BehaviorPolicy {
+            session_load_via_meta_field: true,
+            ..BehaviorPolicy::default()
+        };
+        assert!(agent_metadata_uses_meta_resume(&meta));
+    }
+
+    #[test]
+    fn uses_meta_resume_false_when_policy_flag_unset_even_for_claude_backend() {
+        // Hardening test: previously hardcoded `backend == "claude"`. Now
+        // the policy is the sole source of truth — a catalog row with
+        // backend=claude but no session_load_via_meta_field must return false.
+        let mut meta = metadata_with_yolo_id(None);
+        meta.backend = Some("claude".into());
+        assert!(!agent_metadata_uses_meta_resume(&meta));
+    }
+
+    #[test]
+    fn uses_meta_resume_false_for_default_metadata() {
+        let meta = metadata_with_yolo_id(None);
+        assert!(!agent_metadata_uses_meta_resume(&meta));
+    }
+
+    #[test]
+    fn normalize_requested_mode_trims_and_returns_empty_for_blank() {
+        let meta = metadata_with_yolo_id(Some("full-access"));
+        assert_eq!(normalize_requested_mode(&meta, "   "), "");
+    }
+
+    // ── ELECTRON-3RQ: resolve_required_full_auto_mode (a-pure) ──────────
+    // All available-values are synthetic; no assertion depends on a real CLI.
+
+    /// Kimi (`yolo_id=NULL`, non-codex) resolves the full-auto request to the
+    /// generic `yolo` id and, when the catalog advertises it, applies it.
+    /// The function never receives the persisted literal — it always resolves
+    /// from "yolo", so a fossilised `bypassPermissions` cannot reach it.
+    #[test]
+    fn resolve_full_auto_kimi_applies_yolo_when_advertised() {
+        let meta = metadata_with_yolo_id(None);
+        assert_eq!(
+            resolve_required_full_auto_mode(&meta, ["yolo", "default", "read-only"]),
+            RequiredFullAutoMode::Apply("yolo".into())
+        );
+    }
+
+    /// Bad path: the resolved native YOLO is not in the live catalog →
+    /// look-before-leap `Skip` carrying the exact resolved id (specific
+    /// behaviour, not merely "not Apply").
+    #[test]
+    fn resolve_full_auto_skips_when_resolved_not_in_catalog() {
+        let meta = metadata_with_yolo_id(None);
+        assert_eq!(
+            resolve_required_full_auto_mode(&meta, ["default", "read-only"]),
+            RequiredFullAutoMode::Skip {
+                resolved: "yolo".into()
+            }
+        );
+    }
+
+    /// Regression (ELECTRON-3Q0): codex full-access alignment still holds when
+    /// resolving the full-auto request against a live catalog.
+    #[test]
+    fn resolve_full_auto_codex_aligns_to_live_catalog() {
+        let mut meta = metadata_with_yolo_id(Some("agent-full-access"));
+        meta.backend = Some("codex".into());
+
+        // Canonical id present → keep canonical.
+        assert_eq!(
+            resolve_required_full_auto_mode(&meta, ["agent-full-access", "read-only"]),
+            RequiredFullAutoMode::Apply("agent-full-access".into())
+        );
+        // Only the legacy token present → downgrade to legacy.
+        assert_eq!(
+            resolve_required_full_auto_mode(&meta, ["full-access", "read-only"]),
+            RequiredFullAutoMode::Apply("full-access".into())
+        );
+        // No full-access tier at all → resolved canonical id is unselectable → skip.
+        assert_eq!(
+            resolve_required_full_auto_mode(&meta, ["auto", "read-only"]),
+            RequiredFullAutoMode::Skip {
+                resolved: "agent-full-access".into()
+            }
+        );
+    }
+
+    /// Claude resolves the full-auto request to its native `bypassPermissions`
+    /// and applies it when advertised.
+    #[test]
+    fn resolve_full_auto_claude_applies_bypass_permissions() {
+        let meta = metadata_with_yolo_id(Some("bypassPermissions"));
+        assert_eq!(
+            resolve_required_full_auto_mode(&meta, ["bypassPermissions", "default"]),
+            RequiredFullAutoMode::Apply("bypassPermissions".into())
+        );
+    }
+}

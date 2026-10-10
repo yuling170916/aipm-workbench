@@ -1,0 +1,205 @@
+pub mod acp_assembler;
+
+mod acp;
+mod acp_launch_policy;
+pub(crate) mod aionrs;
+mod antigravity;
+mod context;
+
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use aionui_db::{IMcpServerRepository, IProviderRepository};
+use aionui_realtime::EventBroadcaster;
+use futures_util::FutureExt;
+
+use crate::agent_task::AgentInstance;
+use crate::capability::skill_manager::AcpSkillManager;
+use crate::error::AgentError;
+use crate::factory::context::FactoryContext;
+use crate::persistence::AcpSessionSyncService;
+use crate::registry::AgentRegistry;
+use crate::session_context::AgentSessionKind;
+use crate::task_manager::AgentFactory;
+use crate::types::BuildTaskOptions;
+
+/// Dependencies needed by the agent factory to construct agents.
+pub struct AgentFactoryDeps {
+    pub skill_manager: Arc<AcpSkillManager>,
+    pub provider_repo: Arc<dyn IProviderRepository>,
+    pub encryption_key: [u8; 32],
+    pub agent_registry: Arc<AgentRegistry>,
+    pub acp_agent_service: Arc<AcpSessionSyncService>,
+    pub data_dir: PathBuf,
+    pub dump_prompts: bool,
+    pub broadcaster: Arc<dyn EventBroadcaster>,
+    /// Absolute path to the backend binary, reused as the `command` of the
+    /// stdio MCP bridge injected into ACP `session/new` for team sessions.
+    /// Captured once at app startup (`std::env::current_exe()`).
+    pub backend_binary_path: Arc<PathBuf>,
+    /// User-configured MCP servers repository. Used by ACP factory to
+    /// inject enabled servers into `session/new` (ELECTRON-1JG fix).
+    /// `None` for tests/composition paths that do not need MCP injection.
+    pub mcp_server_repo: Option<Arc<dyn IMcpServerRepository>>,
+    /// Subprocess spawner for the clean-slate session model. claude/codex always
+    /// run through `SessionAgentTask` (direct-CLI) instead of the ACP manager, so
+    /// the spawner is unconditionally wired — there is no fallback to the ACP path.
+    pub session_spawner: Arc<dyn aionui_process::Spawner>,
+    /// Base URL the Antigravity permission hook calls back on (e.g.
+    /// `http://127.0.0.1:25808`). agy cannot prompt for permission in headless
+    /// mode, so AionUi registers its own binary as a PreToolUse hook and
+    /// answers each request itself — the hook process needs this address to
+    /// reach us. `None` disables the bridge, which means agy runs with its gate
+    /// open and NO per-call approval; only acceptable in tests.
+    pub antigravity_hook_base_url: Option<String>,
+    /// Per-conversation tokens authenticating the permission hook's callback.
+    /// Shared with the HTTP endpoint that answers those callbacks.
+    pub antigravity_hook_tokens: Arc<crate::antigravity_hook::HookTokenRegistry>,
+}
+
+/// Build a production agent factory that dispatches to concrete agent types.
+///
+/// [`AgentFactory`] is async: the returned `BoxFuture` is driven by
+/// [`crate::task_manager::IWorkerTaskManager::get_or_build_task`] on whatever
+/// runtime is currently polling it. This lets us spawn CLI processes and
+/// await ACP handshakes directly, without the scoped-thread + `block_on`
+/// bridge the old sync-factory version needed.
+pub fn build_agent_factory(deps: AgentFactoryDeps) -> AgentFactory {
+    let deps = Arc::new(deps);
+
+    Arc::new(move |options: BuildTaskOptions| {
+        let deps = deps.clone();
+        async move { build_agent(deps, options).await }.boxed()
+    })
+}
+
+/// This conversation's skill delivery, resolved once per session build.
+///
+/// `pub` because it travels through the `pub` `SessionBuildInputs`. `Default` is
+/// the "deliver nothing" shape, which is what a test that does not exercise skill
+/// delivery wants.
+#[derive(Default)]
+pub struct ResolvedSkillDelivery {
+    /// Already-substituted launch args / protocol root for this vendor.
+    pub plan: crate::skill_delivery_plan::SkillDeliveryPlan,
+    /// The conversation's skills as real source directories. Carried into
+    /// `SessionInit` for backends that need name+path without touching the
+    /// workspace.
+    pub skill_dirs: Vec<aionui_session::SkillDirSpec>,
+    /// The composed `[Assistant Rules]` block for an `injected`-mode vendor.
+    ///
+    /// Populated only by factory branches whose backend has NO prompt pipeline of
+    /// its own — agy and aionrs. The ACP lane leaves this `None` because its
+    /// `SessionNewPreludeHook` composes the same block at prompt time (through
+    /// the same function, so the wording cannot diverge); computing it here too
+    /// would be dead work.
+    pub injected_prefix: Option<String>,
+}
+
+/// Resolve the per-vendor delivery for one session build.
+///
+/// Shared by every factory branch so the decision is made in ONE place: which
+/// mode applies, which paths get substituted, and what gets logged. Splitting it
+/// per branch is how the old `native_skills_dirs` logic drifted between the
+/// create path and the build path.
+pub(crate) async fn resolve_skill_delivery(
+    deps: &AgentFactoryDeps,
+    user_id: &str,
+    conversation_id: &str,
+    skills: &[String],
+    metadata: &aionui_api_types::AgentMetadata,
+) -> ResolvedSkillDelivery {
+    let skill_dirs = deps.skill_manager.resolve_skill_dirs_for_user(user_id, skills).await;
+
+    // A rejected id yields no view path. `plan_skill_delivery` then contributes
+    // no plugin flag rather than a half-substituted one.
+    let view_dir = aionui_extension::skill_view::view_dir(&deps.data_dir, user_id, conversation_id)
+        .ok()
+        .map(|path| path.to_string_lossy().into_owned());
+    let view_skills_dir = aionui_extension::skill_view::view_skills_dir(&deps.data_dir, user_id, conversation_id)
+        .ok()
+        .map(|path| path.to_string_lossy().into_owned());
+
+    let plan = crate::skill_delivery_plan::plan_skill_delivery(crate::skill_delivery_plan::SkillDeliveryPlanInput {
+        delivery: metadata.skill_delivery.clone(),
+        view_dir,
+        view_skills_dir,
+        skill_dirs: skill_dirs.clone(),
+    });
+
+    for placeholder in &plan.unknown_placeholders {
+        tracing::warn!(
+            conversation_id,
+            backend = metadata.backend.as_deref().unwrap_or("unknown"),
+            placeholder = %placeholder,
+            "skill_delivery: unrecognized placeholder kept verbatim in the spawn args"
+        );
+    }
+    // `info`, not `debug`: this is the anchor for "why did this vendor not pick
+    // up native skills" in a production log at default level.
+    tracing::info!(
+        conversation_id,
+        backend = metadata.backend.as_deref().unwrap_or("unknown"),
+        mode = ?plan.mode,
+        skills = skill_dirs.len(),
+        // Count only -- a full path list would put user directory names in logs.
+        delivery_args = plan.extra_args.len(),
+        protocol_root = plan.protocol_skills_root.is_some(),
+        "skill_delivery: resolved delivery plan for session"
+    );
+
+    ResolvedSkillDelivery {
+        plan,
+        skill_dirs,
+        injected_prefix: None,
+    }
+}
+
+/// Compose the `[Assistant Rules]` block for a backend with no prompt pipeline.
+///
+/// Only agy and aionrs need this: index injection has always lived in the ACP
+/// prompt pipeline, and those two backends never run it — which is why, before
+/// this existed, an `injected`-mode agy or aionrs session received no skills
+/// index at all and (for agy) not even its preset context.
+pub(crate) async fn compose_injected_prefix_for(
+    deps: &AgentFactoryDeps,
+    user_id: &str,
+    preset_context: Option<&str>,
+    skills: &[String],
+    mode: &aionui_api_types::SkillDeliveryMode,
+) -> Option<String> {
+    crate::capability::first_message_injector::compose_injected_prefix(
+        &deps.skill_manager,
+        crate::capability::first_message_injector::InjectionConfig {
+            user_id,
+            preset_context,
+            skills,
+            delivery_mode: mode.clone(),
+        },
+    )
+    .await
+}
+
+async fn build_agent(deps: Arc<AgentFactoryDeps>, options: BuildTaskOptions) -> Result<AgentInstance, AgentError> {
+    let context = options.context;
+    let ctx = FactoryContext::resolve(&context).await?;
+    let model = context.model.clone();
+    match context.kind {
+        AgentSessionKind::Acp(acp_context) => acp::build(deps, *acp_context, ctx).await,
+        AgentSessionKind::Aionrs(aionrs_context) => aionrs::build(deps, *aionrs_context, model, ctx).await,
+        AgentSessionKind::Antigravity(agy_context) => antigravity::build(deps, *agy_context, ctx).await,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn factory_deps_can_be_constructed() {
+        // Verify types compile — actual construction requires DB
+        let _: fn() -> AgentFactoryDeps = || {
+            panic!("compile-time check only");
+        };
+    }
+}

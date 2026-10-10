@@ -1,0 +1,59 @@
+{
+  "health": {
+    "detectedError": "Detected error with current agent ({{agent}})",
+    "autoSwitching": ". System will attempt to switch automatically.",
+    "evaluating": "Evaluating network latency and model availability...",
+    "checking": "Checking {{agent}} endpoint...",
+    "foundBest": "Found best alternative",
+    "recommendSwitch": "Recommended",
+    "available": "Available",
+    "lowLatency": "Low Latency",
+    "mediumLatency": "Medium Latency",
+    "highLatency": "High Latency",
+    "bestMatch": "Best Match",
+    "noAvailable": "No available agents in current environment",
+    "checkConfig": "Please check configuration or try again later"
+  },
+  "setup": {
+    "connectionError": "Connection Error",
+    "notConfigured": "{{agent}} is not configured",
+    "authRequired": "Authentication or API key is required to use this agent.",
+    "findingAlternatives": "Finding available alternatives...",
+    "checkingAgent": "Checking {{agent}}...",
+    "alternativesFound": "{{count}} available alternatives found",
+    "autoSwitching": "Auto-switching to best available agent...",
+    "configError": "Configuration error. Please check your settings or select an alternative:",
+    "noAlternatives": "No available agents found",
+    "configureFirst": "Please configure an agent in Settings first.",
+    "switching": "Switching agent..."
+  },
+  "model": {
+    "switchSuccess": "Model switched successfully",
+    "switchFailed": "Failed to switch model",
+    "searchPlaceholder": "Model ara",
+    "noResults": "Eşleşen model yok"
+  },
+  "config": {
+    "setting": "Ayar uygulanıyor...",
+    "commandAck": "Komut gönderildi, ancak durum doğrulanmadı. Daha sonra yenileyin veya yeniden deneyin.",
+    "timeout": "Ayar doğrulaması zaman aşımına uğradı. Önceki durum gösterilmeye devam ediyor.",
+    "busy": "Başka bir ayar uygulanıyor. Daha sonra tekrar deneyin.",
+    "failed": "Ayar uygulanamadı. Önceki durum gösterilmeye devam ediyor."
+  },
+  "thoughtLevel": {
+    "label": "Düşünme düzeyi",
+    "switchSuccess": "Düşünme düzeyi değiştirildi",
+    "switchFailed": "Düşünme düzeyi değiştirilemedi"
+  },
+  "warmup": {
+    "clickToWake": "Bu üyeyi uyandırmak için tıklayın"
+  },
+  "runtimeRestart": {
+    "tooltip": "Aracıyı yeniden bağla",
+    "confirmContent": "Harici CLI yapılandırma değişikliklerini (kanal değiştirme gibi) alması için aracı sürecini yeniden başlatır. Sohbet geçmişi korunur ve mümkün olduğunda oturum sürdürülür.",
+    "success": "Aracı yeniden bağlandı",
+    "failed": "Aracı yeniden bağlanamadı",
+    "initializingTooltip": "Aracı başlatılıyor. Hazır olduğunda yeniden bağlanın",
+    "processingTooltip": "Yeniden bağlanmadan önce mevcut yanıtın bitmesini bekleyin"
+  }
+}

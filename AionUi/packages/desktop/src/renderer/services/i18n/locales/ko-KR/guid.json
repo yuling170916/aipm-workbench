@@ -1,0 +1,47 @@
+{
+  "promptExamplesHint": "이 지시를 사용해 보세요",
+  "defaultPrompts": {
+    "understand": "이 프로젝트를 파악해서, 무엇을 하는 프로젝트인지 어디서부터 시작하면 되는지 쉽게 설명해 줘",
+    "cleanup": "이 폴더에서 중복되거나 쓸모없는 파일을 찾아 확인할 수 있게 목록으로 보여 줘",
+    "create": "멋진 개인 홈페이지를 만들어서 완성되면 바로 열어서 보여 줘"
+  },
+  "selectAssistantHint": "어시스턴트를 선택하여 작업을 시작하세요",
+  "workspace": {
+    "workInProject": "프로젝트에서 작업",
+    "optional": "선택사항",
+    "clearWorkspace": "지우기",
+    "specifyWorkspace": "프로젝트 폴더 선택",
+    "searchPlaceholder": "프로젝트 검색…",
+    "noProject": "프로젝트 없음"
+  },
+  "home": {
+    "nav": "홈",
+    "workspace": "작업 공간",
+    "eyebrow": "당신의 AI 제품 파트너",
+    "title": "좋은 아이디어를 훌륭한 제품으로.",
+    "description": "요구사항 정리부터 PRD 작성까지, 중요한 의사결정에 더 많은 시간을 쓰세요.",
+    "placeholder": "제품 아이디어를 설명하거나 요구사항 자료를 첨부하세요…",
+    "addMaterials": "자료 추가",
+    "organizeTitle": "요구사항 정리",
+    "organizeDescription": "흩어진 정보를 요구사항 카드로 정리",
+    "prdTitle": "PRD 작성",
+    "prdDescription": "요구사항 카드를 바탕으로 문서 작성",
+    "reviewTitle": "누락 사항 확인",
+    "reviewDescription": "규칙, 경계 상황, 인수 기준 확인",
+    "recentTitle": "최근 프로젝트 이어서 작업",
+    "projectsLoading": "프로젝트를 불러오는 중…",
+    "projectsEmpty": "아직 프로젝트가 없습니다. 새로 만들어 시작하세요.",
+    "projectsError": "프로젝트를 불러오지 못했습니다. 다시 시도해 주세요.",
+    "retry": "새로 고침",
+    "refreshProjects": "프로젝트 새로 고침",
+    "createProject": "새 프로젝트",
+    "updatedAt": "업데이트: {{time}}",
+    "projectWorkspace": "작업 공간: {{path}}",
+    "projectNoActivity": "아직 활동이 없습니다",
+    "prompts": {
+      "organize": "다음 제품 아이디어와 자료를 요구사항 카드로 정리해 주세요. 먼저 부족한 배경 정보를 질문해 주세요. 사용자 문제, 대상 사용자, 사용 시나리오, 범위, 우선순위, 인수 기준을 포함하고 사실과 가정을 명확히 구분해 주세요.\n\n제품 아이디어와 자료: ",
+      "prd": "다음 요구사항을 바탕으로 검토 가능한 PRD를 작성해 주세요. 먼저 누락된 정보를 확인한 뒤 목표, 사용자 흐름, 기능, 상호작용 규칙, 경계 상황, 인수 기준, 미해결 질문을 정리해 주세요. 비즈니스 데이터를 임의로 만들지 마세요.\n\n요구사항: ",
+      "review": "다음 요구사항 또는 PRD에서 규칙, 권한, 경계 상황, 실패 처리 흐름, 인수 기준의 누락을 검토해 주세요. 각 문제의 영향, 권장 해결 방법, 확인할 질문을 함께 나열해 주세요.\n\n요구사항 또는 PRD: "
+    }
+  }
+}

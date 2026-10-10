@@ -1,0 +1,94 @@
+[package]
+name = "aionui-app"
+version.workspace = true
+edition.workspace = true
+exclude = ["data/**"]
+
+[[bin]]
+name = "aioncore"
+path = "src/main.rs"
+
+[features]
+default = ["telegram", "lark", "dingtalk", "weixin", "slack", "discord"]
+telegram = ["aionui-channel/telegram"]
+lark = ["aionui-channel/lark"]
+dingtalk = ["aionui-channel/dingtalk"]
+weixin = ["aionui-channel/weixin"]
+slack = ["aionui-channel/slack"]
+discord = ["aionui-channel/discord"]
+
+[dependencies]
+aionui-common.workspace = true
+aionui-assets.workspace = true
+aionui-db.workspace = true
+aionui-api-types.workspace = true
+aionui-realtime.workspace = true
+aionui-auth.workspace = true
+aionui-system.workspace = true
+aionui-file.workspace = true
+aionui-office.workspace = true
+aionui-shell.workspace = true
+aionui-ai-agent.workspace = true
+aionui-session.workspace = true
+aionui-session-message.workspace = true
+aionui-skill-runtime.workspace = true
+aionui-mcp.workspace = true
+aionui-conversation.workspace = true
+aionui-extension.workspace = true
+aionui-channel.workspace = true
+aionui-team.workspace = true
+aionui-team-prompts.workspace = true
+aionui-cron.workspace = true
+aionui-project.workspace = true
+aionui-requirement.workspace = true
+aionui-sidebar.workspace = true
+aionui-assistant.workspace = true
+aionui-runtime.workspace = true
+aionui-process.workspace = true
+aion-config.workspace = true
+axum.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+dunce.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-subscriber.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+reqwest.workspace = true
+rmcp = { version = "1.5", features = ["server", "transport-io", "schemars"] }
+anyhow.workspace = true
+async-trait.workspace = true
+rpassword.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+] }
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[dev-dependencies]
+aionui-api-types.workspace = true
+aionui-realtime.workspace = true
+# Enable the `AgentInstance::Mock` variant so tests can build fake agents
+# through the trait-object escape hatch without spawning real CLI processes.
+aionui-ai-agent = { workspace = true, features = ["test-support"] }
+base64.workspace = true
+git2.workspace = true
+http-body-util.workspace = true
+rust_xlsxwriter.workspace = true
+sqlx = { workspace = true, features = ["migrate"] }
+tempfile = "3"
+tower = { workspace = true, features = ["util"] }
+tokio-tungstenite.workspace = true
+futures-util.workspace = true
+wiremock = "0.6"

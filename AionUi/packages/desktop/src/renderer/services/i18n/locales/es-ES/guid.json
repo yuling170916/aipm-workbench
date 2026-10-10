@@ -1,0 +1,65 @@
+{
+  "agentFallbackNotice": "{{original}} no está disponible, usando {{fallback}} en su lugar.",
+  "noAgentAvailable": "No hay ningún agente principal disponible. Inicia sesión en Google o instala Claude/Codex CLI. ¿Ir a configuración?",
+  "noAgentAvailableShort": "No hay agente principal disponible. Haz clic para configurar.",
+  "agentTabAutoSwitch": "El modelo no es compatible con Gemini, cambiado automáticamente a {{fallback}}",
+  "autoSwitchToAgent": "Gemini no está configurado, cambiando automáticamente a {{agent}}",
+  "autoSwitchedAgent": "{{from}} no está disponible, cambiado a {{to}}",
+  "promptExamplesHint": "Prueba estos ejemplos:",
+  "selectAssistantHint": "Selecciona un asistente para comenzar una tarea",
+  "agentSwitcherLabel": "Agente",
+  "switchedToAgent": "Cambiado a {{agent}}",
+  "workspace": {
+    "workInProject": "Trabajar en un proyecto",
+    "optional": "Opcional",
+    "clearWorkspace": "Limpiar",
+    "specifyWorkspace": "Seleccionar carpeta del proyecto",
+    "searchPlaceholder": "Buscar proyectos...",
+    "noProject": "Sin proyecto"
+  },
+  "scanning": {
+    "initialMessage": "El agente actual no está disponible, detectando otros agentes disponibles...",
+    "scanningMessage": "Escaneando agentes locales disponibles...",
+    "connectingMessage": "Conexión exitosa, por favor espera...",
+    "establishingConnection": "Estableciendo conexión...",
+    "statusQueued": "En cola",
+    "statusTesting": "Probando latencia...",
+    "statusUnreachable": "Inaccesible",
+    "statusAvailable": "Disponible"
+  },
+  "defaultPrompts": {
+    "understand": "Familiarízate con este proyecto y explícame con palabras sencillas qué hace y por dónde empezar",
+    "cleanup": "Encuentra archivos duplicados e inútiles en esta carpeta y lístalos para que los confirme",
+    "create": "Créame una página personal bonita y ábrela cuando esté lista"
+  },
+  "home": {
+    "nav": "Inicio",
+    "workspace": "Espacio de trabajo",
+    "eyebrow": "Tu aliado de producto con IA",
+    "title": "Convierte buenas ideas en grandes productos.",
+    "description": "De los requisitos al PRD, dedica más tiempo a las decisiones importantes.",
+    "placeholder": "Describe tu idea de producto o adjunta documentos de requisitos…",
+    "addMaterials": "Añadir materiales",
+    "organizeTitle": "Organizar requisitos",
+    "organizeDescription": "Convierte información dispersa en fichas de requisitos",
+    "prdTitle": "Redactar un PRD",
+    "prdDescription": "Crea un documento a partir de las fichas de requisitos",
+    "reviewTitle": "Detectar carencias",
+    "reviewDescription": "Revisa reglas, casos límite y criterios de aceptación",
+    "recentTitle": "Continuar un proyecto reciente",
+    "projectsLoading": "Cargando proyectos…",
+    "projectsEmpty": "Todavía no hay proyectos. Crea uno para empezar.",
+    "projectsError": "No se pudieron cargar los proyectos. Inténtalo de nuevo.",
+    "retry": "Volver a cargar",
+    "refreshProjects": "Actualizar proyectos",
+    "createProject": "Nuevo proyecto",
+    "updatedAt": "Actualizado: {{time}}",
+    "projectWorkspace": "Espacio de trabajo: {{path}}",
+    "projectNoActivity": "Todavía no hay actividad",
+    "prompts": {
+      "organize": "Ayúdame a organizar la siguiente idea de producto y los materiales en fichas de requisitos. Primero, pregunta por el contexto que falte. Incluye el problema del usuario, los usuarios objetivo, los escenarios de uso, el alcance, la prioridad y los criterios de aceptación. Separa claramente los hechos de las suposiciones.\n\nIdea de producto y materiales: ",
+      "prd": "Ayúdame a redactar un PRD listo para revisión a partir de los siguientes requisitos. Primero, aclara la información que falte; después, incluye objetivos, flujos de usuario, funcionalidades, reglas de interacción, casos límite, criterios de aceptación y preguntas pendientes. No inventes datos de negocio.\n\nRequisitos: ",
+      "review": "Revisa los siguientes requisitos o PRD para detectar reglas, permisos, casos límite, flujos de error y criterios de aceptación que falten. Enumera cada problema con su impacto, la solución sugerida y las preguntas que deban aclararse.\n\nRequisitos o PRD: "
+    }
+  }
+}

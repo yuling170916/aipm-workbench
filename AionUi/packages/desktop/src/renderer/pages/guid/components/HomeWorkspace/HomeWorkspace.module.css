@@ -1,0 +1,237 @@
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  width: 100%;
+  min-width: 0;
+  padding-top: 16px;
+  container-type: inline-size;
+}
+.workflows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.workflowCard:global(.arco-btn),
+.projectCard:global(.arco-btn) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 84px;
+  padding: 20px 16px;
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text-1);
+  text-align: start;
+  white-space: normal;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.workflowCard:global(.arco-btn):hover,
+.projectCard:global(.arco-btn):hover {
+  background: var(--surface-card);
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border-base));
+  box-shadow: var(--shadow-popover);
+}
+.workflowCard:global(.arco-btn):focus-visible,
+.projectCard:global(.arco-btn):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.workflowIcon {
+  display: grid;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+.workflowText,
+.projectText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.workflowText strong {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.workflowText > span {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+.arrow {
+  flex: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+.recentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.recentHeader h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.recentHeader :global(.arco-btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+.recentHeader :global(.arco-btn-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  color: var(--text-muted);
+}
+.workflowIcon svg,
+.projectIcon svg,
+.recentHeader :global(.arco-btn-icon svg) {
+  width: 16px;
+  height: 16px;
+}
+.projects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.projectCard:global(.arco-btn) {
+  gap: 8px;
+  min-height: 88px;
+  padding: 20px;
+}
+.projectIcon {
+  display: grid;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+.projectText strong {
+  overflow: hidden;
+  color: var(--color-text-1);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.projectDescription,
+.projectTime {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.projectDescription:empty {
+  display: none;
+}
+.projectTime {
+  font-variant-numeric: tabular-nums;
+}
+.projectState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-height: 90px;
+  padding: 22px;
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.projectState p {
+  margin: 0;
+}
+.emptyIcon {
+  color: var(--primary);
+  font-size: 24px;
+}
+.projectError:global(.arco-alert) {
+  border-radius: var(--radius-card);
+}
+@media (max-width: 1100px) {
+  .workflowCard:global(.arco-btn) {
+    gap: 8px;
+    padding: 20px 16px;
+  }
+  .workflowIcon {
+    flex-basis: 22px;
+    font-size: 16px;
+  }
+  .workflowText strong {
+    font-size: 15px;
+  }
+  .workflowText > span {
+    font-size: 11px;
+  }
+}
+@media (max-width: 767px) {
+  .workspace {
+    gap: 22px;
+    padding-top: 18px;
+  }
+  .workflows,
+  .projects {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .workflowCard:global(.arco-btn),
+  .projectCard:global(.arco-btn) {
+    padding: 18px;
+  }
+  .projectState {
+    padding: 20px 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workflowCard,
+  .projectCard {
+    transition: none !important;
+  }
+}
+
+@container (max-width: 760px) {
+  .workflows,
+  .projects {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "agentFallbackNotice": "{{original}} ist nicht verfügbar, stattdessen wird {{fallback}} verwendet.",
+  "noAgentAvailable": "Kein Hauptagent verfügbar. Bitte bei Google anmelden oder Claude/Codex CLI installieren. Zu den Einstellungen?",
+  "noAgentAvailableShort": "Kein Hauptagent verfügbar. Zum Konfigurieren klicken.",
+  "agentTabAutoSwitch": "Modell nicht kompatibel mit Gemini, automatisch zu {{fallback}} gewechselt",
+  "autoSwitchToAgent": "Gemini ist nicht konfiguriert, automatischer Wechsel zu {{agent}}",
+  "autoSwitchedAgent": "{{from}} ist nicht verfügbar, zu {{to}} gewechselt",
+  "promptExamplesHint": "Diese Anweisungen ausprobieren",
+  "defaultPrompts": {
+    "understand": "Verschaffe dir einen Überblick über dieses Projekt und erkläre mir in einfachen Worten, was es macht und wo ich anfangen sollte",
+    "cleanup": "Finde doppelte und unnötige Dateien in diesem Ordner und liste sie zur Bestätigung auf",
+    "create": "Erstelle mir eine schöne persönliche Homepage und öffne sie, sobald sie fertig ist"
+  },
+  "selectAssistantHint": "Wähle einen Assistenten, um eine Aufgabe zu starten",
+  "agentSwitcherLabel": "Agent",
+  "switchedToAgent": "Zu {{agent}} gewechselt",
+  "workspace": {
+    "workInProject": "In einem Projekt arbeiten",
+    "optional": "Optional",
+    "clearWorkspace": "Löschen",
+    "specifyWorkspace": "Projektordner wählen",
+    "searchPlaceholder": "Projekte suchen…",
+    "noProject": "Kein Projekt"
+  },
+  "scanning": {
+    "initialMessage": "Aktueller Agent nicht verfügbar, andere verfügbare Agenten werden gesucht...",
+    "scanningMessage": "Lokale verfügbare Agenten werden gescannt...",
+    "connectingMessage": "Verbindung erfolgreich, bitte warten...",
+    "establishingConnection": "Verbindung wird hergestellt...",
+    "statusQueued": "In der Warteschlange",
+    "statusTesting": "Latenz wird gemessen...",
+    "statusUnreachable": "Nicht erreichbar",
+    "statusAvailable": "Verfügbar"
+  },
+  "home": {
+    "nav": "Startseite",
+    "workspace": "Arbeitsbereich",
+    "eyebrow": "Ihr KI-Partner für die Produktentwicklung",
+    "title": "Aus guten Ideen werden großartige Produkte.",
+    "description": "Von Anforderungen bis zum PRD: mehr Zeit für die Entscheidungen, die zählen.",
+    "placeholder": "Beschreiben Sie Ihre Produktidee oder fügen Sie Anforderungsunterlagen hinzu…",
+    "addMaterials": "Material hinzufügen",
+    "organizeTitle": "Anforderungen ordnen",
+    "organizeDescription": "Verstreute Informationen in Anforderungskarten bündeln",
+    "prdTitle": "PRD verfassen",
+    "prdDescription": "Ein Dokument aus Anforderungskarten erstellen",
+    "reviewTitle": "Lücken finden",
+    "reviewDescription": "Regeln, Grenzfälle und Abnahmekriterien prüfen",
+    "recentTitle": "Ein kürzlich bearbeitetes Projekt fortsetzen",
+    "projectsLoading": "Projekte werden geladen…",
+    "projectsEmpty": "Noch keine Projekte. Erstellen Sie ein Projekt, um loszulegen.",
+    "projectsError": "Projekte konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "retry": "Neu laden",
+    "refreshProjects": "Projekte aktualisieren",
+    "createProject": "Neues Projekt",
+    "updatedAt": "Aktualisiert: {{time}}",
+    "projectWorkspace": "Arbeitsbereich: {{path}}",
+    "projectNoActivity": "Noch keine Aktivität",
+    "prompts": {
+      "organize": "Hilf mir, die folgende Produktidee und die Materialien in Anforderungskarten zu strukturieren. Frage zuerst nach fehlendem Kontext. Berücksichtige das Nutzerproblem, die Zielgruppe, Nutzungsszenarien, den Umfang, die Priorität und die Abnahmekriterien. Trenne Fakten klar von Annahmen.\n\nProduktidee und Materialien: ",
+      "prd": "Hilf mir, aus den folgenden Anforderungen ein prüfbares PRD zu erstellen. Kläre zuerst fehlende Informationen und beschreibe anschließend Ziele, Nutzerabläufe, Funktionen, Interaktionsregeln, Grenzfälle, Abnahmekriterien und offene Fragen. Erfinde keine Geschäftsdaten.\n\nAnforderungen: ",
+      "review": "Prüfe die folgenden Anforderungen oder das PRD auf fehlende Regeln, Berechtigungen, Grenzfälle, Fehlerabläufe und Abnahmekriterien. Liste jedes Problem mit seinen Auswirkungen, einem Lösungsvorschlag und den zu klärenden Fragen auf.\n\nAnforderungen oder PRD: "
+    }
+  }
+}

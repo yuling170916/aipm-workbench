@@ -1,0 +1,1444 @@
+/**
+ * M4 unit tests for backend-launcher.
+ * All external I/O mocked: node:child_process.spawn, node:net.createServer, fetch.
+ * No real backend is spawned.
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { EventEmitter } from 'node:events';
+import type { ChildProcess } from 'node:child_process';
+import type { Socket } from 'node:net';
+
+// ---- Module-level mocks ----
+vi.mock('node:child_process', () => ({
+  spawn: vi.fn(),
+}));
+
+vi.mock('node:fs', () => ({
+  mkdirSync: vi.fn(),
+  statSync: vi.fn(),
+}));
+
+vi.mock('node:net', () => ({
+  createServer: vi.fn(),
+  connect: vi.fn(),
+}));
+
+vi.mock('./agent-process-registry.js', () => ({
+  cleanupRegisteredAgentProcesses: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { spawn } from 'node:child_process';
+import { mkdirSync, statSync } from 'node:fs';
+import { connect, createServer } from 'node:net';
+import { cleanupRegisteredAgentProcesses } from './agent-process-registry.js';
+import {
+  buildSpawnArgs,
+  buildSpawnEnv,
+  findAvailablePort,
+  BackendLifecycleManager,
+  BackendStartupError,
+} from './backend-launcher.js';
+import type { AppMetadata } from './types.js';
+
+const APP_META: AppMetadata = {
+  version: '1.2.3',
+  isPackaged: false,
+  resourcesPath: '/mock/resources',
+  userDataPath: '/mock/userData',
+};
+
+const APP_META_PACKAGED: AppMetadata = { ...APP_META, isPackaged: true };
+
+function makeFakeServer(port = 54321) {
+  const server = new EventEmitter() as EventEmitter & {
+    listen: (p: number, h: string, cb: () => void) => void;
+    address: () => { port: number };
+    close: (cb?: () => void) => void;
+  };
+  server.listen = (_p, _h, cb) => {
+    setImmediate(cb);
+  };
+  server.address = () => ({ port });
+  server.close = (cb) => {
+    if (cb) setImmediate(cb);
+  };
+  return server;
+}
+
+function makeSyncFakeServer(port = 54321) {
+  const server = makeFakeServer(port);
+  server.listen = (_p, _h, cb) => {
+    cb();
+  };
+  server.close = (cb) => {
+    if (cb) cb();
+  };
+  return server;
+}
+
+function makeFakeChild(): ChildProcess {
+  const child = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
+  child.stdout = new EventEmitter() as ChildProcess['stdout'];
+  child.stderr = new EventEmitter() as ChildProcess['stderr'];
+  (child.stdin as unknown) = { end: vi.fn() };
+  child.kill = vi.fn() as unknown as ChildProcess['kill'];
+  child.pid = 99999;
+  return child as ChildProcess;
+}
+
+function makeFakeTaskkillChild(): ChildProcess {
+  const child = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
+  child.unref = vi.fn() as unknown as ChildProcess['unref'];
+  return child as ChildProcess;
+}
+
+function emitListening(child: ChildProcess, port: number): void {
+  child.stdout?.emit('data', Buffer.from(`AIONCORE_LISTENING {"host":"127.0.0.1","port":${port}}\n`));
+}
+
+function makeFakeSocket(): Socket {
+  const socket = new EventEmitter() as EventEmitter & Partial<Socket>;
+  socket.setTimeout = vi.fn(() => socket as Socket) as unknown as Socket['setTimeout'];
+  socket.destroy = vi.fn() as unknown as Socket['destroy'];
+  socket.end = vi.fn() as unknown as Socket['end'];
+  return socket as Socket;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  // Do NOT call restoreAllMocks; it would remove vi.mock() module factories.
+  vi.useRealTimers();
+});
+
+describe('buildSpawnArgs', () => {
+  it('produces all required flags with logDir and local=true', () => {
+    const args = buildSpawnArgs({
+      port: 12345,
+      dbPath: '/data/path',
+      local: true,
+      logDir: '/log/dir',
+      appVersion: '9.9.9',
+      isPackaged: true,
+    });
+    expect(args).toEqual([
+      '--port',
+      '12345',
+      '--data-dir',
+      '/data/path',
+      '--log-level',
+      'info',
+      '--app-version',
+      '9.9.9',
+      '--managed-resources-mode',
+      'bundled',
+      '--log-dir',
+      '/log/dir',
+      '--local',
+    ]);
+  });
+
+  it('uses debug log level when not packaged', () => {
+    const args = buildSpawnArgs({
+      port: 1,
+      dbPath: '/d',
+      local: false,
+      appVersion: '0.0.1',
+      isPackaged: false,
+    });
+    expect(args).toContain('debug');
+    expect(args).not.toContain('--dump-prompts');
+    expect(args).not.toContain('--managed-resources-mode');
+    expect(args).not.toContain('--log-dir');
+    expect(args).not.toContain('--local');
+  });
+
+  it('passes prompt dump flag in development only when AIONUI_DUMP_PROMPTS is enabled', () => {
+    const prev = process.env.AIONUI_DUMP_PROMPTS;
+    process.env.AIONUI_DUMP_PROMPTS = '1';
+    try {
+      const args = buildSpawnArgs({
+        port: 1,
+        dbPath: '/d',
+        local: false,
+        appVersion: '0.0.1',
+        isPackaged: false,
+      });
+
+      expect(args).toContain('--dump-prompts');
+    } finally {
+      if (prev === undefined) delete process.env.AIONUI_DUMP_PROMPTS;
+      else process.env.AIONUI_DUMP_PROMPTS = prev;
+    }
+  });
+
+  it('passes bundled managed resources mode when packaged', () => {
+    const prev = process.env.AIONUI_DUMP_PROMPTS;
+    process.env.AIONUI_DUMP_PROMPTS = '1';
+    try {
+      const args = buildSpawnArgs({
+        port: 1,
+        dbPath: '/d',
+        local: false,
+        appVersion: '0.0.1',
+        isPackaged: true,
+      });
+
+      expect(args).toContain('--managed-resources-mode');
+      expect(args).toContain('bundled');
+      expect(args).not.toContain('--dump-prompts');
+    } finally {
+      if (prev === undefined) delete process.env.AIONUI_DUMP_PROMPTS;
+      else process.env.AIONUI_DUMP_PROMPTS = prev;
+    }
+  });
+
+  it('passes corrupted database recovery authorization only when requested', () => {
+    const args = buildSpawnArgs({
+      port: 1,
+      dbPath: '/d',
+      local: true,
+      appVersion: '0.0.1',
+      isPackaged: true,
+      recoverCorruptedDatabase: true,
+    });
+
+    expect(args).toContain('--recover-corrupted-database');
+  });
+
+  it('respects AIONUI_LOG_LEVEL override', () => {
+    const prev = process.env.AIONUI_LOG_LEVEL;
+    process.env.AIONUI_LOG_LEVEL = 'trace';
+    try {
+      const args = buildSpawnArgs({
+        port: 1,
+        dbPath: '/d',
+        local: false,
+        appVersion: 'x',
+        isPackaged: true,
+      });
+      expect(args).toContain('trace');
+    } finally {
+      if (prev === undefined) delete process.env.AIONUI_LOG_LEVEL;
+      else process.env.AIONUI_LOG_LEVEL = prev;
+    }
+  });
+});
+
+describe('buildSpawnEnv', () => {
+  it('merges process.env with AIONUI_* dir vars', () => {
+    const env = buildSpawnEnv({
+      cacheDir: '/c',
+      workDir: '/w',
+      logDir: '/l',
+    });
+    expect(env.AIONUI_CACHE_DIR).toBe('/c');
+    expect(env.AIONUI_WORK_DIR).toBe('/w');
+    expect(env.AIONUI_LOG_DIR).toBe('/l');
+    expect(env.PATH).toBe(process.env.PATH); // inherits
+  });
+
+  it('strips PREBUILDS_ONLY so agent CLIs spawned under aioncore can load their build/Release natives (#4070)', () => {
+    const prev = process.env.PREBUILDS_ONLY;
+    process.env.PREBUILDS_ONLY = '1';
+    try {
+      const env = buildSpawnEnv({
+        cacheDir: '/c',
+        workDir: '/w',
+        logDir: '/l',
+      });
+      expect(env).not.toHaveProperty('PREBUILDS_ONLY');
+    } finally {
+      if (prev === undefined) delete process.env.PREBUILDS_ONLY;
+      else process.env.PREBUILDS_ONLY = prev;
+    }
+  });
+
+  it('strips PREBUILDS_ONLY and injects no dir vars when no dir config is provided', () => {
+    const keys = ['PREBUILDS_ONLY', 'AIONUI_CACHE_DIR', 'AIONUI_WORK_DIR', 'AIONUI_LOG_DIR'] as const;
+    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
+    process.env.PREBUILDS_ONLY = '1';
+    // Dir vars may be inherited from a dev shell; clear them so the assertion
+    // below observes injection behavior, not passthrough.
+    delete process.env.AIONUI_CACHE_DIR;
+    delete process.env.AIONUI_WORK_DIR;
+    delete process.env.AIONUI_LOG_DIR;
+    try {
+      const env = buildSpawnEnv();
+      expect(env).not.toHaveProperty('PREBUILDS_ONLY');
+      expect(env).not.toHaveProperty('AIONUI_CACHE_DIR');
+      expect(env).not.toHaveProperty('AIONUI_WORK_DIR');
+      expect(env).not.toHaveProperty('AIONUI_LOG_DIR');
+      expect(env.PATH).toBe(process.env.PATH); // inherits
+    } finally {
+      for (const k of keys) {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      }
+    }
+  });
+});
+
+describe('findAvailablePort', () => {
+  it('resolves with the port reported by the listening server', async () => {
+    vi.mocked(createServer).mockImplementationOnce(
+      () => makeFakeServer(40404) as unknown as ReturnType<typeof createServer>
+    );
+    const port = await findAvailablePort();
+    expect(port).toBe(40404);
+  });
+
+  it('resolves the preferred port when it is available', async () => {
+    const server = makeFakeServer(65303);
+    server.listen = (port, host, cb) => {
+      expect(port).toBe(65303);
+      expect(host).toBe('127.0.0.1');
+      setImmediate(cb);
+    };
+    vi.mocked(createServer).mockImplementationOnce(() => server as unknown as ReturnType<typeof createServer>);
+
+    const port = await findAvailablePort(65303);
+
+    expect(port).toBe(65303);
+  });
+
+  it('skips ports blocked by Fetch so health checks can use the selected port', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    try {
+      vi.mocked(createServer)
+        .mockImplementationOnce(() => makeFakeServer(1720) as unknown as ReturnType<typeof createServer>)
+        .mockImplementationOnce(() => makeFakeServer(40404) as unknown as ReturnType<typeof createServer>);
+
+      const port = await findAvailablePort();
+
+      expect(port).toBe(40404);
+      expect(createServer).toHaveBeenCalledTimes(2);
+      expect(infoSpy).toHaveBeenCalledWith('[aioncore] skipped fetch-blocked backend port 1720');
+      expect(infoSpy).toHaveBeenCalledWith('[aioncore] selected backend port 40404 after 2 attempts');
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
+  it('does not bind a preferred port when Fetch would block requests to it', async () => {
+    const server = makeFakeServer(40404);
+    server.listen = (port, host, cb) => {
+      expect(port).toBe(0);
+      expect(host).toBe('127.0.0.1');
+      setImmediate(cb);
+    };
+    vi.mocked(createServer).mockImplementationOnce(() => server as unknown as ReturnType<typeof createServer>);
+
+    const port = await findAvailablePort(1720);
+
+    expect(port).toBe(40404);
+  });
+
+  it('rejects instead of retrying forever when every attempt returns a Fetch-blocked port', async () => {
+    vi.mocked(createServer).mockImplementation(
+      () => makeFakeServer(1720) as unknown as ReturnType<typeof createServer>
+    );
+
+    await expect(findAvailablePort(undefined, 2)).rejects.toThrow('Failed to get a fetch-compatible port');
+
+    expect(createServer).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('BackendLifecycleManager.start (success path)', () => {
+  it('lets aioncore choose the backend port and waits for the reported listening event', async () => {
+    vi.mocked(createServer).mockImplementation(() => {
+      throw new Error('launcher must not pre-bind backend ports');
+    });
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path', '/log/dir', {
+      cacheDir: '/c',
+      workDir: '/w',
+      logDir: '/l',
+    });
+
+    await Promise.resolve();
+    child.stdout?.emit('data', Buffer.from('AIONCORE_LISTENING {"host":"127.0.0.1","port":55555}\n'));
+
+    const port = await startPromise;
+
+    expect(port).toBe(55555);
+    expect(mgr.port).toBe(55555);
+    expect(createServer).not.toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalledWith('http://127.0.0.1:55555/health');
+    expect(vi.mocked(spawn).mock.calls[0][1]).toEqual([
+      '--port',
+      '0',
+      '--data-dir',
+      '/db/path',
+      '--parent-pid',
+      String(process.pid),
+      '--log-level',
+      'info',
+      '--app-version',
+      '1.2.3',
+      '--managed-resources-mode',
+      'bundled',
+      '--log-dir',
+      '/log/dir',
+      '--work-dir',
+      '/w',
+      '--local',
+    ]);
+
+    fetchSpy.mockRestore();
+  });
+
+  it('spawns with correct args, waits for /health, reports running', async () => {
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const resolveBackend = vi.fn(() => '/abs/path/aioncore');
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, resolveBackend);
+
+    try {
+      const startPromise = mgr.start('/db/path', '/log/dir', {
+        cacheDir: '/c',
+        workDir: '/w',
+        logDir: '/l',
+      });
+      await Promise.resolve();
+      emitListening(child, 55555);
+
+      const port = await startPromise;
+
+      expect(port).toBe(55555);
+      expect(mgr.port).toBe(55555);
+      expect(mgr.status).toBe('running');
+      expect(resolveBackend).toHaveBeenCalledTimes(1);
+      expect(spawn).toHaveBeenCalledTimes(1);
+
+      const spawnCall = vi.mocked(spawn).mock.calls[0];
+      expect(spawnCall[0]).toBe('/abs/path/aioncore');
+      expect(spawnCall[1]).toEqual([
+        '--port',
+        '0',
+        '--data-dir',
+        '/db/path',
+        '--parent-pid',
+        String(process.pid),
+        '--log-level',
+        'info',
+        '--app-version',
+        '1.2.3',
+        '--managed-resources-mode',
+        'bundled',
+        '--log-dir',
+        '/log/dir',
+        '--work-dir',
+        '/w',
+        '--local',
+      ]);
+      const opts = spawnCall[2] as { cwd?: string; env: NodeJS.ProcessEnv };
+      expect(opts.cwd).toBe('/w');
+      expect(opts.env.AIONUI_CACHE_DIR).toBe('/c');
+      expect(opts.env.AIONUI_WORK_DIR).toBe('/w');
+      expect(opts.env.AIONUI_LOG_DIR).toBe('/l');
+      expect((spawnCall[2] as { detached?: boolean }).detached).toBe(process.platform !== 'win32');
+      expect(mkdirSync).toHaveBeenCalledWith('/db/path', { recursive: true });
+      expect(mkdirSync).toHaveBeenCalledWith('/log/dir', { recursive: true });
+      expect(mkdirSync).toHaveBeenCalledWith('/w', { recursive: true });
+      expect(mkdirSync).toHaveBeenCalledWith('/l', { recursive: true });
+
+      expect(fetchSpy).toHaveBeenCalled();
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[aioncore] health ready on port 55555 after 1 attempts, elapsed_ms=')
+      );
+    } finally {
+      fetchSpy.mockRestore();
+      infoSpy.mockRestore();
+    }
+  });
+});
+
+describe('BackendLifecycleManager.start (health timeout)', () => {
+  it('fails before spawn when startup directory preparation fails', async () => {
+    vi.mocked(mkdirSync).mockImplementationOnce(() => {
+      throw new Error('EPERM: operation not permitted, mkdir /db/path');
+    });
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+
+    await expect(
+      mgr.start('/db/path', '/log/dir', {
+        cacheDir: '/cache',
+        workDir: '/work',
+        logDir: '/log',
+      })
+    ).rejects.toMatchObject({
+      name: 'BackendStartupError',
+      details: expect.objectContaining({
+        causeMessage: 'EPERM: operation not permitted, mkdir /db/path',
+        stage: 'spawn',
+      }),
+    });
+
+    expect(spawn).not.toHaveBeenCalled();
+    expect(mgr.status).toBe('error');
+  });
+
+  it('skips mkdir for a pre-existing work dir so a Windows drive root can start (ELECTRON-3S4)', async () => {
+    // Windows drive roots exist but can never be mkdir'd: CreateDirectory on
+    // `D:\` reports access-denied (not already-exists), so mkdirSync throws
+    // EPERM even with recursive:true. Directory preparation must stat first
+    // and skip mkdir for directories that already exist.
+    vi.mocked(statSync).mockImplementation(((p: unknown) =>
+      p === 'D:\\' ? { isDirectory: () => true } : undefined) as unknown as typeof statSync);
+    vi.mocked(mkdirSync).mockImplementation(((p: unknown) => {
+      if (p === 'D:\\') throw new Error('EPERM: operation not permitted, mkdir D:\\');
+      return undefined;
+    }) as unknown as typeof mkdirSync);
+    // Halt startup deterministically right after directory preparation: a
+    // spawn that throws proves preparation passed without hanging on health.
+    vi.mocked(spawn).mockImplementationOnce(() => {
+      throw new Error('halted by test after directory preparation');
+    });
+
+    try {
+      const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+      const error = await mgr
+        .start('/db/path', '/log/dir', { cacheDir: '/cache', workDir: 'D:\\', logDir: '/log' })
+        .catch((e: unknown) => e as Error);
+
+      // Startup got PAST directory preparation and reached spawn.
+      expect((error as Error).message).toContain('spawn threw before startup');
+      expect((error as Error).message).not.toContain('directory preparation failed');
+      expect(mkdirSync).not.toHaveBeenCalledWith('D:\\', expect.anything());
+      expect(spawn).toHaveBeenCalled();
+    } finally {
+      // Implementations survive the global clearAllMocks; reset so later
+      // tests keep the default no-op fs/spawn mocks (an unconsumed spawn
+      // mockImplementationOnce would otherwise leak into the next test).
+      vi.mocked(statSync).mockReset();
+      vi.mocked(mkdirSync).mockReset();
+      vi.mocked(spawn).mockReset();
+    }
+  });
+
+  it('captures backend boundary code and stage from early-exit stderr', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33337) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path', '/log/dir', {
+      cacheDir: '/cache',
+      workDir: '/work',
+      logDir: '/log',
+    });
+
+    await Promise.resolve();
+    child.stderr?.emit(
+      'data',
+      Buffer.from(
+        'BOOTSTRAP_DATA_INIT_FAILED stage=database.open databasePath=/db/path/aionui-backend.db: failed to initialize application data\n'
+      )
+    );
+    child.emit('exit', 1, null);
+    child.emit('close', 1, null);
+
+    await expect(startPromise).rejects.toMatchObject({
+      name: 'BackendStartupError',
+      details: expect.objectContaining({
+        backendBoundaryCode: 'BOOTSTRAP_DATA_INIT_FAILED',
+        backendBoundaryStage: 'database.open',
+      }),
+    });
+  });
+
+  it('captures backend boundary code when stderr drains after exit but before close', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33337) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path', '/log/dir', {
+      cacheDir: '/cache',
+      workDir: '/work',
+      logDir: '/log',
+    });
+
+    await Promise.resolve();
+    child.emit('exit', 1, null);
+    child.stderr?.emit(
+      'data',
+      Buffer.from(
+        'BOOTSTRAP_DATA_INIT_FAILED stage=database.migration databasePath=/db/path/aionui-backend.db: failed to initialize application data\n'
+      )
+    );
+    child.emit('close', 1, null);
+
+    await expect(startPromise).rejects.toMatchObject({
+      name: 'BackendStartupError',
+      details: expect.objectContaining({
+        backendBoundaryCode: 'BOOTSTRAP_DATA_INIT_FAILED',
+        backendBoundaryStage: 'database.migration',
+      }),
+    });
+  });
+
+  it('kills child and reports listen_timeout when aioncore never reports a port', async () => {
+    vi.useFakeTimers();
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin');
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path');
+    const expectedRejection = expect(startPromise).rejects.toMatchObject({
+      name: 'BackendStartupError',
+      details: expect.objectContaining({
+        stage: 'listen_timeout',
+        port: 0,
+        healthCheckTimeoutMs: 60_000,
+      }),
+    });
+
+    await vi.advanceTimersByTimeAsync(61_000);
+    await expectedRejection;
+
+    expect(mgr.status).toBe('error');
+    expect(killSpy).toHaveBeenCalled();
+
+    killSpy.mockRestore();
+    platformSpy.mockRestore();
+  }, 15_000);
+
+  it('kills child and throws when /health never responds OK within timeout', async () => {
+    vi.useFakeTimers();
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin');
+    vi.mocked(createServer).mockImplementation(
+      () => makeFakeServer(33333) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x');
+    const startPromise = mgr.start('/db');
+    const expectedRejection = expect(startPromise).rejects.toThrow(/failed to start within timeout/);
+
+    await Promise.resolve();
+    emitListening(child, 33333);
+
+    // First await the timer advance so all setTimeout callbacks fire
+    await vi.advanceTimersByTimeAsync(31_000);
+    // Then await the rejection
+    await expectedRejection;
+
+    expect(mgr.status).toBe('error');
+    expect(killSpy).toHaveBeenCalled();
+
+    fetchSpy.mockRestore();
+    killSpy.mockRestore();
+    platformSpy.mockRestore();
+    vi.useRealTimers();
+  }, 15_000);
+
+  it('includes startup diagnostics when health check times out', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33334) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path', '/log/dir', {
+      cacheDir: '/cache',
+      workDir: '/work',
+      logDir: '/log',
+    });
+    const expectedRejection = expect(startPromise).rejects.toMatchObject({
+      name: 'BackendStartupError',
+      details: expect.objectContaining({
+        stage: 'health_timeout',
+        binaryPath: '/abs/path/aioncore',
+        port: 33334,
+        healthCheckAttempts: expect.any(Number),
+        healthCheckLastError: 'ECONNREFUSED',
+        dataDir: '/db/path',
+        stderrTail: expect.stringContaining('database is locked'),
+      }),
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    emitListening(child, 33334);
+    child.stderr?.emit('data', Buffer.from('database is locked\n'));
+    await vi.advanceTimersByTimeAsync(31_000);
+
+    await expectedRejection;
+
+    fetchSpy.mockRestore();
+  }, 15_000);
+
+  it('records the last non-OK health response when health check times out', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33336) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(() => Promise.resolve(new Response('starting', { status: 503 })));
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path');
+    const expectedRejection = expect(startPromise).rejects.toMatchObject({
+      name: 'BackendStartupError',
+      details: expect.objectContaining({
+        stage: 'health_timeout',
+        port: 33336,
+        healthCheckAttempts: expect.any(Number),
+        healthCheckLastStatus: 503,
+        healthCheckLastBody: 'starting',
+      }),
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33336);
+    await vi.advanceTimersByTimeAsync(31_000);
+    await expectedRejection;
+
+    fetchSpy.mockRestore();
+  }, 15_000);
+
+  it('records when server listening appears before health check times out', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33337) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('fetch failed'));
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path');
+    const expectedRejection = expect(startPromise).rejects.toMatchObject({
+      name: 'BackendStartupError',
+      details: expect.objectContaining({
+        stage: 'health_timeout',
+        port: 33337,
+        healthCheckLastError: 'fetch failed',
+        serverListeningObserved: true,
+        serverListeningObservedAfterMs: expect.any(Number),
+        serverListeningLine: expect.stringContaining('AIONCORE_LISTENING'),
+      }),
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33337);
+    await vi.advanceTimersByTimeAsync(31_000);
+
+    await expectedRejection;
+
+    fetchSpy.mockRestore();
+  }, 15_000);
+
+  it('records TCP reachability when fetch fails after the server starts listening', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33338) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const socket = makeFakeSocket();
+    vi.mocked(connect).mockImplementation((_options, onConnect) => {
+      queueMicrotask(() => onConnect?.());
+      return socket;
+    });
+
+    const fetchError = new TypeError('fetch failed') as TypeError & { cause?: NodeJS.ErrnoException };
+    fetchError.cause = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:33338'), {
+      code: 'ECONNREFUSED',
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(fetchError);
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path');
+    const expectedRejection = expect(startPromise).rejects.toMatchObject({
+      details: expect.objectContaining({
+        backendPid: 99999,
+        healthCheckUrl: 'http://127.0.0.1:33338/health',
+        healthCheckTimeoutMs: 30_000,
+        healthCheckIntervalMs: 200,
+        healthCheckExpectedAttempts: 150,
+        healthCheckElapsedMs: expect.any(Number),
+        healthCheckLastAttemptAfterMs: expect.any(Number),
+        healthCheckAttemptDeficit: expect.any(Number),
+        healthCheckTimeoutOverrunMs: expect.any(Number),
+        healthCheckPollingDelayed: expect.any(Boolean),
+        healthCheckLastError: 'fetch failed',
+        healthCheckLastErrorName: 'TypeError',
+        healthCheckLastErrorCauseMessage: 'connect ECONNREFUSED 127.0.0.1:33338',
+        healthCheckLastErrorCauseCode: 'ECONNREFUSED',
+        healthCheckTcpProbeOk: true,
+        healthCheckTcpProbeElapsedMs: expect.any(Number),
+        healthCheckTcpProbeTimeoutMs: 1_000,
+      }),
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33338);
+    await vi.advanceTimersByTimeAsync(31_000);
+
+    await expectedRejection;
+
+    expect(connect).toHaveBeenCalledWith({ host: '127.0.0.1', port: 33338 }, expect.any(Function));
+    expect(socket.destroy).toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  }, 15_000);
+
+  it('records polling delay when a health attempt stalls past the timeout', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33340) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const socket = makeFakeSocket();
+    vi.mocked(connect).mockImplementation(() => {
+      queueMicrotask(() => {
+        socket.emit(
+          'error',
+          Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:33340'), { code: 'ECONNREFUSED' })
+        );
+      });
+      return socket;
+    });
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      () =>
+        new Promise<Response>((_resolve, reject) => {
+          setTimeout(() => reject(new Error('fetch failed')), 545_000);
+        })
+    );
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path');
+    const expectedRejection = expect(startPromise).rejects.toMatchObject({
+      details: expect.objectContaining({
+        port: 33340,
+        healthCheckAttempts: 1,
+        healthCheckExpectedAttempts: 150,
+        healthCheckAttemptDeficit: 149,
+        healthCheckPollingDelayed: true,
+        healthCheckTimeoutOverrunMs: expect.any(Number),
+      }),
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33340);
+    await vi.advanceTimersByTimeAsync(545_250);
+    await expectedRejection;
+
+    fetchSpy.mockRestore();
+  }, 15_000);
+
+  it('records TCP connection errors when fetch fails and the port is unreachable', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33339) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const socket = makeFakeSocket();
+    vi.mocked(connect).mockImplementation(() => {
+      queueMicrotask(() => {
+        socket.emit(
+          'error',
+          Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:33339'), { code: 'ECONNREFUSED' })
+        );
+      });
+      return socket;
+    });
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('fetch failed'));
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path');
+    const expectedRejection = expect(startPromise).rejects.toMatchObject({
+      details: expect.objectContaining({
+        port: 33339,
+        healthCheckLastError: 'fetch failed',
+        healthCheckTcpProbeOk: false,
+        healthCheckTcpProbeError: 'connect ECONNREFUSED 127.0.0.1:33339',
+        healthCheckTcpProbeErrorName: 'Error',
+        healthCheckTcpProbeErrorCode: 'ECONNREFUSED',
+        healthCheckTcpProbeElapsedMs: expect.any(Number),
+      }),
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33339);
+    await vi.advanceTimersByTimeAsync(31_000);
+
+    await expectedRejection;
+
+    expect(socket.destroy).toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  }, 15_000);
+
+  it('keeps child alive and reports ready later when pending timeout is allowed', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33335) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const onHealthTimeout = vi.fn();
+    const onReady = vi.fn();
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path', '/log/dir', undefined, {
+      allowPendingOnHealthTimeout: true,
+      onHealthTimeout,
+      onReady,
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33335);
+    await vi.advanceTimersByTimeAsync(31_000);
+    await expect(startPromise).resolves.toBe(33335);
+
+    expect(mgr.status).toBe('starting');
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(onHealthTimeout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'BackendStartupError',
+        details: expect.objectContaining({
+          stage: 'health_timeout',
+          port: 33335,
+        }),
+      })
+    );
+
+    fetchSpy.mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+    await vi.advanceTimersByTimeAsync(250);
+    await Promise.resolve();
+
+    expect(mgr.status).toBe('running');
+    expect(onReady).toHaveBeenCalledWith(33335);
+
+    fetchSpy.mockRestore();
+  }, 15_000);
+
+  it('marks the health_timeout error kept-alive when pending timeout is allowed', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33342) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const onHealthTimeout = vi.fn();
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path', '/log/dir', undefined, {
+      allowPendingOnHealthTimeout: true,
+      onHealthTimeout,
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33342);
+    await vi.advanceTimersByTimeAsync(31_000);
+    await expect(startPromise).resolves.toBe(33342);
+
+    expect(onHealthTimeout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({
+          stage: 'health_timeout',
+          serverListeningObserved: true,
+          healthTimeoutKeptAlive: true,
+        }),
+      })
+    );
+
+    fetchSpy.mockRestore();
+  }, 15_000);
+});
+
+describe('BackendLifecycleManager.start (AIONCORE_READY consumption)', () => {
+  it('AC-7: treats an AIONCORE_READY marker as ready without /health passing', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33343) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    // /health never returns ok — readiness must come solely from the marker.
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path', '/log/dir', undefined, {
+      allowPendingOnHealthTimeout: true,
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33343);
+    await Promise.resolve();
+    child.stdout?.emit('data', Buffer.from('AIONCORE_READY\n'));
+
+    await expect(startPromise).resolves.toBe(33343);
+    expect(mgr.status).toBe('running');
+    // /health was polled but never returned ok; readiness came from the marker.
+    expect(fetchSpy).not.toHaveBeenCalledWith(expect.stringContaining('AIONCORE_READY'));
+
+    fetchSpy.mockRestore();
+  }, 15_000);
+
+  it('AC-7: a late AIONCORE_READY marker resolves the pending state and fires onReady', async () => {
+    vi.useFakeTimers();
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(33344) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+    const onHealthTimeout = vi.fn();
+    const onReady = vi.fn();
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/abs/path/aioncore');
+    const startPromise = mgr.start('/db/path', '/log/dir', undefined, {
+      allowPendingOnHealthTimeout: true,
+      onHealthTimeout,
+      onReady,
+    });
+
+    await Promise.resolve();
+    emitListening(child, 33344);
+    // Health times out first; the process is kept alive (pending).
+    await vi.advanceTimersByTimeAsync(31_000);
+    await expect(startPromise).resolves.toBe(33344);
+    expect(mgr.status).toBe('starting');
+    expect(onHealthTimeout).toHaveBeenCalled();
+
+    // A late readiness marker deterministically resolves the pending state.
+    child.stdout?.emit('data', Buffer.from('AIONCORE_READY\n'));
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    expect(mgr.status).toBe('running');
+    expect(onReady).toHaveBeenCalledWith(33344);
+
+    fetchSpy.mockRestore();
+  }, 15_000);
+});
+
+describe('BackendLifecycleManager.stop', () => {
+  it('rejects startup as cancelled when stopped before health check passes', async () => {
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(22221) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x');
+    const startPromise = mgr.start('/db');
+
+    await Promise.resolve();
+    const stopPromise = mgr.stop();
+    (child as unknown as EventEmitter).emit('exit', null, 'SIGTERM');
+    (child as unknown as EventEmitter).emit('close', null, 'SIGTERM');
+    await stopPromise;
+
+    await expect(startPromise).rejects.toMatchObject({
+      name: 'BackendStartupCancelledError',
+    });
+    expect(mgr.status).toBe('stopped');
+
+    fetchSpy.mockRestore();
+  });
+
+  it('sends SIGTERM then resolves when child emits exit', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin');
+    vi.mocked(createServer).mockImplementation(
+      () => makeFakeServer(22222) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x');
+    const startPromise = mgr.start('/db');
+    await Promise.resolve();
+    emitListening(child, 22222);
+    await startPromise;
+
+    const stopPromise = mgr.stop();
+    // Simulate graceful child exit
+    (child as unknown as EventEmitter).emit('exit', 0);
+    await stopPromise;
+
+    expect(killSpy).toHaveBeenCalled();
+    expect(cleanupRegisteredAgentProcesses).toHaveBeenCalledWith('/db');
+    expect(mgr.status).toBe('stopped');
+
+    fetchSpy.mockRestore();
+    killSpy.mockRestore();
+    platformSpy.mockRestore();
+  });
+
+  it('escalates to SIGKILL when SIGTERM times out', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin');
+    vi.mocked(createServer).mockImplementation(
+      () => makeFakeServer(22223) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    vi.mocked(spawn).mockReturnValue(child as unknown as ChildProcess);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x');
+    const startPromise = mgr.start('/db');
+    await Promise.resolve();
+    emitListening(child, 22223);
+    await startPromise;
+
+    const stopPromise = mgr.stop();
+    // Let real timeout happen (5s), then check result
+    await new Promise((r) => setTimeout(r, 5_200));
+    await stopPromise;
+
+    expect(killSpy.mock.calls).toEqual(expect.arrayContaining([[expect.any(Number), 'SIGTERM']]));
+    expect(killSpy.mock.calls).toEqual(expect.arrayContaining([[expect.any(Number), 'SIGKILL']]));
+    expect(cleanupRegisteredAgentProcesses).toHaveBeenCalledWith('/db');
+
+    fetchSpy.mockRestore();
+    killSpy.mockRestore();
+    platformSpy.mockRestore();
+  }, 7_000);
+
+  it('waits for Windows taskkill to finish before cleaning registered agent processes', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    vi.mocked(createServer).mockImplementation(
+      () => makeFakeServer(22224) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    const taskkillChild = makeFakeTaskkillChild();
+    vi.mocked(spawn)
+      .mockReturnValueOnce(child as unknown as ChildProcess)
+      .mockReturnValueOnce(taskkillChild as unknown as ChildProcess);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x');
+    const startPromise = mgr.start('/db');
+    await Promise.resolve();
+    emitListening(child, 22224);
+    await startPromise;
+
+    const stopPromise = mgr.stop();
+    child.emit('exit', 0);
+    await Promise.resolve();
+
+    expect(cleanupRegisteredAgentProcesses).not.toHaveBeenCalledWith('/db');
+
+    taskkillChild.emit('close', 0);
+    await stopPromise;
+
+    expect(spawn).toHaveBeenLastCalledWith('taskkill', ['/PID', '99999', '/T'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    expect(cleanupRegisteredAgentProcesses).toHaveBeenCalledWith('/db');
+
+    fetchSpy.mockRestore();
+    platformSpy.mockRestore();
+  });
+
+  it('waits for forced Windows taskkill before cleanup when graceful stop times out', async () => {
+    vi.useFakeTimers();
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    vi.mocked(createServer).mockImplementation(
+      () => makeSyncFakeServer(22225) as unknown as ReturnType<typeof createServer>
+    );
+    const child = makeFakeChild();
+    const gracefulTaskkillChild = makeFakeTaskkillChild();
+    const forcedTaskkillChild = makeFakeTaskkillChild();
+    vi.mocked(spawn)
+      .mockReturnValueOnce(child as unknown as ChildProcess)
+      .mockReturnValueOnce(gracefulTaskkillChild as unknown as ChildProcess)
+      .mockReturnValueOnce(forcedTaskkillChild as unknown as ChildProcess);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x');
+    const startPromise = mgr.start('/db');
+    await Promise.resolve();
+    emitListening(child, 22225);
+    await startPromise;
+
+    const stopPromise = mgr.stop();
+    gracefulTaskkillChild.emit('close', 0);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await Promise.resolve();
+
+    expect(cleanupRegisteredAgentProcesses).not.toHaveBeenCalledWith('/db');
+
+    forcedTaskkillChild.emit('close', 0);
+    await stopPromise;
+
+    expect(spawn).toHaveBeenLastCalledWith('taskkill', ['/F', '/PID', '99999', '/T'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    expect(cleanupRegisteredAgentProcesses).toHaveBeenCalledWith('/db');
+
+    fetchSpy.mockRestore();
+    platformSpy.mockRestore();
+  });
+});
+
+describe('BackendLifecycleManager crash restart', () => {
+  it('restarts on the existing backend port after an unexpected exit', async () => {
+    const child1 = makeFakeChild();
+    const child2 = makeFakeChild();
+    vi.mocked(spawn)
+      .mockReturnValueOnce(child1 as unknown as ChildProcess)
+      .mockReturnValueOnce(child2 as unknown as ChildProcess);
+    const onReady = vi.fn();
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x');
+    const startPromise = mgr.start('/db', undefined, undefined, { onReady });
+    await Promise.resolve();
+    emitListening(child1, 65303);
+    await startPromise;
+    expect(mgr.status).toBe('running');
+    expect(vi.mocked(spawn).mock.calls[0][1]).toContain('0');
+
+    (child1 as unknown as EventEmitter).emit('exit', 1, 'SIGABRT');
+    await new Promise((r) => setTimeout(r, 1_200));
+    emitListening(child2, 65303);
+    await new Promise((r) => setTimeout(r, 1));
+
+    expect(vi.mocked(spawn)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(spawn).mock.calls[1][1]).toContain('65303');
+    expect(mgr.port).toBe(65303);
+    expect(onReady).toHaveBeenCalledWith(65303);
+
+    fetchSpy.mockRestore();
+  }, 5_000);
+
+  it('logs crash restart scheduling details', async () => {
+    vi.mocked(createServer).mockImplementation(
+      () => makeFakeServer(65303) as unknown as ReturnType<typeof createServer>
+    );
+    const child1 = makeFakeChild();
+    const child2 = makeFakeChild();
+    vi.mocked(spawn)
+      .mockReturnValueOnce(child1 as unknown as ChildProcess)
+      .mockReturnValueOnce(child2 as unknown as ChildProcess);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x');
+    const startPromise = mgr.start('/db');
+    await Promise.resolve();
+    emitListening(child1, 65303);
+    await startPromise;
+
+    (child1 as unknown as EventEmitter).emit('exit', 1, 'SIGABRT');
+    await new Promise((r) => setTimeout(r, 1_200));
+
+    expect(warnSpy).toHaveBeenCalledWith('[aioncore] child exited unexpectedly; scheduling restart', {
+      exitCode: 1,
+      signal: 'SIGABRT',
+      port: 65303,
+      restartCount: 1,
+      maxRestarts: 3,
+      delayMs: 1000,
+    });
+
+    warnSpy.mockRestore();
+    fetchSpy.mockRestore();
+  }, 5_000);
+
+  it('does not reuse corrupted database recovery authorization during crash restart', async () => {
+    const child1 = makeFakeChild();
+    const child2 = makeFakeChild();
+    vi.mocked(spawn)
+      .mockReturnValueOnce(child1 as unknown as ChildProcess)
+      .mockReturnValueOnce(child2 as unknown as ChildProcess);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('ok', { status: 200 }) as unknown as Response);
+
+    const mgr = new BackendLifecycleManager(APP_META_PACKAGED, () => '/x');
+    const startPromise = mgr.start('/db', undefined, undefined, undefined, undefined, {
+      recoverCorruptedDatabase: true,
+    });
+    await Promise.resolve();
+    emitListening(child1, 65303);
+    await startPromise;
+
+    (child1 as unknown as EventEmitter).emit('exit', 1, 'SIGABRT');
+    await new Promise((r) => setTimeout(r, 1_200));
+
+    const firstSpawnArgs = vi.mocked(spawn).mock.calls[0]?.[1] as string[];
+    const restartSpawnArgs = vi.mocked(spawn).mock.calls[1]?.[1] as string[];
+    expect(firstSpawnArgs).toContain('--recover-corrupted-database');
+    expect(restartSpawnArgs).not.toContain('--recover-corrupted-database');
+
+    fetchSpy.mockRestore();
+  }, 5_000);
+
+  it('logs when crash restart limit is exceeded', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mgr = new BackendLifecycleManager(APP_META, () => '/x') as unknown as {
+      restartCount: number;
+      restartWindowStart: number;
+      handleCrash: (code: number | null, signal?: NodeJS.Signals | string | null) => void;
+      status: string;
+    };
+    mgr.restartCount = 3;
+    mgr.restartWindowStart = Date.now();
+
+    mgr.handleCrash(1, 'SIGABRT');
+
+    expect(mgr.status).toBe('error');
+    expect(errorSpy).toHaveBeenCalledWith('[aioncore] child exited unexpectedly; restart limit exceeded', {
+      exitCode: 1,
+      signal: 'SIGABRT',
+      port: 0,
+      restartCount: 4,
+      maxRestarts: 3,
+    });
+
+    errorSpy.mockRestore();
+  });
+});
+
+// T-A4 — bounded peer-already-running retry (Sentry 135525166).
+type AttemptStartSpyTarget = { attemptStart: (...args: unknown[]) => Promise<number> };
+
+function makePeerAlreadyRunningError(): BackendStartupError {
+  return new BackendStartupError('aioncore exited before health check passed', {
+    stage: 'early_exit',
+    appVersion: APP_META.version,
+    backendBoundaryCode: 'BOOTSTRAP_PEER_ALREADY_RUNNING',
+    backendBoundaryStage: 'instance_guard.acquire',
+  });
+}
+
+describe('BackendLifecycleManager.start peer retry', () => {
+  it('retries with bounded backoff and succeeds once the peer releases the data dir', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mgr = new BackendLifecycleManager(APP_META, () => '/abs/path/aioncore');
+    const attemptStart = vi
+      .spyOn(mgr as unknown as AttemptStartSpyTarget, 'attemptStart')
+      .mockRejectedValueOnce(makePeerAlreadyRunningError())
+      .mockRejectedValueOnce(makePeerAlreadyRunningError())
+      .mockResolvedValueOnce(58672);
+
+    const started = mgr.start('/data/aionui-backend.db');
+    await vi.runAllTimersAsync();
+
+    await expect(started).resolves.toBe(58672);
+    expect(attemptStart).toHaveBeenCalledTimes(3);
+
+    warnSpy.mockRestore();
+  });
+
+  it('throws the peer boundary error after exhausting the retry budget', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mgr = new BackendLifecycleManager(APP_META, () => '/abs/path/aioncore');
+    const attemptStart = vi
+      .spyOn(mgr as unknown as AttemptStartSpyTarget, 'attemptStart')
+      .mockRejectedValue(makePeerAlreadyRunningError());
+
+    const started = mgr.start('/data/aionui-backend.db');
+    const assertion = expect(started).rejects.toMatchObject({
+      details: { backendBoundaryCode: 'BOOTSTRAP_PEER_ALREADY_RUNNING' },
+    });
+    await vi.runAllTimersAsync();
+    await assertion;
+
+    // 5 attempts: initial + 4 retries.
+    expect(attemptStart).toHaveBeenCalledTimes(5);
+
+    warnSpy.mockRestore();
+  });
+
+  it('does not retry a non-peer startup failure', async () => {
+    const mgr = new BackendLifecycleManager(APP_META, () => '/abs/path/aioncore');
+    const nonPeerError = new BackendStartupError('assistant storage bootstrap failed', {
+      stage: 'early_exit',
+      appVersion: APP_META.version,
+      backendBoundaryCode: 'BOOTSTRAP_SERVER_FAILED',
+      backendBoundaryStage: 'router.assistant.bootstrap',
+    });
+    const attemptStart = vi
+      .spyOn(mgr as unknown as AttemptStartSpyTarget, 'attemptStart')
+      .mockRejectedValue(nonPeerError);
+
+    await expect(mgr.start('/data/aionui-backend.db')).rejects.toBe(nonPeerError);
+    expect(attemptStart).toHaveBeenCalledTimes(1);
+  });
+});

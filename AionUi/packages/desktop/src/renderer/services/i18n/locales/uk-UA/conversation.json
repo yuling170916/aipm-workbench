@@ -1,0 +1,802 @@
+{
+  "welcome": {
+    "title": "Привіт, які плани на сьогодні?",
+    "placeholder": "Надішліть повідомлення, завантажте файли, відкрийте папку, створіть заплановане завдання або введіть / для команд...",
+    "linkFolder": "Відкрити папку",
+    "newConversation": "Нова розмова",
+    "selectModel": "Вибрати модель",
+    "useCliModel": "Вибрати модель",
+    "modelSwitchNotSupported": "Список моделей буде доступний після першого підключення. Надішліть повідомлення, щоб підключитися та завантажити доступні моделі.",
+    "specifyWorkspace": "Чат у проєкті",
+    "currentWorkspace": "Поточний проєкт",
+    "clearWorkspace": "Видалити проєкт",
+    "openFolder": "Відкрити папку",
+    "none": "Немає",
+    "quickActionsTitle": "Що вміє AIPM工作台?",
+    "quickActionFeedback": "Повідомити про проблему",
+    "quickActionStar": "Подобається? Поставте нам зірку!",
+    "skillsMarket": "Маркет навичок AIPM工作台",
+    "skillsMarketDesc": "Шукайте та активуйте навички спільноти за запитом. Налаштуйте один раз — доступно для всіх агентів.",
+    "skillsMarketDetails": "Докладніше >>"
+  },
+  "history": {
+    "recents": "Недавні",
+    "noHistory": "Немає історії чатів",
+    "deleteTitle": "Видалити",
+    "deleteConfirm": "Ви впевнені, що хочете видалити цей чат?",
+    "confirmDelete": "Видалити",
+    "cancelDelete": "Скасувати",
+    "editName": "Редагувати назву",
+    "saveName": "Зберегти",
+    "cancelEdit": "Скасувати",
+    "rename": "Перейменувати",
+    "createCronTask": "Створити заплановане завдання",
+    "renameTitle": "Перейменувати чат",
+    "renamePlaceholder": "Будь ласка, введіть нову назву",
+    "renameSuccess": "Перейменовано успішно",
+    "renameFailed": "Не вдалося перейменувати",
+    "batchManage": "Масове керування",
+    "batchModeExit": "Вийти з режиму масового керування",
+    "selectAll": "Вибрати все",
+    "selectedCount": "Вибрано: {{count}}",
+    "batchExport": "Масовий експорт",
+    "batchExportConfirm": "Експортувати {{count}} вибраних тем?",
+    "batchDelete": "Масове видалення",
+    "batchDeleteConfirm": "Видалити {{count}} вибраних тем?",
+    "batchDeleteConfirm_one": "Видалити {{count}} вибрану тему?",
+    "batchDeleteConfirm_other": "Видалити {{count}} вибраних тем?",
+    "batchDeleteConfirm_few": "Видалити {{count}} вибрані теми?",
+    "batchDeleteConfirm_many": "Видалити {{count}} вибраних тем?",
+    "batchDeleteSuccess": "Видалено {{count}} тем",
+    "batchDeleteSuccess_one": "Видалено {{count}} тему",
+    "batchDeleteSuccess_other": "Видалено {{count}} тем",
+    "batchDeleteSuccess_few": "Видалено {{count}} теми",
+    "batchDeleteSuccess_many": "Видалено {{count}} тем",
+    "batchNoSelection": "Спочатку виберіть теми",
+    "export": "Експортувати",
+    "exportDialogTitle": "Експорт тем",
+    "exportDialogSingleDescription": "Експортувати записи поточної теми (JSON + Markdown) та файли проєкту в ZIP-архів.",
+    "exportDialogBatchDescription": "Експортувати записи {{count}} вибраних тем (JSON + Markdown) та файли проєкту в один ZIP-архів.",
+    "exportTargetFolder": "Експортувати до папки",
+    "exportSelectFolder": "Будь ласка, виберіть папку для експорту",
+    "exportDialogHint": "Вибір папки працює так само, як і при зміні проєкту.",
+    "exporting": "Експорт...",
+    "exportSuccess": "Експорт успішний",
+    "exportCanceled": "Експорт скасовано",
+    "exportFailed": "Помилка експорту",
+    "pin": "Закріпити",
+    "unpin": "Відкріпити",
+    "markAsUnread": "Позначити як непрочитане",
+    "markAsRead": "Позначити як прочитане",
+    "pinned": "Закріплено",
+    "pinFailed": "Не вдалося закріпити",
+    "pinnedSection": "Закріплені",
+    "deleteSuccess": "Видалено успішно",
+    "deleteFailed": "Не вдалося видалити",
+    "today": "Сьогодні",
+    "yesterday": "Вчора",
+    "recent7Days": "Останні 7 днів",
+    "earlier": "Раніше",
+    "projectsSection": "Проєкти",
+    "conversationsSection": "Розмови",
+    "newConversationInProject": "Нова розмова в цьому проєкті",
+    "deleting": "Видалення...",
+    "reorderPinned": "Перетягніть, щоб змінити порядок закріплених розмов",
+    "forkedFrom": "Відгалуження від «{{name}}»",
+    "forkedConversation": "Відгалужена розмова",
+    "archive": "Архівувати",
+    "archiveSuccess": "Заархівовано",
+    "archiveFailed": "Не вдалося заархівувати",
+    "batchArchive": "Batch archive",
+    "batchArchiveConfirm": "Archive {{count}} selected topics? You can restore or delete them from Archived in Settings.",
+    "batchArchiveSuccess": "Archived {{count}} topics",
+    "archiveProject": "Archive project",
+    "archiveProjectTitle": "Archive project",
+    "archiveProjectConfirm": "Archive project \"{{name}}\"? Its {{count}} conversation(s) will be archived too. You can restore or delete them from Archived in Settings.",
+    "archiving": "Archiving..."
+  },
+  "historySearch": {
+    "tooltip": "Пошук повідомлень",
+    "title": "Пошук за вмістом діалогів",
+    "shortTitle": "Пошук",
+    "description": "Пошук в історії повідомлень за ключовим словом, завантаження більше при прокручуванні та перехід до знайденого повідомлення.",
+    "placeholder": "Пошук за повідомленнями...",
+    "idle": "Введіть ключові слова для пошуку повідомлень",
+    "empty": "Відповідних повідомлень не знайдено",
+    "loadingMore": "Завантаження...",
+    "untitled": "Діалог без назви"
+  },
+  "dropdown": {
+    "cliAgents": "CLI Агенти",
+    "presetAssistants": "Встановлені асистенти"
+  },
+  "noAgentsAvailable": "Немає доступних агентів",
+  "noModelConfigured": "Модель не налаштована. Будь ласка, налаштуйте в параметрах.",
+  "createFailed": "Не вдалося створити діалог",
+  "createError": {
+    "pathVariants": {
+      "WORKSPACE_PATH_UNAVAILABLE": "Вибраний шлях робочого простору недоступний. Переконайтеся, що шлях робочого простору \"{{workspacePath}}\" справді існує та доступний."
+    },
+    "codes": {
+      "TEAM_ASSISTANT_ID_REQUIRED": "Please select an assistant before creating the team.",
+      "TEAM_ASSISTANT_NOT_FOUND": "Assistant {{assistantId}} is no longer available. Refresh the assistant list and choose another one.",
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": "Use assistant_id instead of {{field}}."
+    }
+  },
+  "agentError": {
+    "fallbackTitle": "Агент не зміг відповісти",
+    "errorCode": "Код помилки",
+    "retryable": "Можна повторити",
+    "notRetryable": "Потрібне налаштування",
+    "resolutionPrefix": "Рекомендація: ",
+    "resolution": {
+      "retry": "Повторіть спробу пізніше або надішліть це повідомлення ще раз.",
+      "wait_for_current_response": "Дочекайтеся завершення поточної відповіді, перш ніж надсилати наступне повідомлення.",
+      "start_new_session": "Почніть нову розмову, щоб продовжити.",
+      "reconnect_agent": "Перезапустіть або перепідключіть вибраного агента, потім повторіть спробу.",
+      "check_agent_login": "Увійдіть у вибраного агента або оновіть його облікові дані.",
+      "check_agent_installation": "Перевірте встановлення агента та налаштування локальної команди.",
+      "check_agent_version": "Перевірте сумісність протоколу та версії агента.",
+      "check_local_command": "Встановіть відсутню команду або переконайтеся, що її додано до PATH.",
+      "check_provider_credentials": "Перевірте API-ключ або облікові дані постачальника моделі в налаштуваннях.",
+      "check_provider_billing": "Перевірте баланс, кредити або квоту постачальника моделі.",
+      "check_provider_base_url": "Перевірте Base URL, шлях API, проксі та сумісність API постачальника моделі.",
+      "change_model": "Виберіть модель, доступну для поточного акаунта та сумісну з цим запитом.",
+      "reduce_context": "Зменште вміст повідомлення, кількість файлів або розмір контексту, потім повторіть спробу.",
+      "send_feedback": "Надішліть відгук із логами, щоб команда могла розібратися."
+    },
+    "ownership": {
+      "aionui": "Застосунок",
+      "user_agent": "Агент",
+      "user_llm_provider": "Постачальник моделі",
+      "unknown_upstream": "Зовнішній сервіс"
+    },
+    "codes": {
+      "AIONUI_STREAM_BROKEN": {
+        "title": "Потік відповіді було перервано",
+        "body": "Застосунок прийняв повідомлення, але потік відповіді несподівано завершився. Повторіть спробу; якщо це повториться, надішліть відгук."
+      },
+      "AIONUI_STATE_INCONSISTENT": {
+        "title": "Стан розмови не синхронізовано",
+        "body": "Стан розмови не синхронізовано. Перезапустіть цей чат або перезавантажте застосунок, потім повторіть спробу."
+      },
+      "AIONUI_PERMISSION_ERROR": {
+        "title": "Не вдалося отримати доступ до потрібного ресурсу",
+        "body": "Перевірка локальних дозволів або файлової системи не вдалася. Перевірте шлях проєкту та дозволи застосунку, потім повторіть спробу."
+      },
+      "AIONUI_INTERNAL_ERROR": {
+        "title": "Запит не вдалося обробити в застосунку",
+        "body": "Під час обробки запиту в застосунку сталася помилка. Повторіть спробу один раз; якщо проблема повториться, надішліть відгук."
+      },
+      "AIONUI_CONVERSATION_BUSY": {
+        "title": "Розмова зайнята",
+        "body": "Інша відповідь ще виконується. Дочекайтеся її завершення перед надсиланням нового повідомлення."
+      },
+      "USER_AGENT_NOT_INSTALLED": {
+        "title": "Вибраного агента не встановлено",
+        "body": "Встановіть CLI або застосунок, потрібний для цього агента, потім перепідключіть його в налаштуваннях."
+      },
+      "USER_AGENT_STARTUP_FAILED": {
+        "title": "Не вдалося запустити вибраного агента",
+        "body": "Процес агента завершився до готовності. Перевірте встановлення, стан входу та налаштування локальної команди."
+      },
+      "USER_AGENT_OPENCLAW_GATEWAY_UNREACHABLE": {
+        "title": "OpenClaw Gateway недоступний",
+        "body": "OpenClaw Gateway не запущено або він недоступний за адресою 127.0.0.1:18789.\n\nЗапустіть OpenClaw Gateway і повторіть спробу. Можна виконати:\nopenclaw gateway status\nopenclaw gateway start"
+      },
+      "USER_AGENT_DISCONNECTED": {
+        "title": "Вибраний агент відключився",
+        "body": "Під час обробки цього повідомлення з’єднання з агентом було закрито. Перезапустіть або перепідключіть агента, потім повторіть спробу."
+      },
+      "USER_AGENT_AUTH_REQUIRED": {
+        "title": "Вибраному агенту потрібна автентифікація",
+        "body": "Увійдіть у вибраного агента або оновіть його облікові дані, потім надішліть повідомлення ще раз."
+      },
+      "USER_AGENT_SESSION_NOT_FOUND": {
+        "title": "Сесію агента втрачено",
+        "body": "Агент повідомив, що цю сесію не знайдено або вона більше йому невідома."
+      },
+      "USER_AGENT_UNSUPPORTED_METHOD": {
+        "title": "Вибраний агент не підтримує цю дію",
+        "body": "Агент повідомив, що запитаний метод ACP не підтримується або недоступний."
+      },
+      "USER_AGENT_INVALID_PARAMS": {
+        "title": "Вибраний агент відхилив запит",
+        "body": "Агент повідомив, що параметри запиту недійсні."
+      },
+      "USER_AGENT_HANDSHAKE_FAILED": {
+        "title": "Не вдалося виконати рукостискання з агентом",
+        "body": "Вибраний агент не зміг завершити стартове рукостискання. Перезапустіть або перепідключіть агента, потім повторіть спробу."
+      },
+      "USER_AGENT_HANDSHAKE_TIMEOUT": {
+        "title": "Час рукостискання з агентом минув",
+        "body": "Вибраний агент не завершив стартове рукостискання вчасно. Перевірте, чи він ще запускається або заблокований, потім повторіть спробу."
+      },
+      "USER_AGENT_ACP_INIT_FAILED": {
+        "title": "Не вдалося ініціалізувати протокол агента",
+        "body": "Застосунок не зміг ініціалізувати сесію Agent Client Protocol із цим агентом."
+      },
+      "USER_AGENT_PROTOCOL_PARSE_ERROR": {
+        "title": "Agent повідомив про помилку розбору протоколу",
+        "body": "Вибраний Agent повідомив, що повідомлення ACP/JSON-RPC не вдалося розібрати."
+      },
+      "USER_AGENT_INVALID_REQUEST": {
+        "title": "Agent повідомив про недійсний протокольний запит",
+        "body": "Вибраний Agent повідомив, що об’єкт запиту ACP/JSON-RPC недійсний."
+      },
+      "USER_AGENT_RESOURCE_NOT_FOUND": {
+        "title": "Agent не знайшов потрібний ресурс",
+        "body": "Вибраний Agent повідомив, що потрібний ресурс, наприклад файл, не знайдено."
+      },
+      "USER_AGENT_PROTOCOL_ERROR": {
+        "title": "Agent повернув помилку протоколу",
+        "body": "Вибраний Agent повернув нестандартний ACP-код помилки."
+      },
+      "USER_AGENT_PROTOCOL_MISMATCH": {
+        "title": "Версії протоколу агента несумісні",
+        "body": "Застосунок і вибраний агент не змогли використати сумісну версію протоколу ACP."
+      },
+      "USER_AGENT_NO_PREVIOUS_SESSION": {
+        "title": "Попередня сесія агента недоступна",
+        "body": "Агент не може відновити попередню сесію. Почніть нову розмову, щоб продовжити."
+      },
+      "USER_AGENT_COMMAND_NOT_FOUND": {
+        "title": "Команду агента не знайдено",
+        "body": "Налаштовану команду агента не знайдено. Встановіть її або оновіть шлях команди в налаштуваннях."
+      },
+      "USER_AGENT_MISSING_ENV": {
+        "title": "Агенту бракує потрібних змінних середовища",
+        "body": "Не налаштовано змінні середовища, потрібні агенту. Додайте їх у налаштуваннях або shell-середовищі, потім перепідключіть агента."
+      },
+      "USER_LLM_PROVIDER_AUTH_FAILED": {
+        "title": "Помилка автентифікації в постачальника моделі",
+        "body": "Вибраний постачальник відхилив API-ключ або облікові дані. Перевірте налаштування постачальника та повторіть спробу."
+      },
+      "USER_LLM_PROVIDER_AWS_SSO_EXPIRED": {
+        "title": "Сеанс AWS SSO завершився",
+        "body": "Термін дії сеансу AWS SSO минув. Виконайте 'aws sso login' для відповідного profile, а потім надішліть повідомлення ще раз."
+      },
+      "USER_LLM_PROVIDER_CONFIG_ERROR": {
+        "title": "Неправильна конфігурація постачальника моделі",
+        "body": "Не вдалося сформувати запит до постачальника з поточних налаштувань. Перевірте облікові дані, регіон, Base URL і налаштування постачальника перед повторною спробою."
+      },
+      "USER_LLM_PROVIDER_MODEL_NOT_FOUND": {
+        "title": "Вибрану модель не знайдено",
+        "body": "Постачальник не розпізнає цю назву моделі. Виберіть доступну модель у налаштуваннях і повторіть спробу."
+      },
+      "USER_LLM_PROVIDER_RATE_LIMITED": {
+        "title": "Досягнуто ліміту запитів постачальника моделі",
+        "body": "Постачальник тимчасово обмежує запити. Зачекайте, зменште частоту запитів або перемкніть модель."
+      },
+      "USER_LLM_PROVIDER_TIMEOUT": {
+        "title": "Час запиту до постачальника моделі минув",
+        "body": "Постачальник не відповів вчасно. Повторіть спробу пізніше або перейдіть на стабільнішого постачальника."
+      },
+      "USER_LLM_PROVIDER_NETWORK_ERROR": {
+        "title": "Не вдалося підключитися до постачальника моделі",
+        "body": "Мережева або DNS-помилка завадила доступу до постачальника. Перевірте мережу, проксі та Base URL."
+      },
+      "USER_LLM_PROVIDER_GATEWAY_ERROR": {
+        "title": "Сервіс постачальника моделі недоступний",
+        "body": "Постачальник повернув помилку шлюзу або сервісу. Повторіть спробу пізніше або скористайтеся іншим постачальником."
+      },
+      "USER_LLM_PROVIDER_PERMISSION_DENIED": {
+        "title": "Постачальник моделі відмовив у доступі",
+        "body": "Обліковий запис постачальника не має дозволу на цю модель або операцію. Перевірте права акаунта або виберіть іншу модель."
+      },
+      "USER_LLM_PROVIDER_BILLING_REQUIRED": {
+        "title": "Постачальнику моделі потрібна активна оплата",
+        "body": "Для виконання цього запиту вибраному постачальнику потрібна активна оплата, кредити або квота."
+      },
+      "USER_LLM_PROVIDER_UNSUPPORTED_MODEL": {
+        "title": "Модель не підтримує цей запит",
+        "body": "Вибрана модель недоступна або не підтримує потрібну можливість. Виберіть підтримувану модель і повторіть спробу."
+      },
+      "USER_LLM_PROVIDER_ENDPOINT_NOT_FOUND": {
+        "title": "Ендпоінт постачальника моделі не знайдено",
+        "body": "Ендпоінт або шлях API постачальника не знайдено. Перевірте Base URL, назву розгортання та сумісність API."
+      },
+      "USER_LLM_PROVIDER_INVALID_REQUEST": {
+        "title": "Постачальник моделі відхилив запит",
+        "body": "Постачальник повідомив, що запит недійсний. Спростіть повідомлення або перевірте налаштування моделі/постачальника."
+      },
+      "USER_LLM_PROVIDER_INVALID_TOOL_SCHEMA": {
+        "title": "Постачальник відхилив схему інструмента",
+        "body": "Постачальник відхилив визначення інструмента в цьому запиті. Оновіть агента або вимкніть несумісний інструмент, потім повторіть спробу."
+      },
+      "USER_LLM_PROVIDER_CONTEXT_TOO_LARGE": {
+        "title": "Контекст перевищує ліміт моделі",
+        "body": "Запит перевищує ліміт контексту моделі. Зменште повідомлення, файли або історію розмови, потім повторіть спробу."
+      },
+      "USER_LLM_PROVIDER_EMPTY_RESPONSE": {
+        "title": "Постачальник моделі повернув порожню відповідь",
+        "body": "Постачальник завершив запит, але не повернув придатний вміст. Повторіть один раз або змініть постачальника, якщо це повториться."
+      },
+      "WORKSPACE_PATH_RUNTIME_UNAVAILABLE": {
+        "title": "Поточний Agent не зміг виконатися в цьому шляху робочого простору",
+        "body": "Переконайтеся, що поточний шлях робочого простору справді існує.",
+        "bodyWithPath": "Поточний Agent не зміг виконатися в шляху робочого простору \"{{workspacePath}}\". Переконайтеся, що цей шлях справді існує."
+      },
+      "UNKNOWN_UPSTREAM_ERROR": {
+        "title": "Помилка зовнішнього агента або постачальника",
+        "body": "Застосунок отримав зовнішню помилку, але не зміг визначити, чи вона походить від агента, постачальника, мережі або локального середовища."
+      },
+      "MCP_HTTP_RESPONSE_READ_FAILED": {
+        "title": "Failed to read the team helper response",
+        "body": "AIPM工作台 could not read the local team helper response. Retry once, and if it keeps happening, restart the app."
+      },
+      "MCP_TOOL_REMOTE_ERROR": {
+        "title": "The local team helper rejected the request",
+        "body": "The local team helper returned an error while processing this request. Review the details below and retry after adjusting the team action."
+      },
+      "MCP_TOOL_RESPONSE_UNEXPECTED": {
+        "title": "The team helper returned an unexpected response",
+        "body": "AIPM工作台 received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
+      },
+      "MCP_TCP_READ_FAILED": {
+        "title": "Failed to read from the local team helper",
+        "body": "AIPM工作台 could not read the local team helper TCP response. Retry once, and restart the app if it keeps failing."
+      },
+      "TEAM_SERVICE_UNAVAILABLE": {
+        "title": "Team service is not ready yet",
+        "body": "The local team session is still starting or has been interrupted. Wait a moment and retry."
+      },
+      "TEAM_ASSISTANT_ID_REQUIRED": {
+        "title": "A teammate assistant must be selected",
+        "body": "Choose a real assistant from the available assistant catalog before creating or spawning a teammate."
+      },
+      "TEAM_ASSISTANT_NOT_FOUND": {
+        "title": "The selected assistant is no longer available",
+        "body": "Refresh the assistant catalog, then choose another assistant for this teammate."
+      },
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": {
+        "title": "The request used a legacy team identity field",
+        "body": "This team action must use assistant_id instead of legacy backend or agent fields."
+      }
+    }
+  },
+  "workspace": {
+    "title": "Проєкт",
+    "pasteConfirm_title": "Вставка файлів",
+    "pasteConfirm_message": "Ви впевнені, що хочете вставити «{{name}}» у вибрану папку ({{target}})?",
+    "pasteConfirm_paste": "Вставити",
+    "pasteConfirm_cancel": "Скасувати",
+    "pasteConfirm_noAsk": "Більше не запитувати",
+    "pasteConfirm_fileName": "Ім'я файлу",
+    "pasteConfirm_targetFolder": "Цільова папка",
+    "pasteConfirm_multipleFiles": "{{count}} файлів",
+    "empty": "Пусто",
+    "emptyDescription": "Файли з'являться тут після завантаження або відкриття папки",
+    "searchPlaceholder": "Пошук файлів...",
+    "createNewConversation": "Створити новий чат у поточному проєкті",
+    "search.empty": "Результати пошуку порожні",
+    "addFile": "Додати файл",
+    "refresh": "Оновити",
+    "temporarySpace": "Тимчасовий простір",
+    "dragOverlayTitle": "Перетягніть для імпорту",
+    "dragOverlayDesc": "Перетягніть файли або папки сюди, щоб скопіювати їх у цей проєкт.",
+    "dragOverlayHint": "Порада: перетягніть у будь-яке місце для імпорту у вибрану папку.",
+    "dragNoFiles": "Валідні файли не виявлені. Перетягніть з Finder/Explorer.",
+    "dragFailed": "Не вдалося імпортувати перетягнуті файли.",
+    "contextMenu": {
+      "open": "Відкрити",
+      "openLocation": "Показати в папці",
+      "preview": "Попередній перегляд",
+      "previewFailed": "Не вдалося відкрити попередній перегляд",
+      "deleteTitle": "Видалити файл",
+      "deleteConfirm": "Це видалить файл із вашої системи. Продовжити?",
+      "deleteSuccess": "Видалено успішно",
+      "deleteFailed": "Не вдалося видалити",
+      "rename": "Перейменувати",
+      "renameTitle": "Перейменувати",
+      "renamePlaceholder": "Введіть нове ім'я",
+      "renameSuccess": "Перейменовано успішно",
+      "renameFailed": "Не вдалося перейменувати",
+      "renameEmpty": "Ім'я не може бути порожнім",
+      "renameTimeout": "Таймаут запиту на перейменування, будь ласка, спробуйте знову",
+      "addToChat": "Додати в чат",
+      "addedToChat": "Додано в чат",
+      "openFailed": "Не вдалося відкрити",
+      "revealFailed": "Не вдалося відкрити папку з файлом",
+      "download": "Завантажити",
+      "downloadSuccess": "Завантаження успішне",
+      "downloadFailed": "Не вдалося завантажити"
+    },
+    "preview": {
+      "errors": {
+        "outsideSandbox": "Файл поза пісочницею проєкту, попередній перегляд недоступний.",
+        "notFound": "Файл не існує або його було видалено.",
+        "timeout": "Час читання файла вичерпано. Спробуйте ще раз."
+      }
+    },
+    "changes": {
+      "tab": "Зміни",
+      "filesTab": "Файли",
+      "currentBranchLabel": "Поточна гілка",
+      "summary": "{{count}} файл(ів) змінено",
+      "insertions": "+{{count}} додано",
+      "deletions": "-{{count}} видалено",
+      "empty": "Поки немає змін",
+      "emptyDescription": "Зміни файлів з'являться тут, коли ШІ змінить файли",
+      "refresh": "Оновити",
+      "staged": "Індексовані зміни",
+      "unstaged": "Зміни",
+      "changedFiles": "Змінені файли",
+      "stage": "Індексувати",
+      "stageAll": "Індексувати всі зміни",
+      "unstage": "Разиндексувати",
+      "unstageAll": "Разиндексувати всі зміни",
+      "discard": "Скасувати зміни",
+      "reset": "Відкотити зміни",
+      "noUnstaged": "Немає неіндексованих змін",
+      "noStaged": "Немає індексованих змін"
+    },
+    "openWorkspace": "Відкрити папку проєкту",
+    "openWith": {
+      "vscode": "VS Code",
+      "terminal": "Термінал",
+      "explorer": "Провідник",
+      "browser": "Браузер"
+    }
+  },
+  "minimap": {
+    "searchAria": "Пошук по діалогу",
+    "searchHint": "Натисніть тут для пошуку за ключовими словами",
+    "empty": "Поки немає запитань та відповідей",
+    "noMatch": "Відповідний контент не знайдено",
+    "count": "{{count}} ходів",
+    "count_one": "{{count}} хід",
+    "count_other": "{{count}} ходів",
+    "count_few": "{{count}} ходи",
+    "count_many": "{{count}} ходів"
+  },
+  "chat": {
+    "noModelSelected": "Модель для поточної сесії не вибрана, неможливо надіслати повідомлення",
+    "sendMessageTo": "Надіслати повідомлення {{model}}",
+    "processing": "Обробка...",
+    "quotaExceededTitle": "Ліміт моделі вичерпано",
+    "quotaExceededBody": "Ліміт поточної моделі вичерпано. Переключитися на {{model}}, щоб продовжити?",
+    "quotaExceededNoFallback": "Ліміт моделі вичерпано. Будь ласка, переключіться на іншу доступну модель.",
+    "quotaSwitched": "Переключено на {{model}}.",
+    "apiErrorNoCli": "Виникла помилка API. Немає CLI Агента для переключення.",
+    "apiErrorSwitchFailed": "Не вдалося створити діалог для переключення.",
+    "apiErrorSwitched": "Помилка API, автоматичне переключення на {{cli}} CLI",
+    "confirmationLoadError": "Не вдалося завантажити діалог підтвердження",
+    "tryAnotherAgent": "Спробуйте іншого агента:",
+    "switchAgentFailed": "Не вдалося переключити агента",
+    "speech": {
+      "recordTooltip": "Почати голосове введення",
+      "recordTooltipWithShortcut": "Голосове введення cmd+M",
+      "pickFileTooltip": "Вибрати аудіофайл",
+      "stopTooltip": "Зупинити запис",
+      "processing": "Транскрибування аудіо...",
+      "unsupported": "Голосове введення недоступне в цьому середовищі",
+      "startShort": "Мік",
+      "stopShort": "Стоп",
+      "transcribingShort": "...",
+      "audioCaptureError": "Мікрофон не виявлено",
+      "fileTooLarge": "Аудіофайл занадто великий",
+      "networkError": "Мережева помилка під час транскрибування аудіо",
+      "notConfigured": "Перетворення мовлення на текст ще не налаштовано",
+      "permissionDenied": "Доступ до мікрофона відхилено",
+      "recordingUnsupported": "Запис у реальному часі не підтримується. Будь ласка, завантажте аудіофайл",
+      "transcriptionFailed": "Не вдалося транскрибувати аудіо",
+      "genericError": "Помилка голосового введення. Спробуйте ще раз",
+      "emptyTranscript": "No speech was detected"
+    }
+  },
+  "sideQuestion": {
+    "title": "Бічне запитання",
+    "description": "Швидко запитати про поточний діалог",
+    "started": "Запуск бічного запитання...",
+    "answered": "На бічне запитання отримано відповідь.",
+    "noAnswer": "На бічне запитання немає чіткої відповіді в поточному діалозі.",
+    "loading": "Розмірковує...",
+    "parentTaskRunning": "Основне завдання все ще виконується у фоновому режимі.",
+    "dismissHint": "Натисніть Escape, Enter або Space, щоб закрити",
+    "unsupported": "Бічні запитання недоступні для цього діалогу.",
+    "alreadyRunning": "Бічне запитання вже виконується.",
+    "attachmentsNotAllowed": "Бічні запитання не можуть містити файли або фрагменти DOM.",
+    "emptyQuestion": "Будь ласка, введіть бічне запитання після /btw.",
+    "toolsRequired": "/btw може відповідати лише на запитання на основі того, що вже є в цьому діалозі. У нього немає доступу до пошуку, браузера або отримання нової інформації.",
+    "error": "Не вдалося відповісти на бічне запитання."
+  },
+  "commandQueue": {
+    "title": "Чернетки",
+    "clear": "Очистити чернетки",
+    "edit": "Редагувати",
+    "editing": "Редагування",
+    "editPlaceholder": "Оновіть команду в черзі перед виконанням.",
+    "cancelEdit": "Скасувати",
+    "saveEdit": "Зберегти",
+    "moreActions": "Ще дії",
+    "reorder": "Перетягніть, щоб змінити порядок",
+    "remove": "Видалити",
+    "files": "{{count}} файлів",
+    "files_one": "{{count}} файл",
+    "files_other": "{{count}} файлів",
+    "files_few": "{{count}} файли",
+    "files_many": "{{count}} файлів",
+    "pausedAfterFailure": "Наступна команда в черзі не може запуститися. Відредагуйте, змініть порядок або видаліть її, щоб продовжити.",
+    "emptyInput": "Команди в черзі не можуть бути порожніми.",
+    "queueFull": "Черга заповнена. Видаліть команду перед додаванням нових.",
+    "inputTooLong": "Ця команда в черзі занадто довга. Скоротіть її перед надсиланням.",
+    "tooManyFiles": "Занадто багато файлів прикріплено до цієї команди в черзі.",
+    "queueTooLarge": "Дані черги занадто великі для безпечного збереження. Спочатку видаліть кілька команд.",
+    "sendNow": "Надіслати зараз",
+    "modeToggle": "Перемкнути режим надсилання",
+    "help": "Довідка",
+    "helpIntro": "Повідомлення, надіслані під час відповіді ШІ, чекають тут.",
+    "helpAuto": ": надсилаються автоматично по черзі після кожної відповіді.",
+    "helpManual": ": зберігаються без надсилання; надішліть кожне кнопкою «Надіслати зараз».",
+    "clearConfirmTitle": "Очистити чернетки надсилання?",
+    "clearConfirmContent": "Усі повідомлення в очікуванні буде видалено. Цю дію не можна скасувати.",
+    "mode": {
+      "auto": "Авто-надсилання",
+      "manual": "Ручне надсилання"
+    },
+    "addToQueue": "Додати до чернеток",
+    "addToQueueShortcut": "⌘ + Enter / Ctrl + Enter",
+    "midturnBlocked": "Втручання не підтримується, поки цей агент відповідає. Використайте «Додати до чернеток».",
+    "enterShortcut": "Enter",
+    "actionMode": "Choose send action",
+    "midturnBlockedSendHint": "This agent is still working, so the message can’t be sent directly. Save it to Draft box and send it later.",
+    "addToQueueBusyHint": "Save to Draft box and send it later."
+  },
+  "contextUsage": {
+    "contextUsed": "контексту використано",
+    "tokensUsed": "Використано токенів: {{tokens}}",
+    "windowUnknown": "Розмір контекстного вікна невідомий",
+    "sessionCost": "Вартість сесії",
+    "input": "Ввід",
+    "output": "Вивід",
+    "thought": "Міркування",
+    "cachedRead": "Читання кешу",
+    "cachedWrite": "Запис кешу"
+  },
+  "skill_generator": {
+    "title": "Створити Навичку/Правило",
+    "generate": "Створити",
+    "description": "Аналіз історії діалогу для створення:",
+    "type_skill": "Навичка (Python)",
+    "type_rule": "Правило (JSON/MD)",
+    "name_label": "Ім'я Агента:",
+    "name_placeholder": "напр. Excel Translator",
+    "menu_generate": "Створити з історії",
+    "menu_load": "Завантажити Правило/Навичку",
+    "load_title": "Завантажити Правило/Навичку",
+    "load_error": "Не вдалося завантажити файли",
+    "no_files": "Релевантних файлів не знайдено в проєкті",
+    "read_error": "Не вдалося прочитати файл",
+    "rule_loaded": "Правило успішно завантажено",
+    "no_workspace": "Проєкт не налаштовано",
+    "name_required": "Будь ласка, введіть ім'я для пресета",
+    "no_history": "Історію діалогу не знайдено",
+    "request_sent": "Запит надіслано Агенту",
+    "failed": "Не вдалося створити",
+    "preset_registered": "Пресет Агента успішно зареєстровано!"
+  },
+  "thinking": {
+    "complete": "Роздуми завершено",
+    "label": "Розмірковує..."
+  },
+  "skills": {
+    "loaded": "Завантажені навички",
+    "slashHint": "Навичка"
+  },
+  "mcp": {
+    "loaded": "Завантажений MCP",
+    "managementHint": "Якщо MCP виглядає некоректно, зазвичай проблема в конфігурації MCP JSON. Відкрийте налаштування інструментів і перевірте його вручну.",
+    "openSettings": "Відкрити налаштування інструментів",
+    "status": {
+      "loaded": "Завантажено",
+      "failed": "Помилка",
+      "unsupported": "Не підтримується"
+    },
+    "selected": "Вибрані MCP"
+  },
+  "runtimePreparing": {
+    "sendboxHint": "Готується середовище виконання. Перший запуск може тривати трохи довше."
+  },
+  "sendbox": {
+    "hint": "Введіть / для команд, @ для посилань на файли, ↑/↓ для історії повідомлень",
+    "mediaPathFallback": "Цей агент не підтримує цей тип файлу нативно; його буде надіслано як шлях до файлу.",
+    "hintWithSessions": "/ — команди, @ — файли, @@ — розмови, ↑/↓ — історія"
+  },
+  "agentTip": {
+    "codes": {
+      "ACP_EMPTY_TURN": {
+        "body": "Цей запит завершився без видимої відповіді."
+      },
+      "ACP_EMPTY_TURN_NEEDS_AUTH": {
+        "body": "Цей запит не дав видимої відповіді. Якщо ви вже ввійшли, можливо, це тимчасова проблема бекенду або з'єднання — повторіть спробу або почніть нову розмову. Якщо ви ще не ввійшли, ви можете ввійти: {{hint}}."
+      },
+      "ACP_EMPTY_TURN_TOKEN_LIMIT": {
+        "body": "Цей запит не дав видимої відповіді. Можливо, поточна розмова наближається до межі довжини контексту — повторіть спробу або почніть нову розмову та спробуйте знову."
+      },
+      "ACP_EMPTY_TURN_MAX_TOKENS": {
+        "body": "У цьому запиті модель досягла ліміту вихідних токенів до появи видимої відповіді."
+      },
+      "ACP_EMPTY_TURN_MAX_TURN_REQUESTS": {
+        "body": "У цьому запиті модель досягла ліміту запитів до появи видимої відповіді."
+      },
+      "ACP_EMPTY_TURN_REFUSAL": {
+        "body": "Модель відхилила цей запит до появи видимої відповіді."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "Кроків завершилося невдало: {{count}}; вони НЕ були виконані. agy все одно позначає такі ходи як успішні — перевіряйте фактичний результат, а не відповідь."
+      },
+      "CLI_VERSION_OLDER": {
+        "body": "Встановлена версія {{cli}} старіша за перевірену AIPM工作台; деякі можливості можуть бути відсутні. Радимо оновити {{cli}}. (встановлено: {{reported}} / перевірено AIPM工作台: {{verified}})"
+      },
+      "CLI_VERSION_NEWER": {
+        "body": "Встановлена версія {{cli}} новіша за перевірену AIPM工作台. Зазвичай усе працює; повідомте про дивну поведінку. (встановлено: {{reported}} / перевірено AIPM工作台: {{verified}})"
+      },
+      "CODEX_RETRYING": {
+        "body": "{{detail}} (спроба {{attempts}}, минуло {{elapsed}} — провайдер агента постійно обриває з'єднання, AIPM工作台 очікує відновлення.)"
+      }
+    }
+  },
+  "notFound": "Розмову не знайдено або її видалено",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "refreshFiles": "Оновити файли",
+    "refreshChanges": "Оновити зміни",
+    "collapseAll": "Згорнути все",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Перейменувати",
+      "addToChat": "Додати в чат",
+      "copyRelativePath": "Копіювати відносний шлях",
+      "copyAbsolutePath": "Копіювати абсолютний шлях",
+      "newFile": "Новий файл",
+      "newDir": "Нова папка"
+    },
+    "namePlaceholder": "Назва",
+    "deleteConfirm": "Видалити «{{name}}»? Цю дію не можна скасувати.",
+    "renameFailed": "Не вдалося перейменувати",
+    "newFileFailed": "Не вдалося створити файл",
+    "newDirFailed": "Не вдалося створити папку",
+    "tabs": {
+      "files": "Файли",
+      "changes": "Зміни"
+    },
+    "addedToChat": "{{name}} додано в чат",
+    "imported": "Імпортовано файлів: {{count}}",
+    "importPartialFailed": "Скопійовано: {{copied}}, з помилкою: {{failed}} (конфлікти імен або не підтримується)",
+    "importFailed": "Не вдалося імпортувати файли",
+    "copyNodeFailed": "Не вдалося скопіювати",
+    "moveNodeFailed": "Не вдалося перемістити",
+    "search": {
+      "placeholder": "Пошук файлів за назвою",
+      "searching": "Пошук…",
+      "empty": "Немає відповідних файлів",
+      "limitReached": "Показано перші {{count}} — уточніть запит"
+    },
+    "scm": {
+      "notARepository": "Ця тека не під контролем версій",
+      "noChanges": "Немає змін",
+      "loading": "Завантаження змін…",
+      "loadFailed": "Не вдалося завантажити зміни",
+      "groups": {
+        "staged": "Проіндексовані зміни",
+        "unstaged": "Зміни",
+        "changes": "Зміни",
+        "blocked": "Потребує розв’язання"
+      },
+      "sections": {
+        "repositories": "Репозиторії",
+        "changes": "Зміни"
+      },
+      "viewAsTree": "Показати деревом",
+      "viewAsList": "Показати списком",
+      "worktree": "Робоче дерево",
+      "expandWorktrees": "Показати робочі дерева",
+      "collapseWorktrees": "Приховати робочі дерева",
+      "state": {
+        "created": "Додано",
+        "modified": "Змінено",
+        "deleted": "Видалено",
+        "renamed": "Перейменовано",
+        "conflicted": "Конфлікт",
+        "unknown": "Невідомий стан"
+      },
+      "badge": {
+        "created": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "conflicted": "!",
+        "unknown": "?"
+      },
+      "conflictedHint": "Спершу розв’яжіть цей конфлікт поза AIPM工作台",
+      "opaqueHint": "Цей стан надійшов від новішої версії сервера — лише для перегляду",
+      "degraded": "Оновлення виконується в повільнішому режимі: не вдається записати індекс git",
+      "truncated": "Занадто багато змін — показано лише першу частину",
+      "renamedFrom": "{{from}} → {{to}}",
+      "diff": {
+        "loading": "Завантаження різниці…",
+        "failed": "Не вдалося завантажити різницю",
+        "binary": "Двійковий файл — текстової різниці немає",
+        "truncated": "Різницю скорочено (великий файл)",
+        "empty": "Немає текстових змін",
+        "close": "Закрити різницю"
+      },
+      "actions": {
+        "stage": "Проіндексувати зміни",
+        "unstage": "Прибрати з індексу",
+        "discard": "Скасувати зміни",
+        "stageAll": "Проіндексувати все",
+        "unstageAll": "Прибрати все з індексу",
+        "blockedHint": "Спершу розв’яжіть конфлікт поза AIPM工作台, потім індексуйте або скасовуйте",
+        "confirmDiscardTitle": "Скасувати зміни?",
+        "confirmDiscardTracked": "Правки у {{count}} файлах буде втрачено. Це не можна скасувати.",
+        "confirmDiscardUntracked": "{{count}} нових файлів буде переміщено до смітника.",
+        "confirmDiscardMixed": "Правки у {{tracked}} файлі(ах) буде безповоротно втрачено; {{untracked}} нових файлів потраплять до смітника.",
+        "discardConfirmButton": "Скасувати",
+        "okStage": "Проіндексовано файлів: {{count}}",
+        "okStage_one": "Проіндексовано файлів: {{count}}",
+        "okStage_other": "Проіндексовано файлів: {{count}}",
+        "okStage_few": "Проіндексовано файлів: {{count}}",
+        "okStage_many": "Проіндексовано файлів: {{count}}",
+        "okUnstage": "Прибрано з індексу файлів: {{count}}",
+        "okUnstage_one": "Прибрано з індексу файлів: {{count}}",
+        "okUnstage_other": "Прибрано з індексу файлів: {{count}}",
+        "okUnstage_few": "Прибрано з індексу файлів: {{count}}",
+        "okUnstage_many": "Прибрано з індексу файлів: {{count}}",
+        "okDiscard": "Скасовано зміни у {{count}} файлах",
+        "okDiscard_one": "Скасовано зміни у {{count}} файлі",
+        "okDiscard_other": "Скасовано зміни у {{count}} файлах",
+        "okDiscard_few": "Скасовано зміни у {{count}} файлах",
+        "okDiscard_many": "Скасовано зміни у {{count}} файлах",
+        "partial": "Виконано {{succeeded}} з {{total}} —— не вдалося: {{failed}}",
+        "partialDetail": "Не виконано: {{files}}",
+        "rejectedBlocked": "Нічого не змінено —— спершу розв’яжіть конфлікт",
+        "rejectedUnsupported": "Це сховище не підтримує таку дію",
+        "rejectedFailed": "Не вдалося виконати дію",
+        "retry": "Повторити",
+        "notSent": "Запит не дійшов до сервера, нічого не змінено. Можна повторити.",
+        "outcomeUnknown": "З’єднання скинуто до отримання відповіді — операція могла завершитися, а могла й ні. Оновіть і перевірте список файлів, перш ніж повторювати.",
+        "allFailed": "Жоден із {{count}} файл(ів) не вдалося обробити",
+        "allFailed_one": "Не вдалося обробити {{count}} файл",
+        "allFailed_other": "Жоден із {{count}} файлів не вдалося обробити",
+        "allFailed_few": "Жоден із {{count}} файлів не вдалося обробити",
+        "allFailed_many": "Жоден із {{count}} файлів не вдалося обробити"
+      }
+    },
+    "pathCopied": "Шлях скопійовано",
+    "copyFailed": "Не вдалося скопіювати шлях"
+  },
+  "terminal": {
+    "running": "Виконується",
+    "stopped": "Зупинено",
+    "exited": "Код {{code}}",
+    "stop": "Зупинити",
+    "truncated": "(ранній вивід обрізано)"
+  },
+  "emptyState": {
+    "greeting": "Вітаю! Розкажіть, що потрібно, і я почну."
+  },
+  "crossSession": {
+    "mentionAgain": "Згадати розмову {{name}} у полі введення",
+    "mentionAgainHint": "Натисніть, щоб згадати цю розмову у полі введення",
+    "mentionUnavailable": "Цю розмову більше не можна згадати.",
+    "mentionFailed": "Не вдалося згадати цю розмову.",
+    "fromBadge": "З розмови «{{name}}»",
+    "otherWorkspace": "інша робоча тека",
+    "rateLimitedTitle": "Повідомлення між розмовами, можливо, зациклилися",
+    "rateLimited": "Автоматичні повідомлення між «{{from}}» і «{{to}}» надходять надто часто — можливо, вони зациклилися.",
+    "stopBoth": "Зупинити обидві розмови",
+    "disableFeature": "Вимкнути повідомлення між розмовами"
+  },
+  "planBar": {
+    "title": "План",
+    "progress": "{{completed}}/{{total}}",
+    "expand": "Розгорнути план",
+    "collapse": "Згорнути план"
+  }
+}

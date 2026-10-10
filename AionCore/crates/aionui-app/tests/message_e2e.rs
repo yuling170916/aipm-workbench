@@ -1,0 +1,927 @@
+//! E2E tests for message listing, search, pagination, and auth protection.
+
+mod common;
+
+use axum::body::Body;
+use axum::http::StatusCode;
+use serde_json::json;
+use tower::ServiceExt;
+
+use aionui_db::{ConversationRowUpdate, IConversationRepository};
+use common::{body_json, build_app, build_app_with_mock_agents, get_request, get_with_token, setup_and_login};
+
+// ── Helpers ───────────────────────────────────────────────────────────
+
+fn create_conv_body(name: &str) -> serde_json::Value {
+    json!({
+        "type": "acp",
+        "name": name,
+        "extra": { "backend": "gemini" }
+    })
+}
+
+async fn create_conversation(app: &mut axum::Router, token: &str, csrf: &str, name: &str) -> String {
+    let req = common::json_with_token("POST", "/api/conversations", create_conv_body(name), token, csrf);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let json = common::body_json(resp).await;
+    json["data"]["id"].as_str().unwrap().to_owned()
+}
+
+async fn insert_message(
+    services: &aionui_app::AppServices,
+    conv_id: &str,
+    msg_id: &str,
+    content: &str,
+    created_at: i64,
+) {
+    let repo = aionui_db::SqliteConversationRepository::new(services.database.pool().clone());
+    let user_id = repo.owner_user_id(conv_id).await.unwrap().unwrap();
+    let msg = aionui_db::models::MessageRow {
+        id: msg_id.into(),
+        conversation_id: conv_id.into(),
+        msg_id: None,
+        r#type: "text".into(),
+        content: serde_json::json!({"content": content}).to_string(),
+        position: Some("right".into()),
+        status: Some("finish".into()),
+        hidden: false,
+        created_at,
+        backend_turn_id: None,
+    };
+    aionui_db::IConversationRepository::insert_message(&repo, &user_id, &msg)
+        .await
+        .unwrap();
+}
+
+async fn update_conversation_workspace(services: &aionui_app::AppServices, conv_id: &str, workspace: &str) {
+    let repo = aionui_db::SqliteConversationRepository::new(services.database.pool().clone());
+    let user_id = repo.owner_user_id(conv_id).await.unwrap().unwrap();
+    IConversationRepository::update(
+        &repo,
+        &user_id,
+        conv_id,
+        &ConversationRowUpdate {
+            extra: Some(json!({ "workspace": workspace, "backend": "gemini" }).to_string()),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+}
+
+async fn insert_acp_tool_message(
+    services: &aionui_app::AppServices,
+    conv_id: &str,
+    msg_id: &str,
+    output: &str,
+    created_at: i64,
+) {
+    let repo = aionui_db::SqliteConversationRepository::new(services.database.pool().clone());
+    let user_id = repo.owner_user_id(conv_id).await.unwrap().unwrap();
+    let msg = aionui_db::models::MessageRow {
+        id: msg_id.into(),
+        conversation_id: conv_id.into(),
+        msg_id: Some(msg_id.into()),
+        r#type: "acp_tool_call".into(),
+        content: serde_json::json!({
+            "session_id": "session-1",
+            "update": {
+                "session_update": "tool_call",
+                "tool_call_id": msg_id,
+                "status": "completed",
+                "title": "rg",
+                "kind": "search",
+                "raw_input": { "pattern": "needle", "path": "." },
+                "content": [{
+                    "type": "content",
+                    "content": { "type": "text", "text": output }
+                }]
+            }
+        })
+        .to_string(),
+        position: Some("left".into()),
+        status: Some("finish".into()),
+        hidden: false,
+        created_at,
+        backend_turn_id: None,
+    };
+    aionui_db::IConversationRepository::insert_message(&repo, &user_id, &msg)
+        .await
+        .unwrap();
+}
+
+async fn upsert_artifact(services: &aionui_app::AppServices, artifact: aionui_db::ConversationArtifactRow) {
+    let repo = aionui_db::SqliteConversationRepository::new(services.database.pool().clone());
+    let user_id = repo.owner_user_id(&artifact.conversation_id).await.unwrap().unwrap();
+    aionui_db::IConversationRepository::upsert_artifact(&repo, &user_id, &artifact)
+        .await
+        .unwrap();
+}
+
+// ── T8: Message list ──────────────────────────────────────────────────
+
+#[tokio::test]
+async fn t8_1_messages_empty() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Empty Conv").await;
+
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["items"].as_array().unwrap().len(), 0);
+    assert!(json["data"]["oldest_cursor"].is_null());
+    assert!(json["data"]["newest_cursor"].is_null());
+    assert_eq!(json["data"]["has_more_before"], false);
+    assert_eq!(json["data"]["has_more_after"], false);
+}
+
+#[tokio::test]
+async fn t8_2_messages_pagination() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Paginated Conv").await;
+
+    // Insert 10 messages
+    for i in 0..10 {
+        insert_message(
+            &services,
+            &conv_id,
+            &format!("msg-{i}"),
+            &format!("Message {i}"),
+            1000 + i * 100,
+        )
+        .await;
+    }
+
+    // Latest page, limit 3
+    let resp = app
+        .clone()
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages?limit=3"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["items"].as_array().unwrap().len(), 3);
+    assert_eq!(json["data"]["has_more_before"], true);
+    assert_eq!(json["data"]["has_more_after"], false);
+    let oldest_cursor = json["data"]["oldest_cursor"].as_str().unwrap();
+
+    // Previous history page
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages?limit=3&before={oldest_cursor}"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["items"].as_array().unwrap().len(), 3);
+    assert_eq!(json["data"]["has_more_before"], true);
+    assert_eq!(json["data"]["has_more_after"], true);
+}
+
+#[tokio::test]
+async fn t8_2b_messages_compact_mode_truncates_large_tool_payload() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Compact Tool Conv").await;
+    let large_output = "match line\n".repeat(10_000);
+
+    insert_acp_tool_message(&services, &conv_id, "tool-big", &large_output, 1000).await;
+
+    let resp = app
+        .clone()
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages?content_mode=compact"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    let content = &json["data"]["items"][0]["content"];
+    let preview = content["update"]["content"][0]["content"]["text"].as_str().unwrap();
+
+    assert_eq!(content["_compact"]["truncated"], true);
+    assert!(preview.len() < large_output.len());
+    assert!(!preview.contains(&large_output));
+}
+
+#[tokio::test]
+async fn t8_2c_get_message_returns_full_tool_payload() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Tool Detail Conv").await;
+    let large_output = "wide rg output\n".repeat(10_000);
+
+    insert_acp_tool_message(&services, &conv_id, "tool-detail", &large_output, 1000).await;
+
+    let resp = app
+        .clone()
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages/tool-detail"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+
+    assert_eq!(
+        json["data"]["content"]["update"]["content"][0]["content"]["text"]
+            .as_str()
+            .unwrap(),
+        large_output
+    );
+}
+
+#[tokio::test]
+async fn t8_2d_get_message_requires_auth() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Tool Detail Auth Conv").await;
+
+    let resp = app
+        .oneshot(get_request(&format!(
+            "/api/conversations/{conv_id}/messages/tool-detail"
+        )))
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let json = body_json(resp).await;
+    assert_eq!(json["code"], "UNAUTHORIZED");
+}
+
+#[tokio::test]
+async fn t8_2e_get_message_not_found_returns_specific_error() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Tool Detail Missing Conv").await;
+
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages/missing-message"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let json = body_json(resp).await;
+
+    assert_eq!(json["code"], "NOT_FOUND");
+    assert!(
+        json["error"]
+            .as_str()
+            .unwrap()
+            .contains("Message missing-message not found")
+    );
+}
+
+#[tokio::test]
+async fn t8_2f_get_message_does_not_leak_cross_user_conversation() {
+    let (mut app, services) = build_app().await;
+    let (owner_token, owner_csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let owner_conv_id = create_conversation(&mut app, &owner_token, &owner_csrf, "Owner Tool Conv").await;
+    insert_acp_tool_message(&services, &owner_conv_id, "owner-tool", "private output", 1000).await;
+
+    let (other_token, _other_csrf) = setup_and_login(&mut app, &services, "other-user", "StrongP@ss2").await;
+
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{owner_conv_id}/messages/owner-tool"),
+            &other_token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let json = body_json(resp).await;
+
+    assert_eq!(json["code"], "NOT_FOUND");
+    assert!(
+        json["error"]
+            .as_str()
+            .unwrap()
+            .contains(&format!("Conversation {owner_conv_id} not found"))
+    );
+    assert!(!json["error"].as_str().unwrap().contains("owner-tool"));
+    assert!(!json["error"].as_str().unwrap().contains("private output"));
+}
+
+#[tokio::test]
+async fn t8_3_messages_order_asc_default() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Order Test").await;
+
+    insert_message(&services, &conv_id, "msg-old", "Old", 1000).await;
+    insert_message(&services, &conv_id, "msg-mid", "Mid", 2000).await;
+    insert_message(&services, &conv_id, "msg-new", "New", 3000).await;
+
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    let items = json["data"]["items"].as_array().unwrap();
+    // ASC order (default): oldest first
+    assert!(items[0]["created_at"].as_i64().unwrap() < items[1]["created_at"].as_i64().unwrap());
+    assert!(items[1]["created_at"].as_i64().unwrap() < items[2]["created_at"].as_i64().unwrap());
+}
+
+#[tokio::test]
+async fn t8_4_messages_limit_returns_latest_window_in_ascending_order() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Limit Test").await;
+
+    insert_message(&services, &conv_id, "msg-old", "Old", 1000).await;
+    insert_message(&services, &conv_id, "msg-mid", "Mid", 2000).await;
+    insert_message(&services, &conv_id, "msg-new", "New", 3000).await;
+
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages?limit=2"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    let items = json["data"]["items"].as_array().unwrap();
+    assert_eq!(items.len(), 2);
+    assert_eq!(items[0]["id"], "msg-mid");
+    assert_eq!(items[1]["id"], "msg-new");
+    assert!(items[0]["created_at"].as_i64().unwrap() < items[1]["created_at"].as_i64().unwrap());
+}
+
+#[tokio::test]
+async fn t8_5_messages_conversation_not_found() {
+    let (mut app, services) = build_app().await;
+    let (token, _csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let resp = app
+        .oneshot(get_with_token("/api/conversations/non-existent/messages", &token))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn t8_6_messages_requires_auth() {
+    let (app, _services) = build_app().await;
+    let resp = app
+        .oneshot(get_request("/api/conversations/some-id/messages"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let json = body_json(resp).await;
+    assert_eq!(json["code"], "UNAUTHORIZED");
+}
+
+#[tokio::test]
+async fn t8_7_messages_exclude_legacy_cron_rows() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Legacy Filter").await;
+
+    insert_message(&services, &conv_id, "msg-text", "Visible", 1000).await;
+
+    let repo = aionui_db::SqliteConversationRepository::new(services.database.pool().clone());
+    for (id, ty, content) in [
+        (
+            "legacy-cron",
+            "cron_trigger",
+            json!({
+                "cron_job_id": "cron_1",
+                "cron_job_name": "Daily",
+                "triggered_at": 2000
+            }),
+        ),
+        (
+            "legacy-skill",
+            "skill_suggest",
+            json!({
+                "cron_job_id": "cron_1",
+                "name": "daily-report",
+                "description": "Daily report",
+                "skillContent": "---\nname: daily-report\n---\nUse it."
+            }),
+        ),
+    ] {
+        let msg = aionui_db::models::MessageRow {
+            id: id.into(),
+            conversation_id: conv_id.clone(),
+            msg_id: None,
+            r#type: ty.into(),
+            content: content.to_string(),
+            position: Some("center".into()),
+            status: Some("finish".into()),
+            hidden: false,
+            created_at: 2000,
+            backend_turn_id: None,
+        };
+        let user_id = repo.owner_user_id(&conv_id).await.unwrap().unwrap();
+        aionui_db::IConversationRepository::insert_message(&repo, &user_id, &msg)
+            .await
+            .unwrap();
+    }
+
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let json = body_json(resp).await;
+    let items = json["data"]["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["type"], "text");
+    assert_eq!(items[0]["content"]["content"], "Visible");
+}
+
+#[tokio::test]
+async fn t8_8_artifacts_list_and_patch_status() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Artifacts").await;
+    let artifact_id = format!("{conv_id}:skill_suggest:cron_1");
+
+    upsert_artifact(
+        &services,
+        aionui_db::ConversationArtifactRow {
+            id: artifact_id.clone(),
+            conversation_id: conv_id.clone(),
+            cron_job_id: Some("cron_1".into()),
+            kind: "skill_suggest".into(),
+            status: "active".into(),
+            payload: json!({
+                "cron_job_id": "cron_1",
+                "name": "daily-report",
+                "description": "Daily report",
+                "skillContent": "---\nname: daily-report\n---\nUse it."
+            })
+            .to_string(),
+            created_at: 1000,
+            updated_at: 1000,
+        },
+    )
+    .await;
+
+    let resp = app
+        .clone()
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/artifacts"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    let items = json["data"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["id"], artifact_id);
+    assert_eq!(items[0]["kind"], "skill_suggest");
+    assert_eq!(items[0]["status"], "active");
+
+    let patch_req = common::json_with_token(
+        "PATCH",
+        &format!("/api/conversations/{conv_id}/artifacts/{artifact_id}"),
+        json!({ "status": "dismissed" }),
+        &token,
+        &csrf,
+    );
+    let patch_resp = app.oneshot(patch_req).await.unwrap();
+    assert_eq!(patch_resp.status(), StatusCode::OK);
+    let patch_json = body_json(patch_resp).await;
+    assert_eq!(patch_json["data"]["status"], "dismissed");
+}
+
+// ── T9: Message search ────────────────────────────────────────────────
+
+#[tokio::test]
+async fn t9_1_search_keyword_match() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Search Conv").await;
+    insert_message(&services, &conv_id, "msg-1", "Rust is great", 1000).await;
+    insert_message(&services, &conv_id, "msg-2", "Python is also nice", 2000).await;
+
+    let resp = app
+        .oneshot(get_with_token("/api/messages/search?keyword=Rust", &token))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    let items = json["data"]["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["conversation"]["name"], "Search Conv");
+}
+
+#[tokio::test]
+async fn t9_2_search_no_match() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let conv_id = create_conversation(&mut app, &token, &csrf, "No Match Conv").await;
+    insert_message(&services, &conv_id, "msg-1", "Hello world", 1000).await;
+
+    let resp = app
+        .oneshot(get_with_token("/api/messages/search?keyword=xxxxnotexist", &token))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["items"].as_array().unwrap().len(), 0);
+    assert_eq!(json["data"]["total"], 0);
+}
+
+#[tokio::test]
+async fn t9_3_search_pagination() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Search Paged").await;
+    for i in 0..5 {
+        insert_message(
+            &services,
+            &conv_id,
+            &format!("msg-{i}"),
+            &format!("Matching keyword {i}"),
+            1000 + i * 100,
+        )
+        .await;
+    }
+
+    let resp = app
+        .clone()
+        .oneshot(get_with_token(
+            "/api/messages/search?keyword=Matching&page=1&page_size=2",
+            &token,
+        ))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["items"].as_array().unwrap().len(), 2);
+    assert_eq!(json["data"]["total"], 5);
+    assert_eq!(json["data"]["has_more"], true);
+}
+
+#[tokio::test]
+async fn t9_4_search_empty_keyword() {
+    let (mut app, services) = build_app().await;
+    let (token, _csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let resp = app
+        .oneshot(get_with_token("/api/messages/search?keyword=", &token))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn t9_5_search_requires_auth() {
+    let (app, _services) = build_app().await;
+    let resp = app
+        .oneshot(get_request("/api/messages/search?keyword=test"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let json = body_json(resp).await;
+    assert_eq!(json["code"], "UNAUTHORIZED");
+}
+
+// ── T12.4: SQL injection safety ───────────────────────────────────────
+
+#[tokio::test]
+async fn t12_4_search_sql_injection_safe() {
+    let (mut app, services) = build_app().await;
+    let (token, _csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let resp = app
+        .oneshot(get_with_token(
+            "/api/messages/search?keyword=';%20DROP%20TABLE%20messages;%20--",
+            &token,
+        ))
+        .await
+        .unwrap();
+    // Should not crash; just return empty results
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["items"].as_array().unwrap().len(), 0);
+}
+
+// ── Message response field validation ─────────────────────────────────
+
+#[tokio::test]
+async fn message_response_has_correct_fields() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Field Check").await;
+    insert_message(&services, &conv_id, "msg-fc", "Content check", 5000).await;
+
+    let resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    let msg = &json["data"]["items"][0];
+
+    // Verify snake_case fields exist
+    assert!(msg.get("id").is_some());
+    assert!(msg.get("conversation_id").is_some());
+    assert!(msg.get("type").is_some());
+    assert!(msg.get("content").is_some());
+    assert!(msg.get("position").is_some());
+    assert!(msg.get("status").is_some());
+    assert!(msg.get("created_at").is_some());
+    // Verify no camelCase leaks
+    assert!(msg.get("conversationId").is_none());
+    assert!(msg.get("createdAt").is_none());
+    assert!(msg.get("msgId").is_none());
+}
+
+// ── Delete cascades messages ──────────────────────────────────────────
+
+#[tokio::test]
+async fn delete_conversation_cascades_messages() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Cascade Test").await;
+    insert_message(&services, &conv_id, "msg-cas-1", "msg 1", 1000).await;
+    insert_message(&services, &conv_id, "msg-cas-2", "msg 2", 2000).await;
+
+    // Delete the conversation
+    let resp = app
+        .clone()
+        .oneshot(common::delete_with_token(
+            &format!("/api/conversations/{conv_id}"),
+            &token,
+            &csrf,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Search for messages from the deleted conversation should return nothing
+    let resp = app
+        .oneshot(get_with_token("/api/messages/search?keyword=msg", &token))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["items"].as_array().unwrap().len(), 0);
+}
+
+// ── Cross-conversation search ─────────────────────────────────────────
+
+#[tokio::test]
+async fn search_across_multiple_conversations() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let conv1 = create_conversation(&mut app, &token, &csrf, "Conv Alpha").await;
+    let conv2 = create_conversation(&mut app, &token, &csrf, "Conv Beta").await;
+
+    insert_message(&services, &conv1, "msg-a1", "Rust review needed", 1000).await;
+    insert_message(&services, &conv2, "msg-b1", "Rust performance tips", 2000).await;
+    insert_message(&services, &conv2, "msg-b2", "Python patterns", 3000).await;
+
+    let resp = app
+        .oneshot(get_with_token("/api/messages/search?keyword=Rust", &token))
+        .await
+        .unwrap();
+    let json = body_json(resp).await;
+    let items = json["data"]["items"].as_array().unwrap();
+    assert_eq!(items.len(), 2);
+    assert_eq!(json["data"]["total"], 2);
+}
+
+// ── T2.1: Send message ──────────────────────────────────────────────
+
+#[tokio::test]
+async fn t2_1_send_message_accepted() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Send Test").await;
+
+    let body = json!({ "content": "Hello AI" });
+    let req = common::json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/messages"),
+        body,
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    // The stub agent factory returns an error, so we expect 500
+    // (the route itself is wired correctly — 202 when factory is real)
+    // In E2E with stub factory, the get_or_build_task fails.
+    // We verify the route is reachable and returns an error (not 404/405).
+    // 400 may occur when the stub environment lacks valid backend configuration.
+    let status = resp.status();
+    assert!(
+        status == StatusCode::ACCEPTED
+            || status == StatusCode::INTERNAL_SERVER_ERROR
+            || status == StatusCode::BAD_REQUEST,
+        "Expected 202, 400, or 500 (stub factory), got {status}"
+    );
+
+    if status == StatusCode::ACCEPTED {
+        let body: serde_json::Value =
+            serde_json::from_slice(&axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap()).unwrap();
+        assert!(body["success"].as_bool().unwrap());
+        assert!(body["data"]["msg_id"].as_str().is_some_and(|s| !s.is_empty()));
+    }
+}
+
+#[tokio::test]
+async fn t2_1_send_message_empty_content_bad_request() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Empty Content").await;
+
+    let body = json!({ "content": "" });
+    let req = common::json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/messages"),
+        body,
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn t2_1_send_message_conversation_not_found() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let body = json!({ "content": "Hello" });
+    let req = common::json_with_token("POST", "/api/conversations/non-existent/messages", body, &token, &csrf);
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn t2_1b_send_message_legacy_workspace_with_whitespace_succeeds() {
+    let (mut app, services) = build_app_with_mock_agents().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Legacy Workspace").await;
+    let dir = tempfile::tempdir().unwrap();
+    let workspace = dir.path().join("my project");
+    std::fs::create_dir(&workspace).unwrap();
+    update_conversation_workspace(&services, &conv_id, &workspace.to_string_lossy()).await;
+
+    let body = json!({ "content": "Hello" });
+    let req = common::json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/messages"),
+        body,
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+}
+
+#[tokio::test]
+async fn t2_1c_send_message_missing_workspace_persists_message_and_failure_tip() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Missing Workspace").await;
+    update_conversation_workspace(&services, &conv_id, "/tmp/does-not-exist-for-message-e2e").await;
+
+    let body = json!({ "content": "Hello" });
+    let req = common::json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/messages"),
+        body,
+        &token,
+        &csrf,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+    let json = body_json(resp).await;
+    assert!(json["data"]["msg_id"].as_str().is_some());
+
+    let messages_resp = app
+        .oneshot(get_with_token(
+            &format!("/api/conversations/{conv_id}/messages"),
+            &token,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(messages_resp.status(), StatusCode::OK);
+    let messages_json = body_json(messages_resp).await;
+    let items = messages_json["data"]["items"].as_array().unwrap();
+    assert_eq!(items.len(), 2);
+    assert!(items.iter().any(|item| item["position"] == "right"));
+    assert!(items.iter().any(|item| item["type"] == "tips"));
+}
+
+#[tokio::test]
+async fn t2_1_send_message_requires_auth() {
+    let (app, _services) = build_app().await;
+
+    let body = json!({ "content": "Hello" });
+    let req = axum::http::Request::builder()
+        .method("POST")
+        .uri("/api/conversations/some-id/messages")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// ── T2.2: Stop stream ───────────────────────────────────────────────
+
+#[tokio::test]
+async fn t2_2_stop_stream_conversation_not_found() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let req = common::json_with_token(
+        "POST",
+        "/api/conversations/non-existent/cancel",
+        json!({ "turn_id": "turn_missing_conversation" }),
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn t2_2_stop_stream_requires_auth() {
+    let (app, _services) = build_app().await;
+
+    let req = axum::http::Request::builder()
+        .method("POST")
+        .uri("/api/conversations/some-id/cancel")
+        .header("content-type", "application/json")
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+// ── T2.3: Runtime ensure ────────────────────────────────────────────
+
+#[tokio::test]
+async fn t2_3_runtime_ensure_conversation_not_found() {
+    let (mut app, services) = build_app().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+
+    let req = common::json_with_token(
+        "POST",
+        "/api/conversations/non-existent/runtime/ensure",
+        json!({}),
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn t2_3b_runtime_ensure_legacy_workspace_with_whitespace_succeeds() {
+    let (mut app, services) = build_app_with_mock_agents().await;
+    let (token, csrf) = setup_and_login(&mut app, &services, "admin", "StrongP@ss1").await;
+    let conv_id = create_conversation(&mut app, &token, &csrf, "Runtime Ensure").await;
+    let dir = tempfile::tempdir().unwrap();
+    let workspace = dir.path().join("my project");
+    std::fs::create_dir(&workspace).unwrap();
+    update_conversation_workspace(&services, &conv_id, &workspace.to_string_lossy()).await;
+
+    let req = common::json_with_token(
+        "POST",
+        &format!("/api/conversations/{conv_id}/runtime/ensure"),
+        json!({}),
+        &token,
+        &csrf,
+    );
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+}

@@ -1,0 +1,247 @@
+//! Black-box integration tests for `Mailbox` service.
+//!
+//! Exercises the service layer against a real SQLite database.
+//!
+//! Covers test-plan items:
+//! - MW-1..MW-3 (write messages: text, idle_notification, shutdown_request)
+//! - MR-1..MR-4 (atomic read + mark, re-read empty, no messages)
+//! - MH-1..MH-3 (history query with/without limit)
+//! - MD-1..MD-2 (delete by team, isolation)
+
+use std::sync::Arc;
+
+use aionui_common::now_ms;
+use aionui_db::{ITeamRepository, SqliteTeamRepository, init_database_memory};
+use aionui_team::{Mailbox, MailboxMessageType};
+
+async fn setup() -> (Mailbox, aionui_db::Database) {
+    let db = init_database_memory().await.unwrap();
+    let repo = Arc::new(SqliteTeamRepository::new(db.pool().clone()));
+    for team_id in ["t1", "t2"] {
+        repo.create_team(&aionui_db::models::TeamRow {
+            id: team_id.to_owned(),
+            user_id: "system_default_user".to_owned(),
+            name: team_id.to_owned(),
+            workspace: String::new(),
+            workspace_mode: "shared".to_owned(),
+            agents: "[]".to_owned(),
+            lead_agent_id: None,
+            session_mode: None,
+            agents_version: "1.0.1".to_owned(),
+            created_at: now_ms(),
+            updated_at: now_ms(),
+            project_id: None,
+            folder_id: None,
+        })
+        .await
+        .unwrap();
+    }
+    (Mailbox::new(repo as Arc<dyn ITeamRepository>), db)
+}
+
+// -- MW: Write messages -------------------------------------------------------
+
+#[tokio::test]
+async fn mw1_write_text_message() {
+    let (mailbox, _db) = setup().await;
+    let msg = mailbox
+        .write("t1", "a1", "user", MailboxMessageType::Message, "hello", None)
+        .await
+        .unwrap();
+    assert_eq!(msg.msg_type, MailboxMessageType::Message);
+    assert_eq!(msg.content, "hello");
+    assert!(!msg.read);
+    assert!(!msg.id.is_empty());
+}
+
+#[tokio::test]
+async fn mw1b_write_text_message_preserves_files_in_mailbox() {
+    let (mailbox, _db) = setup().await;
+    let files = vec!["/tmp/a.txt".to_string(), "/tmp/b.txt".to_string()];
+    let msg = mailbox
+        .write_with_files(
+            "t1",
+            "a1",
+            "user",
+            MailboxMessageType::Message,
+            "hello",
+            None,
+            Some(&files),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(msg.files.as_deref(), Some(files.as_slice()));
+    let unread = mailbox.peek_unread("t1", "a1").await.unwrap();
+    assert_eq!(unread.len(), 1);
+    assert_eq!(unread[0].files.as_deref(), Some(files.as_slice()));
+}
+
+#[tokio::test]
+async fn mw2_write_idle_notification_with_summary() {
+    let (mailbox, _db) = setup().await;
+    let msg = mailbox
+        .write(
+            "t1",
+            "lead",
+            "a1",
+            MailboxMessageType::IdleNotification,
+            "done",
+            Some("Task finished"),
+        )
+        .await
+        .unwrap();
+    assert_eq!(msg.msg_type, MailboxMessageType::IdleNotification);
+    assert_eq!(msg.summary.as_deref(), Some("Task finished"));
+}
+
+#[tokio::test]
+async fn mw3_write_shutdown_request() {
+    let (mailbox, _db) = setup().await;
+    let msg = mailbox
+        .write(
+            "t1",
+            "a1",
+            "lead",
+            MailboxMessageType::ShutdownRequest,
+            "cleanup done",
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(msg.msg_type, MailboxMessageType::ShutdownRequest);
+}
+
+// -- MR: Atomic read + mark ---------------------------------------------------
+
+#[tokio::test]
+async fn mr1_read_unread_returns_all_and_marks() {
+    let (mailbox, _db) = setup().await;
+    for i in 0..3 {
+        mailbox
+            .write(
+                "t1",
+                "a1",
+                "user",
+                MailboxMessageType::Message,
+                &format!("msg-{i}"),
+                None,
+            )
+            .await
+            .unwrap();
+    }
+    let unread = mailbox.read_unread("t1", "a1").await.unwrap();
+    assert_eq!(unread.len(), 3);
+}
+
+#[tokio::test]
+async fn mr2_second_read_returns_empty() {
+    let (mailbox, _db) = setup().await;
+    mailbox
+        .write("t1", "a1", "user", MailboxMessageType::Message, "x", None)
+        .await
+        .unwrap();
+    mailbox.read_unread("t1", "a1").await.unwrap();
+    let second = mailbox.read_unread("t1", "a1").await.unwrap();
+    assert!(second.is_empty());
+}
+
+#[tokio::test]
+async fn mr4_no_unread_messages() {
+    let (mailbox, _db) = setup().await;
+    let unread = mailbox.read_unread("t1", "a1").await.unwrap();
+    assert!(unread.is_empty());
+}
+
+// -- MH: History query --------------------------------------------------------
+
+#[tokio::test]
+async fn mh1_get_history_no_limit() {
+    let (mailbox, _db) = setup().await;
+    for i in 0..5 {
+        mailbox
+            .write("t1", "a1", "user", MailboxMessageType::Message, &format!("m{i}"), None)
+            .await
+            .unwrap();
+    }
+    mailbox.read_unread("t1", "a1").await.unwrap();
+    let history = mailbox.get_history("t1", "a1", None).await.unwrap();
+    assert_eq!(history.len(), 5);
+}
+
+#[tokio::test]
+async fn mh2_get_history_with_limit() {
+    let (mailbox, _db) = setup().await;
+    for i in 0..10 {
+        mailbox
+            .write("t1", "a1", "user", MailboxMessageType::Message, &format!("m{i}"), None)
+            .await
+            .unwrap();
+    }
+    let history = mailbox.get_history("t1", "a1", Some(5)).await.unwrap();
+    assert_eq!(history.len(), 5);
+}
+
+#[tokio::test]
+async fn mh3_empty_history() {
+    let (mailbox, _db) = setup().await;
+    let history = mailbox.get_history("t1", "a1", None).await.unwrap();
+    assert!(history.is_empty());
+}
+
+// -- MD: Delete by team -------------------------------------------------------
+
+#[tokio::test]
+async fn md1_delete_by_team_removes_all_messages() {
+    let (mailbox, _db) = setup().await;
+    mailbox
+        .write("t1", "a1", "user", MailboxMessageType::Message, "x", None)
+        .await
+        .unwrap();
+    mailbox
+        .write("t1", "a2", "user", MailboxMessageType::Message, "y", None)
+        .await
+        .unwrap();
+    mailbox.delete_by_team("t1").await.unwrap();
+    let h1 = mailbox.get_history("t1", "a1", None).await.unwrap();
+    let h2 = mailbox.get_history("t1", "a2", None).await.unwrap();
+    assert!(h1.is_empty());
+    assert!(h2.is_empty());
+}
+
+#[tokio::test]
+async fn md2_delete_by_team_does_not_affect_other_teams() {
+    let (mailbox, _db) = setup().await;
+    mailbox
+        .write("t1", "a1", "user", MailboxMessageType::Message, "x", None)
+        .await
+        .unwrap();
+    mailbox
+        .write("t2", "a1", "user", MailboxMessageType::Message, "y", None)
+        .await
+        .unwrap();
+    mailbox.delete_by_team("t1").await.unwrap();
+    let h2 = mailbox.get_history("t2", "a1", None).await.unwrap();
+    assert_eq!(h2.len(), 1);
+}
+
+// -- Agent scope isolation ----------------------------------------------------
+
+#[tokio::test]
+async fn read_unread_scoped_to_target_agent() {
+    let (mailbox, _db) = setup().await;
+    mailbox
+        .write("t1", "a1", "user", MailboxMessageType::Message, "for-a1", None)
+        .await
+        .unwrap();
+    mailbox
+        .write("t1", "a2", "user", MailboxMessageType::Message, "for-a2", None)
+        .await
+        .unwrap();
+    let a1_msgs = mailbox.read_unread("t1", "a1").await.unwrap();
+    assert_eq!(a1_msgs.len(), 1);
+    assert_eq!(a1_msgs[0].content, "for-a1");
+    let a2_msgs = mailbox.read_unread("t1", "a2").await.unwrap();
+    assert_eq!(a2_msgs.len(), 1);
+    assert_eq!(a2_msgs[0].content, "for-a2");
+}

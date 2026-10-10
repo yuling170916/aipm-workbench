@@ -1,0 +1,47 @@
+{
+  "promptExamplesHint": "Essayez ces exemples de prompts :",
+  "defaultPrompts": {
+    "understand": "Découvre ce projet et explique-moi simplement ce qu'il fait et par où commencer",
+    "cleanup": "Trouve les fichiers en double et inutiles dans ce dossier et liste-les pour que je confirme",
+    "create": "Crée-moi une belle page personnelle et ouvre-la une fois terminée"
+  },
+  "selectAssistantHint": "Sélectionnez un assistant pour démarrer une tâche",
+  "workspace": {
+    "workInProject": "Travailler dans un projet",
+    "optional": "Facultatif",
+    "clearWorkspace": "Clair",
+    "specifyWorkspace": "Sélectionnez le dossier du projet",
+    "searchPlaceholder": "Rechercher des projets…",
+    "noProject": "Aucun projet"
+  },
+  "home": {
+    "nav": "Accueil",
+    "workspace": "Espace de travail",
+    "eyebrow": "Votre partenaire produit IA",
+    "title": "Transformez vos bonnes idées en produits réussis.",
+    "description": "Des exigences au PRD, gardez plus de temps pour les décisions qui comptent.",
+    "placeholder": "Décrivez votre idée de produit ou joignez des documents d’exigences…",
+    "addMaterials": "Ajouter des documents",
+    "organizeTitle": "Organiser les exigences",
+    "organizeDescription": "Transformez les informations éparses en fiches d’exigences",
+    "prdTitle": "Rédiger un PRD",
+    "prdDescription": "Créez un document à partir des fiches d’exigences",
+    "reviewTitle": "Repérer les lacunes",
+    "reviewDescription": "Vérifiez les règles, les cas limites et les critères d’acceptation",
+    "recentTitle": "Reprendre un projet récent",
+    "projectsLoading": "Chargement des projets…",
+    "projectsEmpty": "Aucun projet pour le moment. Créez-en un pour commencer.",
+    "projectsError": "Impossible de charger les projets. Veuillez réessayer.",
+    "retry": "Recharger",
+    "refreshProjects": "Actualiser les projets",
+    "createProject": "Nouveau projet",
+    "updatedAt": "Mis à jour : {{time}}",
+    "projectWorkspace": "Espace de travail : {{path}}",
+    "projectNoActivity": "Aucune activité pour le moment",
+    "prompts": {
+      "organize": "Aide-moi à organiser l’idée de produit et les documents ci-dessous en fiches d’exigences. Commence par poser des questions sur le contexte manquant. Inclus le problème utilisateur, les utilisateurs cibles, les scénarios d’utilisation, le périmètre, la priorité et les critères d’acceptation. Distingue clairement les faits des hypothèses.\n\nIdée de produit et documents : ",
+      "prd": "Aide-moi à rédiger un PRD prêt à être relu à partir des exigences ci-dessous. Commence par clarifier les informations manquantes, puis couvre les objectifs, les parcours utilisateur, les fonctionnalités, les règles d’interaction, les cas limites, les critères d’acceptation et les questions ouvertes. N’invente pas de données métier.\n\nExigences : ",
+      "review": "Examine les exigences ou le PRD ci-dessous pour repérer les règles, autorisations, cas limites, parcours d’échec et critères d’acceptation manquants. Pour chaque problème, indique son impact, la solution proposée et les questions à clarifier.\n\nExigences ou PRD : "
+    }
+  }
+}

@@ -1,0 +1,228 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/aionui-assets",
+    "crates/aionui-common",
+    "crates/aionui-db",
+    "crates/aionui-api-types",
+    "crates/aionui-realtime",
+    "crates/aionui-runtime",
+    "crates/aionui-process",
+    "crates/aionui-session",
+    "crates/aionui-session-message",
+    "crates/aionui-skill-runtime",
+    "crates/aionui-auth",
+    "crates/aionui-system",
+    "crates/aionui-file",
+    "crates/aionui-office",
+    "crates/aionui-shell",
+    "crates/aionui-ai-agent",
+    "crates/aionui-mcp",
+    "crates/aionui-conversation",
+    "crates/aionui-extension",
+    "crates/aionui-channel",
+    "crates/aionui-team-prompts",
+    "crates/aionui-team",
+    "crates/aionui-project",
+    "crates/aionui-sidebar",
+    "crates/aionui-cron",
+    "crates/aionui-assistant",
+    "crates/aionui-app",
+    "crates/aionui-requirement",
+]
+
+[workspace.package]
+version = "0.2.2"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+# Internal crates
+aionui-common = { path = "crates/aionui-common" }
+aionui-assets = { path = "crates/aionui-assets" }
+aionui-db = { path = "crates/aionui-db" }
+aionui-api-types = { path = "crates/aionui-api-types" }
+aionui-realtime = { path = "crates/aionui-realtime" }
+aionui-runtime = { path = "crates/aionui-runtime" }
+aionui-process = { path = "crates/aionui-process" }
+aionui-session = { path = "crates/aionui-session" }
+aionui-session-message = { path = "crates/aionui-session-message" }
+aionui-skill-runtime = { path = "crates/aionui-skill-runtime" }
+aionui-auth = { path = "crates/aionui-auth" }
+aionui-system = { path = "crates/aionui-system" }
+aionui-file = { path = "crates/aionui-file" }
+aionui-office = { path = "crates/aionui-office" }
+aionui-shell = { path = "crates/aionui-shell" }
+aionui-ai-agent = { path = "crates/aionui-ai-agent" }
+aionui-mcp = { path = "crates/aionui-mcp" }
+aionui-conversation = { path = "crates/aionui-conversation" }
+aionui-extension = { path = "crates/aionui-extension" }
+aionui-channel = { path = "crates/aionui-channel" }
+aionui-team-prompts = { path = "crates/aionui-team-prompts" }
+aionui-team = { path = "crates/aionui-team" }
+aionui-project = { path = "crates/aionui-project" }
+aionui-sidebar = { path = "crates/aionui-sidebar" }
+aionui-cron = { path = "crates/aionui-cron" }
+aionui-assistant = { path = "crates/aionui-assistant" }
+aionui-app = { path = "crates/aionui-app" }
+aionui-requirement = { path = "crates/aionui-requirement" }
+
+aion-agent = { git = "https://github.com/iOfficeAI/aionrs.git", tag = "v0.2.11" }
+aion-providers = { git = "https://github.com/iOfficeAI/aionrs.git", tag = "v0.2.11" }
+aion-types = { git = "https://github.com/iOfficeAI/aionrs.git", tag = "v0.2.11" }
+aion-protocol = { git = "https://github.com/iOfficeAI/aionrs.git", tag = "v0.2.11" }
+aion-config = { git = "https://github.com/iOfficeAI/aionrs.git", tag = "v0.2.11" }
+aion-mcp = { git = "https://github.com/iOfficeAI/aionrs.git", tag = "v0.2.11" }
+
+# Core framework
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["multipart", "ws"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["cors", "trace", "limit", "fs"] }
+http = "1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+# Async utilities
+futures-util = "0.3"
+
+# Async trait (dyn-compatible async traits)
+async-trait = "0.1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "registry"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+# No-echo password prompt for the `user set-password` bootstrap CLI (win/mac/linux).
+rpassword = "7"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Auth / Crypto
+jsonwebtoken = "9"
+bcrypt = "0.17"
+aes-gcm = "0.10"
+
+# UUID
+uuid = { version = "1", features = ["v7"] }
+url = "2"
+
+# HTTP client — use rustls with native roots to align backend trust with the host system.
+reqwest = { version = "0.12", features = ["json", "multipart", "rustls-tls-native-roots"], default-features = false }
+
+# Concurrency
+dashmap = "6"
+
+# WebSocket
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-native-roots"] }
+
+# Protobuf
+prost = "0.13"
+
+# Semver
+semver = "1"
+
+# Directories
+dirs = "6"
+
+# Regex
+regex = "1"
+
+# File system
+dunce = "1"
+include_dir = "0.7"
+notify = "8"
+walkdir = "2"
+ignore = "0.4"
+zip = "2"
+git2 = { version = "0.21.0", default-features = false }
+# Source-control discard sends untracked files to the platform trash instead of
+# unlinking them (mac/win/linux, x64 + arm64).
+trash = "5"
+mime_guess = "2"
+rust-embed = "8"
+
+# Runtime embedding
+fs2 = "0.4"
+zstd = "0.13"
+
+# Cron
+cron = "0.15"
+chrono = "0.4"
+chrono-tz = "0.10"
+iana-time-zone = "0.1"
+
+# Shell
+open = "5"
+which = "7"
+# Text-only clipboard. default-features off: `image-data` pulls `image`/`zune-jpeg`
+# which we don't use and currently fails to build. No `wayland-data-control` either:
+# it pulls wl-clipboard-rs → wayland-scanner (build-time) → the vulnerable quick-xml
+# 0.39 (RUSTSEC-2026-0194/0195). Without it, arboard uses its unconditional x11rb
+# backend on Linux (works under X11/XWayland); macOS/Windows unaffected.
+arboard = { version = "3", default-features = false }
+
+# Office
+calamine = "0.36"
+rust_xlsxwriter = "0.82"
+sha1 = "0.10"
+sha2 = "0.10"
+
+# AWS
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-bedrock = { version = "1", default-features = false, features = ["rt-tokio", "default-https-client"] }
+aws-sdk-bedrockruntime = { version = "1", default-features = false, features = ["rt-tokio", "default-https-client"] }
+
+# TLS
+rustls = "0.23"
+rustls-native-certs = "0.8"
+
+# Pin rustls-webpki to fix RUSTSEC-2026-{0098,0099,0104}
+rustls-webpki = "0.103.13"
+
+# OAuth / MCP
+oauth2 = "5.0.0-rc.1"
+toml = "0.8"
+
+# Ed25519
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+
+# Encoding
+base64 = "0.22"
+
+# HTTP body utilities (testing)
+http-body-util = "0.1"
+
+# Testing
+tempfile = "3"
+wiremock = "0.6"
+proptest = "1"
+
+# Random
+getrandom = "0.2"
+hex = "0.4"
+libc = "0.2"
+
+# Shrink target/debug: minimal debuginfo, sidecar files, no incremental cache.
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+incremental = false
+
+[profile.test]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+incremental = false
+

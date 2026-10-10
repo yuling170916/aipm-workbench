@@ -1,0 +1,800 @@
+//! Minimal public contract for a running agent task.
+//!
+//! `IAgentTask` captures **only** the operations that every agent type
+//! implements identically and that the generic task_manager / idle_scanner /
+//! message-flow code actually needs. Anything that is type-specific
+//! (session modes, session keys, model switching, config options, pending
+//! confirmation lists, approval memory, ACP usage, etc.) lives as
+//! **inherent** methods on each concrete `XxxAgentManager`
+//! and is reached through the `AgentInstance` enum — forcing every callsite
+//! to say out loud which agent type it is addressing.
+//!
+//! Replaces the old bloated `IAgentManager` trait + `as_any()` downcast
+//! pattern (deleted in PR #8c).
+use std::sync::Arc;
+
+use aionui_common::{AgentKillReason, AgentType, ConversationStatus, TimestampMs};
+use tokio::sync::broadcast;
+
+use crate::error::AgentError;
+use crate::manager::acp::{AcpAgentManager, RequiredFullAutoApplication};
+use crate::manager::aionrs::AionrsAgentManager;
+use crate::protocol::events::AgentStreamEvent;
+use crate::protocol::send_error::AgentSendError;
+use crate::types::{PromptMediaCaps, SendMessageData};
+
+use aionui_api_types::{
+    GetConfigOptionsResponse, GetModelInfoResponse, ModelInfoEntry, ModelInfoPayload, SetConfigOptionResponse,
+    SideQuestionRequest, SideQuestionResponse, SlashCommandItem,
+};
+
+#[cfg(any(test, feature = "test-support"))]
+use aionui_common::Confirmation;
+
+/// Ten-method public surface every agent type implements identically.
+///
+/// Object-safe by construction (no generic methods, no `Self` by value).
+/// Used by generic lifecycle code (task_manager, idle_scanner, stream
+/// fan-out) that genuinely does not care which agent type it is dealing
+/// with. For type-specific operations, match on [`AgentInstance`] and
+/// call the concrete manager's inherent methods.
+#[async_trait::async_trait]
+pub trait IAgentTask: Send + Sync {
+    /// The type of agent this task controls.
+    fn agent_type(&self) -> AgentType;
+
+    /// Conversation ID this task is bound to.
+    fn conversation_id(&self) -> &str;
+
+    /// Working directory for this agent session.
+    fn workspace(&self) -> &str;
+
+    /// Current conversation status. `None` if the agent has not
+    /// transitioned into a known status yet.
+    fn status(&self) -> Option<ConversationStatus>;
+
+    /// Timestamp (ms) of the last activity (message send, event received).
+    fn last_activity_at(&self) -> TimestampMs;
+
+    /// Number of live (declared, not yet terminal) background containers —
+    /// workflows, background bashes, background subagents. These outlive their
+    /// launching turn by design and emit no mid-flight frames, so `status` and
+    /// `last_activity_at` alone misread a busy agent as idle. Backends without
+    /// a background-task subsystem report 0.
+    fn live_background_tasks(&self) -> usize {
+        0
+    }
+
+    /// Subscribe to the agent's stream event channel.
+    fn subscribe(&self) -> broadcast::Receiver<AgentStreamEvent>;
+
+    /// Prompt media capabilities the agent declared. Defaults to none —
+    /// callers must then deliver attachments as file paths, not blocks.
+    fn prompt_media_caps(&self) -> PromptMediaCaps {
+        PromptMediaCaps::default()
+    }
+
+    /// Whether a message sent right now reaches the agent without waiting for
+    /// the current turn to end (task-1 brief: mid-turn interjection). Mirrors
+    /// `aionui_session::Capabilities::supports_midturn_delivery` — defaults
+    /// false (ACP-like) so only backends that genuinely deliver mid-turn
+    /// (the clean-slate `Session` variant reading claude/codex capabilities)
+    /// opt in.
+    fn supports_midturn_delivery(&self) -> bool {
+        false
+    }
+
+    /// Send a user message to the agent. Returns once the agent has
+    /// accepted the turn; actual streaming proceeds on the broadcast
+    /// channel returned by [`Self::subscribe`].
+    async fn send_message(&self, data: SendMessageData) -> Result<(), AgentSendError>;
+
+    /// Stop the current streaming response without killing the agent.
+    async fn cancel(&self) -> Result<(), AgentError>;
+
+    /// Terminate the agent process.
+    ///
+    /// - `reason: Some(IdleTimeout)` — idle cleanup
+    /// - `reason: None` — explicit user/system kill
+    fn kill(&self, reason: Option<AgentKillReason>) -> Result<(), AgentError>;
+}
+
+/// Extended trait used exclusively by the `AgentInstance::Mock` variant so
+/// tests can inject richer fake behaviour (pending confirmations, approval
+/// memory, fake session keys, etc.) without polluting the production
+/// `IAgentTask` contract with trait-level defaults that would be lies for
+/// at least one concrete manager.
+///
+/// Every method has a sensible identity-style default so simple mocks only
+/// need to implement the ten `IAgentTask` methods and pick up nothing for
+/// free.
+#[cfg(any(test, feature = "test-support"))]
+#[async_trait::async_trait]
+pub trait IMockAgent: IAgentTask {
+    fn get_confirmations(&self) -> Vec<Confirmation> {
+        Vec::new()
+    }
+    fn check_approval(&self, _action: &str, _command_type: Option<&str>) -> bool {
+        false
+    }
+    fn confirm(
+        &self,
+        _msg_id: &str,
+        _call_id: &str,
+        _data: serde_json::Value,
+        _always_allow: bool,
+    ) -> Result<(), AgentError> {
+        Ok(())
+    }
+    /// Answer a structured question card (AskUserQuestion) — the DEDICATED
+    /// channel, separate from the permission confirm path (2026-08-05 ruling).
+    /// `answers: None` = the user dismissed the card (a deny on the wire).
+    /// Default: not a question-capable agent.
+    fn answer_ask(
+        &self,
+        _request_id: &str,
+        _answers: Option<Vec<aionui_api_types::AskQuestionAnswer>>,
+    ) -> Result<(), AgentError> {
+        Err(AgentError::BadRequest(
+            "answer_ask is not supported by this agent".into(),
+        ))
+    }
+    fn get_session_key(&self) -> Option<String> {
+        None
+    }
+    /// B5 mid-turn delivery test seam. Default: forward to `send_message` so
+    /// simple mocks behave; mid-turn tests override to record the routed call.
+    async fn deliver_midturn(&self, data: SendMessageData) -> Result<(), AgentSendError> {
+        self.send_message(data).await
+    }
+    async fn mode(&self) -> Result<aionui_api_types::AgentModeResponse, AgentError> {
+        Ok(aionui_api_types::AgentModeResponse {
+            mode: "default".into(),
+            initialized: false,
+        })
+    }
+    async fn get_model(&self) -> Result<GetModelInfoResponse, AgentError> {
+        Ok(GetModelInfoResponse { model_info: None })
+    }
+    async fn get_config_options(&self) -> Result<GetConfigOptionsResponse, AgentError> {
+        Ok(GetConfigOptionsResponse {
+            config_options: Vec::new(),
+        })
+    }
+    async fn set_config_option(&self, _option_id: &str, _value: &str) -> Result<SetConfigOptionResponse, AgentError> {
+        Err(AgentError::bad_request(
+            "Config option switching is not supported for this mock",
+        ))
+    }
+    async fn get_usage(&self) -> Result<Option<serde_json::Value>, AgentError> {
+        Ok(None)
+    }
+    async fn get_slash_commands(&self) -> Result<Vec<SlashCommandItem>, AgentError> {
+        Ok(Vec::new())
+    }
+    async fn handle_side_question(&self, _req: SideQuestionRequest) -> Result<SideQuestionResponse, AgentError> {
+        Ok(SideQuestionResponse {
+            status: "unsupported".into(),
+            answer: None,
+        })
+    }
+}
+
+/// Concrete, closed-set dispatcher for runnable agent variants.
+///
+/// Every generic path holds an `AgentInstance` (not `Arc<dyn IAgentTask>`):
+/// this gives us the `IAgentTask` ten-method surface via [`Self::as_task`]
+/// **and** lets type-specific routes recover the concrete manager with a
+/// single `match` — no `as_any` / `downcast_ref` anywhere. Adding a new
+/// agent type means adding a new variant here; every `match` in the
+/// codebase then fails to compile until it explicitly handles the new
+/// type, which is the compile-time pressure we want.
+#[derive(Clone)]
+pub enum AgentInstance {
+    Acp(Arc<AcpAgentManager>),
+    Aionrs(Arc<AionrsAgentManager>),
+    /// clean-slate direct-CLI session model (claude / codex / antigravity).
+    /// Wraps an `aionui_session::SessionBackend` via [`SessionAgentTask`],
+    /// which is backend-agnostic. Every other backend keeps the `Acp` path.
+    /// See the session-model-port design doc.
+    Session(Arc<crate::session_agent::SessionAgentTask>),
+    /// Test-only trait-object escape hatch used by downstream crates
+    /// (conversation/cron/team/app tests) to inject fake agents without
+    /// spinning up a real CLI or WebSocket connection. Gated behind
+    /// `#[cfg(any(test, feature = "test-support"))]`: production builds
+    /// never see this variant, so every `match` in release code can
+    /// rely on the runnable closed set. The trait object is
+    /// [`IMockAgent`] (extends `IAgentTask`) so mocks can also override
+    /// the enum-level helpers — `get_confirmations`, `check_approval`,
+    /// `confirm`, `get_session_key`, `get_mode`, `set_mode`.
+    #[cfg(any(test, feature = "test-support"))]
+    Mock(Arc<dyn IMockAgent>),
+}
+
+impl AgentInstance {
+    /// Common `IAgentTask` view, regardless of variant.
+    pub fn as_task(&self) -> &dyn IAgentTask {
+        match self {
+            Self::Acp(m) => m.as_ref(),
+            Self::Aionrs(m) => m.as_ref(),
+            Self::Session(m) => m.as_ref(),
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.as_ref(),
+        }
+    }
+
+    // ── Convenience forwarders ───────────────────────────────────────
+    //
+    // These stay in the final API (not a migration crutch): they turn
+    // `instance.agent_type()` into a direct vtable-free call on the
+    // concrete `Arc<XxxManager>`, and they keep callsites terse.
+
+    /// The type of agent this instance controls.
+    pub fn agent_type(&self) -> AgentType {
+        self.as_task().agent_type()
+    }
+
+    /// Conversation ID this task is bound to.
+    pub fn conversation_id(&self) -> &str {
+        self.as_task().conversation_id()
+    }
+
+    /// Working directory for this agent session.
+    pub fn workspace(&self) -> &str {
+        self.as_task().workspace()
+    }
+
+    /// Current conversation status.
+    pub fn status(&self) -> Option<ConversationStatus> {
+        self.as_task().status()
+    }
+
+    /// Timestamp (ms) of the last activity.
+    pub fn last_activity_at(&self) -> TimestampMs {
+        self.as_task().last_activity_at()
+    }
+
+    /// Number of live background containers (workflows / background bashes /
+    /// background subagents) still in flight.
+    pub fn live_background_tasks(&self) -> usize {
+        self.as_task().live_background_tasks()
+    }
+
+    /// Subscribe to the stream event channel.
+    pub fn subscribe(&self) -> broadcast::Receiver<AgentStreamEvent> {
+        self.as_task().subscribe()
+    }
+
+    /// Whether a message sent right now reaches the agent without waiting
+    /// for the current turn to end. See `IAgentTask::supports_midturn_delivery`.
+    pub fn supports_midturn_delivery(&self) -> bool {
+        self.as_task().supports_midturn_delivery()
+    }
+
+    /// Send a user message to the agent.
+    pub async fn send_message(&self, data: SendMessageData) -> Result<(), AgentSendError> {
+        self.as_task().send_message(data).await
+    }
+
+    /// B5 mid-turn delivery: hand a message to the RUNNING turn instead of
+    /// opening a new one. Only meaningful when
+    /// [`Self::supports_midturn_delivery`] is true — the conversation layer
+    /// gates on that bit before routing here. Variants without the path reject
+    /// (the caller must not have routed them here).
+    pub async fn deliver_midturn(&self, data: SendMessageData) -> Result<(), AgentSendError> {
+        match self {
+            Self::Acp(_) | Self::Aionrs(_) => Err(AgentSendError::from_agent_error(AgentError::BadRequest(
+                "mid-turn delivery is not supported by this agent".into(),
+            ))),
+            Self::Session(m) => m.deliver_midturn(data).await,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.deliver_midturn(data).await,
+        }
+    }
+
+    /// Cancel the current streaming response without killing the agent.
+    pub async fn cancel(&self) -> Result<(), AgentError> {
+        self.as_task().cancel().await
+    }
+
+    /// Terminate the agent process.
+    pub fn kill(&self, reason: Option<AgentKillReason>) -> Result<(), AgentError> {
+        self.as_task().kill(reason)
+    }
+
+    /// Terminate the agent process and return a future that resolves when the
+    /// underlying OS process has exited.
+    pub fn kill_and_wait(
+        &self,
+        reason: Option<AgentKillReason>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        match self {
+            Self::Acp(m) => m.kill_and_wait(reason),
+            Self::Aionrs(m) => m.kill_and_wait(reason),
+            // Session: delegate to the task's awaitable kill. For a
+            // `UserCancelTimeout` this emits a clean `Finish` (turn converges,
+            // gate recovers) then really terminates the CLI process tree, even
+            // while this `Arc` clone is held by an in-flight orchestrator —
+            // where the old Drop-only no-op silently failed (ELECTRON-3RW).
+            Self::Session(m) => m.kill_and_wait(reason),
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => {
+                let _ = m.kill(reason);
+                Box::pin(std::future::ready(()))
+            }
+        }
+    }
+
+    // ── Cross-variant semi-specific helpers ──────────────────────────
+    //
+    // These fan out to inherent methods on concrete managers. Variants
+    // that don't support the operation return a sensible zero-value
+    // rather than an error: "no pending confirmations" and "no session
+    // key" are honest statements about those variants.
+
+    /// Pending confirmation items for this task.
+    ///
+    /// ACP surfaces pending permission prompts through its permission
+    /// router. Aionrs maintains inline confirmation lists.
+    pub fn get_confirmations(&self) -> Vec<aionui_common::Confirmation> {
+        match self {
+            Self::Acp(m) => m.get_confirmations(),
+            Self::Aionrs(m) => m.get_confirmations(),
+            // Session permissions surface as AcpPermission stream events + are
+            // answered via confirm(); no separate cached-confirmation list yet.
+            Self::Session(m) => m.get_confirmations(),
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.get_confirmations(),
+        }
+    }
+
+    /// Submit a confirmation response for a pending tool call.
+    pub fn confirm(
+        &self,
+        msg_id: &str,
+        call_id: &str,
+        data: serde_json::Value,
+        always_allow: bool,
+    ) -> Result<(), AgentError> {
+        match self {
+            Self::Acp(m) => m.confirm(msg_id, call_id, data, always_allow),
+            Self::Aionrs(m) => m.confirm(msg_id, call_id, data, always_allow),
+            Self::Session(m) => m.confirm(msg_id, call_id, data, always_allow),
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.confirm(msg_id, call_id, data, always_allow),
+        }
+    }
+
+    /// Answer a structured question card via the dedicated channel.
+    pub fn answer_ask(
+        &self,
+        request_id: &str,
+        answers: Option<Vec<aionui_api_types::AskQuestionAnswer>>,
+    ) -> Result<(), AgentError> {
+        match self {
+            // Only the direct-CLI session path has a question channel today
+            // (claude AskUserQuestion); ACP/aionrs have none to answer on.
+            Self::Acp(_) | Self::Aionrs(_) => Err(AgentError::BadRequest(
+                "answer_ask is not supported by this agent".into(),
+            )),
+            Self::Session(m) => m.answer_ask(request_id, answers),
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.answer_ask(request_id, answers),
+        }
+    }
+
+    /// Check whether an action is auto-approved in this session.
+    pub fn check_approval(&self, action: &str, command_type: Option<&str>) -> bool {
+        match self {
+            Self::Acp(_) => false,
+            Self::Aionrs(m) => m.check_approval(action, command_type),
+            // Session (claude/codex) has no aionrs-style auto-approve list.
+            Self::Session(_) => false,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.check_approval(action, command_type),
+        }
+    }
+
+    /// Session key for test doubles that expose one.
+    pub fn get_session_key(&self) -> Option<String> {
+        match self {
+            Self::Acp(_) | Self::Aionrs(_) | Self::Session(_) => None,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.get_session_key(),
+        }
+    }
+
+    /// Get the current session mode.
+    pub async fn get_mode(&self) -> Result<aionui_api_types::AgentModeResponse, AgentError> {
+        match self {
+            Self::Acp(m) => m.mode().await,
+            Self::Aionrs(m) => m.mode().await,
+            Self::Session(m) => m.mode().await,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.mode().await,
+        }
+    }
+
+    /// Get the current session model info. Only ACP exposes a model
+    /// catalog; other variants report `model_info = None` so the UI can
+    /// hide the model picker without an error.
+    pub async fn get_model(&self) -> Result<GetModelInfoResponse, AgentError> {
+        match self {
+            Self::Acp(m) => {
+                let sdk_model = m.model().await;
+                let sdk_info = sdk_model.map(map_sdk_model_to_payload);
+                let cc_switch_info = if m.is_claude_backend() {
+                    crate::cc_switch::read_claude_model_info()
+                } else {
+                    None
+                };
+                let model_info = merge_model_info(sdk_info, cc_switch_info);
+                Ok(GetModelInfoResponse { model_info })
+            }
+            Self::Aionrs(_) => Ok(GetModelInfoResponse { model_info: None }),
+            Self::Session(m) => m.get_model().await,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.get_model().await,
+        }
+    }
+
+    pub async fn get_config_options(&self) -> Result<GetConfigOptionsResponse, AgentError> {
+        match self {
+            Self::Acp(m) => m.config_options().await,
+            Self::Aionrs(m) => m.config_options().await,
+            Self::Session(m) => m.get_config_options().await,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.get_config_options().await,
+        }
+    }
+
+    pub async fn set_config_option(&self, option_id: &str, value: &str) -> Result<SetConfigOptionResponse, AgentError> {
+        if option_id.trim().is_empty() {
+            return Err(AgentError::bad_request("option_id must not be empty"));
+        }
+        if value.trim().is_empty() {
+            return Err(AgentError::bad_request("value must not be empty"));
+        }
+        match self {
+            Self::Acp(m) => m.set_config_option_confirmed(option_id, value).await,
+            Self::Aionrs(m) => m.set_config_option(option_id, value).await,
+            Self::Session(m) => m.set_config_option(option_id, value).await,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.set_config_option(option_id, value).await,
+        }
+    }
+
+    /// Apply cron's full-auto required-runtime-mode (a-pure, ELECTRON-3RQ) for
+    /// metadata-bearing ACP agents (Kimi et al.). Returns `Ok(None)` for
+    /// non-ACP variants (claude/codex `Session`, `Aionrs`, `Mock`) — the
+    /// `yolo_id` metadata this resolution needs is only visible on the ACP
+    /// manager, so the caller uses the retained legacy apply path (codex
+    /// ELECTRON-3Q0 catalog alignment + native pass-through) for the rest.
+    pub async fn apply_required_full_auto_mode(&self) -> Result<Option<RequiredFullAutoApplication>, AgentError> {
+        match self {
+            Self::Acp(m) => Ok(Some(m.apply_required_full_auto_mode().await?)),
+            _ => Ok(None),
+        }
+    }
+
+    /// Returns the cached session usage as a snake_case JSON object. The
+    /// structure mirrors the ACP SDK `UsageUpdate` schema
+    /// (`used` / `size` / `cost` / `_meta`), normalised via
+    /// [`aionui_common::normalize_keys_to_snake_case`] so keys land as
+    /// `used` / `size` / `cost` to match the AionUI wire convention —
+    /// `_meta` passes through verbatim.
+    ///
+    /// Non-ACP agents return `None`.
+    pub async fn get_usage(&self) -> Result<Option<serde_json::Value>, AgentError> {
+        match self {
+            Self::Acp(m) => {
+                let Some(usage) = m.usage().await else { return Ok(None) };
+                let mut value = serde_json::to_value(usage)
+                    .map_err(|e| AgentError::internal(format!("Failed to serialize usage: {e}")))?;
+                aionui_common::normalize_keys_to_snake_case(&mut value);
+                Ok(Some(value))
+            }
+            Self::Aionrs(_) => Ok(None),
+            Self::Session(m) => m.get_usage().await,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.get_usage().await,
+        }
+    }
+
+    /// Slash commands available in the current session. Only ACP exposes
+    /// a slash-command catalog; other variants report an empty list
+    /// (the UI renders "no commands").
+    pub async fn get_slash_commands(&self) -> Result<Vec<SlashCommandItem>, AgentError> {
+        match self {
+            Self::Acp(m) => m.load_slash_commands().await,
+            Self::Aionrs(m) => m.get_slash_commands().await,
+            Self::Session(m) => m.get_slash_commands().await,
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.get_slash_commands().await,
+        }
+    }
+
+    /// Dispatch a side-question to the agent. **Placeholder** — matches
+    /// the current `AgentService::handle_side_question` behaviour: ACP
+    /// agents whose behavior_policy enables side-questions return a stub
+    /// "ok" response, everyone else returns `unsupported`.
+    pub async fn handle_side_question(&self, req: SideQuestionRequest) -> Result<SideQuestionResponse, AgentError> {
+        if req.question.trim().is_empty() {
+            return Err(AgentError::bad_request("question must not be empty"));
+        }
+        match self {
+            Self::Acp(m) => {
+                if !m.supports_side_question() {
+                    return Ok(SideQuestionResponse {
+                        status: "unsupported".into(),
+                        answer: None,
+                    });
+                }
+                Ok(SideQuestionResponse {
+                    status: "ok".into(),
+                    answer: Some("Side question support will be fully wired in app integration phase.".into()),
+                })
+            }
+            Self::Aionrs(_) => Ok(SideQuestionResponse {
+                status: "unsupported".into(),
+                answer: None,
+            }),
+            Self::Session(_) => Ok(SideQuestionResponse {
+                status: "unsupported".into(),
+                answer: None,
+            }),
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock(m) => m.handle_side_question(req).await,
+        }
+    }
+}
+
+/// Map the legacy ACP model state into the public API payload.
+///
+/// Kept private to this module: the only caller is
+/// [`AgentInstance::get_model`]. Mirrors the helper formerly living in
+/// `services/agent.rs`; do not duplicate — if the shape of
+/// `ModelInfoPayload` changes, update it here.
+fn map_sdk_model_to_payload(m: crate::manager::acp::legacy_session_model::LegacySessionModelState) -> ModelInfoPayload {
+    let available: Vec<ModelInfoEntry> = m
+        .available_models
+        .iter()
+        .map(|am| ModelInfoEntry {
+            id: am.model_id.clone(),
+            label: am.name.clone(),
+        })
+        .collect();
+    let current_id = m.current_model_id;
+    let current_label = available
+        .iter()
+        .find(|e| e.id == current_id)
+        .map(|e| e.label.clone())
+        .unwrap_or_else(|| current_id.clone());
+    ModelInfoPayload {
+        current_model_id: Some(current_id),
+        current_model_label: Some(current_label),
+        available_models: available,
+    }
+}
+
+fn merge_model_info(
+    sdk_info: Option<ModelInfoPayload>,
+    cc_switch_info: Option<ModelInfoPayload>,
+) -> Option<ModelInfoPayload> {
+    sdk_info.or(cc_switch_info)
+}
+
+#[cfg(test)]
+mod cc_switch_model_merge_tests {
+    use super::*;
+
+    #[test]
+    fn merge_prefers_sdk_model_over_cc_switch() {
+        let sdk_payload = ModelInfoPayload {
+            current_model_id: Some("default".into()),
+            current_model_label: Some("Claude Sonnet 4.6".into()),
+            available_models: vec![ModelInfoEntry {
+                id: "default".into(),
+                label: "Claude Sonnet 4.6".into(),
+            }],
+        };
+        let cc_switch_payload = ModelInfoPayload {
+            current_model_id: Some("default".into()),
+            current_model_label: Some("DeepSeek V4".into()),
+            available_models: vec![ModelInfoEntry {
+                id: "default".into(),
+                label: "DeepSeek V4".into(),
+            }],
+        };
+
+        let result = merge_model_info(Some(sdk_payload), Some(cc_switch_payload));
+        assert_eq!(
+            result.unwrap().current_model_label.as_deref(),
+            Some("Claude Sonnet 4.6")
+        );
+    }
+
+    #[test]
+    fn merge_falls_back_to_cc_switch_when_sdk_none() {
+        let cc_switch_payload = ModelInfoPayload {
+            current_model_id: Some("default".into()),
+            current_model_label: Some("DeepSeek V4".into()),
+            available_models: vec![ModelInfoEntry {
+                id: "default".into(),
+                label: "DeepSeek V4".into(),
+            }],
+        };
+
+        let result = merge_model_info(None, Some(cc_switch_payload));
+        assert_eq!(result.unwrap().current_model_label.as_deref(), Some("DeepSeek V4"));
+    }
+
+    #[test]
+    fn merge_returns_none_when_both_none() {
+        let result = merge_model_info(None, None);
+        assert!(result.is_none());
+    }
+}
+
+#[cfg(test)]
+mod aionrs_config_option_tests {
+    use std::sync::Arc;
+
+    use aionui_api_types::ConfigOptionConfirmation;
+
+    use super::*;
+    use crate::types::AionrsResolvedConfig;
+
+    fn make_test_config() -> AionrsResolvedConfig {
+        AionrsResolvedConfig {
+            provider: "anthropic".into(),
+            api_key: "sk-test-key".into(),
+            model: "claude-sonnet-4-20250514".into(),
+            base_url: None,
+            system_prompt: None,
+            max_tokens: None,
+            max_turns: None,
+            max_tool_call_malformed_turns: None,
+            max_tool_call_failure_turns: None,
+            compat_overrides: Default::default(),
+            session_directory: std::env::temp_dir().join("aionrs-agent-task-test-sessions"),
+            session_mode: None,
+            skills: Vec::new(),
+            extra_mcp_servers: std::collections::HashMap::new(),
+            bedrock_config: None,
+            runtime_env: Vec::new(),
+            prompt_dump_dir: None,
+        }
+    }
+
+    async fn aionrs_instance() -> AgentInstance {
+        let manager = AionrsAgentManager::new("conv-aionrs-config".into(), "/project".into(), make_test_config(), None)
+            .await
+            .expect("aionrs manager should start in tests");
+        AgentInstance::Aionrs(Arc::new(manager))
+    }
+
+    #[tokio::test]
+    async fn aionrs_exposes_mode_as_config_option() {
+        let instance = aionrs_instance().await;
+
+        let response = instance.get_config_options().await.unwrap();
+
+        let mode = response
+            .config_options
+            .iter()
+            .find(|option| option.id == "mode")
+            .expect("aionrs should expose a mode config option");
+        assert_eq!(mode.category.as_deref(), Some("mode"));
+        assert_eq!(mode.option_type, "select");
+        assert_eq!(mode.current_value.as_deref(), Some("default"));
+        assert_eq!(
+            mode.options
+                .iter()
+                .map(|option| option.value.as_str())
+                .collect::<Vec<_>>(),
+            vec!["default", "auto_edit", "yolo"]
+        );
+    }
+
+    #[tokio::test]
+    async fn aionrs_set_config_option_mode_switches_session_mode() {
+        let instance = aionrs_instance().await;
+
+        let response = instance.set_config_option("mode", "yolo").await.unwrap();
+
+        assert_eq!(response.confirmation, ConfigOptionConfirmation::Observed);
+        let options = response
+            .config_options
+            .expect("observed response should include snapshot");
+        let mode = options
+            .iter()
+            .find(|option| option.id == "mode")
+            .expect("response should include mode option");
+        assert_eq!(mode.current_value.as_deref(), Some("yolo"));
+        assert_eq!(instance.get_mode().await.unwrap().mode, "yolo");
+    }
+
+    #[tokio::test]
+    async fn aionrs_set_config_option_rejects_invalid_mode() {
+        let instance = aionrs_instance().await;
+
+        let error = instance.set_config_option("mode", "invalid").await.unwrap_err();
+
+        assert!(
+            matches!(&error, AgentError::BadRequest(message) if message == "Value 'invalid' is not selectable for config option 'mode'"),
+            "unexpected error: {error:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn aionrs_set_config_option_rejects_unavailable_option() {
+        let instance = aionrs_instance().await;
+
+        let error = instance.set_config_option("thought_level", "high").await.unwrap_err();
+
+        assert!(
+            matches!(&error, AgentError::BadRequest(message) if message == "Config option 'thought_level' is not available"),
+            "unexpected error: {error:?}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod required_full_auto_dispatch_tests {
+    use super::*;
+    use tokio::sync::broadcast;
+
+    /// Minimal non-ACP agent behind the `Mock` variant: exercises the
+    /// `apply_required_full_auto_mode` dispatch without a real CLI.
+    struct NoopMockAgent {
+        conversation_id: String,
+        event_tx: broadcast::Sender<AgentStreamEvent>,
+    }
+
+    #[async_trait::async_trait]
+    impl IAgentTask for NoopMockAgent {
+        fn agent_type(&self) -> AgentType {
+            AgentType::Acp
+        }
+        fn conversation_id(&self) -> &str {
+            &self.conversation_id
+        }
+        fn workspace(&self) -> &str {
+            "/tmp/test"
+        }
+        fn status(&self) -> Option<ConversationStatus> {
+            None
+        }
+        fn last_activity_at(&self) -> TimestampMs {
+            0
+        }
+        fn subscribe(&self) -> broadcast::Receiver<AgentStreamEvent> {
+            self.event_tx.subscribe()
+        }
+        async fn send_message(&self, _data: SendMessageData) -> Result<(), AgentSendError> {
+            Ok(())
+        }
+        async fn cancel(&self) -> Result<(), AgentError> {
+            Ok(())
+        }
+        fn kill(&self, _reason: Option<AgentKillReason>) -> Result<(), AgentError> {
+            Ok(())
+        }
+    }
+
+    impl IMockAgent for NoopMockAgent {}
+
+    /// Non-ACP variants (proxy for claude/codex `Session`, `Aionrs`) never
+    /// enter the a-pure path — they signal `Ok(None)` so the caller falls back
+    /// to the retained legacy apply path.
+    #[tokio::test]
+    async fn non_acp_variant_returns_none_for_full_auto_apply() {
+        let (event_tx, _rx) = broadcast::channel(4);
+        let instance = AgentInstance::Mock(Arc::new(NoopMockAgent {
+            conversation_id: "conv-mock".into(),
+            event_tx,
+        }));
+        assert!(matches!(instance.apply_required_full_auto_mode().await, Ok(None)));
+    }
+}

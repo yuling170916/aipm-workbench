@@ -1,0 +1,47 @@
+{
+  "promptExamplesHint": "試試這些指令",
+  "defaultPrompts": {
+    "understand": "了解一下這個專案，用白話告訴我它是做什麼的、從哪裡入手",
+    "cleanup": "幫我找出這個資料夾裡重複和沒用的檔案，列出來讓我確認",
+    "create": "幫我做一個精美的個人主頁網頁，做好後直接打開給我看"
+  },
+  "selectAssistantHint": "選擇一位助手開始任務",
+  "workspace": {
+    "workInProject": "在專案中工作",
+    "optional": "可選",
+    "clearWorkspace": "清除",
+    "specifyWorkspace": "選擇專案資料夾",
+    "searchPlaceholder": "搜尋專案…",
+    "noProject": "不使用專案"
+  },
+  "home": {
+    "nav": "首頁",
+    "workspace": "工作台",
+    "eyebrow": "你的 AI 產品搭檔",
+    "title": "讓好想法，成為好產品。",
+    "description": "從需求梳理到 PRD，把時間留給更重要的決策。",
+    "placeholder": "說說你的產品想法，或上傳一份需求資料…",
+    "addMaterials": "新增資料",
+    "organizeTitle": "整理需求",
+    "organizeDescription": "把零散資訊整理成需求卡",
+    "prdTitle": "撰寫 PRD",
+    "prdDescription": "從需求卡開始組織文件",
+    "reviewTitle": "檢查遺漏",
+    "reviewDescription": "檢查規則、邊界與驗收標準",
+    "recentTitle": "繼續最近的專案",
+    "projectsLoading": "正在讀取專案…",
+    "projectsEmpty": "還沒有專案，先建立一個專案開始吧",
+    "projectsError": "專案暫時載入失敗，請重試",
+    "retry": "重新載入",
+    "refreshProjects": "重新整理專案",
+    "createProject": "新增專案",
+    "updatedAt": "最近更新：{{time}}",
+    "projectWorkspace": "工作目錄：{{path}}",
+    "projectNoActivity": "尚無活動紀錄",
+    "prompts": {
+      "organize": "請幫我把下面的產品想法和資料整理成需求卡。先詢問缺失的資訊，再梳理使用者問題、目標使用者、使用情境、需求範圍、優先順序與驗收標準，明確區分已知事實和待確認假設。\n\n產品想法與資料：",
+      "prd": "請根據下面的需求幫我撰寫一份可評審的 PRD。先確認缺失資訊，再涵蓋目標、使用者流程、功能、互動規則、異常邊界、驗收標準和待確認問題，不要編造業務資料。\n\n需求內容：",
+      "review": "請檢查下面的需求或 PRD 是否遺漏業務規則、權限、邊界情況、異常流程和驗收標準。逐項列出問題、影響、修改建議與待確認事項。\n\n需求或 PRD："
+    }
+  }
+}

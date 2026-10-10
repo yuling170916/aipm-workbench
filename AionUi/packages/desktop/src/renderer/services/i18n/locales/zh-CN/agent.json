@@ -1,0 +1,59 @@
+{
+  "health": {
+    "detectedError": "检测到当前 Agent ({{agent}}) 响应异常",
+    "autoSwitching": "。系统将自动尝试切换线路。",
+    "evaluating": "正在评估网络延迟与模型可用性...",
+    "checking": "检查 {{agent}} 节点...",
+    "foundBest": "已找到最佳替代方案",
+    "recommendSwitch": "推荐切换",
+    "available": "可用",
+    "lowLatency": "低延迟",
+    "mediumLatency": "中等延迟",
+    "highLatency": "高延迟",
+    "bestMatch": "最佳匹配",
+    "noAvailable": "当前环境没有可用 agent",
+    "checkConfig": "请检查配置或稍后重试"
+  },
+  "setup": {
+    "connectionError": "连接错误",
+    "notConfigured": "{{agent}} 尚未配置",
+    "authRequired": "使用此 Agent 需要先完成认证或配置 API Key。",
+    "findingAlternatives": "正在查找可用的替代方案...",
+    "checkingAgent": "正在检查 {{agent}}...",
+    "alternativesFound": "找到 {{count}} 个可用的替代方案",
+    "autoSwitching": "正在自动切换到最佳可用 Agent...",
+    "configError": "配置有问题，请检查配置或选择其他 Agent：",
+    "noAlternatives": "未找到可用的 Agent",
+    "configureFirst": "请先在设置中配置一个 Agent。",
+    "switching": "正在切换 Agent..."
+  },
+  "model": {
+    "switchSuccess": "模型切换成功",
+    "switchFailed": "模型切换失败",
+    "searchPlaceholder": "搜索模型",
+    "noResults": "没有匹配的模型"
+  },
+  "config": {
+    "setting": "正在应用设置...",
+    "commandAck": "命令已发送，但状态尚未确认，请稍后刷新或重试",
+    "timeout": "设置确认超时，界面已保留原状态",
+    "busy": "已有设置正在应用，请稍后再试",
+    "failed": "设置失败，界面已保留原状态"
+  },
+  "thoughtLevel": {
+    "label": "思考强度",
+    "switchSuccess": "思考强度切换成功",
+    "switchFailed": "思考强度切换失败"
+  },
+  "warmup": {
+    "clickToWake": "点击唤醒该成员"
+  },
+  "runtimeRestart": {
+    "tooltip": "重连代理",
+    "confirmContent": "将重启代理进程，以读取最新的 CLI 配置（例如切换渠道后）。聊天记录不会丢失，代理会尽可能恢复当前会话。",
+    "success": "代理已重连",
+    "failed": "代理重连失败",
+    "initializingTooltip": "代理正在初始化，请稍后再重连",
+    "processingTooltip": "请等当前回复结束后再重连"
+  }
+}

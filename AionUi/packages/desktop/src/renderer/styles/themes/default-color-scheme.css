@@ -1,0 +1,151 @@
+/* Workbench palette: quiet surfaces, ink typography and a cobalt accent. */
+
+:root,
+[data-color-scheme='default'] {
+  /* Brand scale. */
+  --aou-1: #f2f7ff;
+  --aou-2: #e8f0ff;
+  --aou-3: #d5e3ff;
+  --aou-4: #b8ceff;
+  --aou-5: #7fa7fa;
+  --aou-6: #315ff4;
+  --aou-7: #284fda;
+  --aou-8: #2145a8;
+  --aou-9: #243f84;
+  --aou-10: #1c2943;
+
+  /* Surface and neutral scale. */
+  --bg-base: #ffffff;
+  --bg-1: #f7fbff;
+  --bg-2: #eef5ff;
+  --bg-3: #e0e9f8;
+  --bg-4: #c8d7ee;
+  --bg-5: #a8b8d1;
+  --bg-6: #7e8ca6;
+  --bg-8: #61728e;
+  --bg-9: #394a69;
+  --bg-10: #1c2943;
+  --bg-hover: #edf4ff;
+  --bg-active: #e0ebff;
+
+  /* Text. Muted is reserved for supporting metadata, not body copy. */
+  --text-primary: #25334f;
+  --color-text-1: #25334f;
+  --text-secondary: #64738e;
+  --text-disabled: #a8b8d1;
+
+  /* Semantic colors. */
+  --primary: #315ff4;
+  --success: #228268;
+  --warning: #b87416;
+  --danger: #d24d62;
+  --info: #315ff4;
+
+  /* Borders and brand surfaces. */
+  --border-base: #dce7ff;
+  --border-light: #edf3fc;
+  --brand: #315ff4;
+  --brand-light: #eaf1ff;
+  --brand-hover: #284fda;
+
+  /* Navigation is deliberately distinct from the working canvas. */
+  --sidebar-bg: #f3f7fe;
+  --sidebar-surface: #ffffff;
+  --sidebar-hover: #e5eeff;
+  --sidebar-text: #25334f;
+  --sidebar-muted: #7e8ca6;
+  --sidebar-active: #315ff4;
+  --sidebar-active-text: #ffffff;
+  --sidebar-border: #dce7ff;
+  --button-primary-bg: #315ff4;
+
+  /* Conversation and workspace surfaces. */
+  --message-user-bg: #eaf1ff;
+  --message-tips-bg: #f3f7fd;
+  --workspace-btn-bg: #edf4ff;
+  --thought-gradient: linear-gradient(90deg, #f3f7fd 0%, #f3f7fd 100%);
+  --color-guid-agent-bar: #f3f7fe;
+
+  /* Shared component tokens. */
+  --fill: #f7fbff;
+  --inverse: #ffffff;
+  --dialog-fill-0: #ffffff;
+  --text-0: #1c2943;
+  --text-white: #ffffff;
+  --fill-0: #ffffff;
+  --fill-white-to-black: #ffffff;
+  --border-special: #c8d7ee;
+  --shadow-card: 0 4px 20px rgba(59, 92, 147, 0.045), 0 1px 3px rgba(31, 70, 128, 0.02);
+  --shadow-popover: 0 12px 40px rgba(40, 72, 128, 0.12), 0 2px 8px rgba(40, 72, 128, 0.04);
+}
+
+[data-color-scheme='default'][data-theme='dark'] {
+  /* The brighter accent remains legible on navy surfaces. */
+  --aou-1: #1a2848;
+  --aou-2: #22355a;
+  --aou-3: #314a7b;
+  --aou-4: #4763a0;
+  --aou-5: #607fe0;
+  --aou-6: #8aa7ff;
+  --aou-7: #a9bdff;
+  --aou-8: #c5d2ff;
+  --aou-9: #dce5ff;
+  --aou-10: #edf2ff;
+
+  --bg-base: #172238;
+  --bg-1: #10192b;
+  --bg-2: #1e2b43;
+  --bg-3: #2b3a55;
+  --bg-4: #40506d;
+  --bg-5: #5d6c86;
+  --bg-6: #91a0ba;
+  --bg-8: #b1bed4;
+  --bg-9: #d0daeb;
+  --bg-10: #edf2fb;
+  --bg-hover: #243451;
+  --bg-active: #2c4165;
+
+  --text-primary: #edf2fb;
+  --color-text-1: #edf2fb;
+  --text-secondary: #b5c2d9;
+  --text-disabled: #5d6c86;
+
+  --primary: #8aa7ff;
+  --success: #65c5a7;
+  --warning: #e5b76d;
+  --danger: #f18c9b;
+  --info: #8aa7ff;
+
+  --border-base: #2b3a55;
+  --border-light: #233149;
+  --brand: #8aa7ff;
+  --brand-light: #22355a;
+  --brand-hover: #a9bdff;
+
+  --sidebar-bg: #0c1425;
+  --sidebar-surface: #15223a;
+  --sidebar-hover: #1d2e4c;
+  --sidebar-text: #edf2ff;
+  --sidebar-muted: #9baac5;
+  --sidebar-active: #315ff4;
+  --sidebar-active-text: #ffffff;
+  --sidebar-border: #22324d;
+  --button-primary-bg: #315ff4;
+
+  --message-user-bg: #263a61;
+  --message-tips-bg: #1e2b43;
+  --workspace-btn-bg: #243451;
+  --thought-gradient: linear-gradient(90deg, #1e2b43 0%, #1e2b43 100%);
+  --color-guid-agent-bar: #1e2b43;
+
+  --fill: #1e2b43;
+  --inverse: #ffffff;
+  --dialog-fill-0: #1a273e;
+  --text-0: #edf2fb;
+  --text-white: #ffffff;
+  --fill-0: rgba(255, 255, 255, 0.04);
+  --fill-white-to-black: #10192b;
+  --border-special: #40506d;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.12);
+}

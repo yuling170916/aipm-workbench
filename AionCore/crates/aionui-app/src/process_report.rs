@@ -1,0 +1,107 @@
+// Consumed by following CLI/bootstrap boundary tasks.
+#![allow(dead_code)]
+
+use std::process::ExitCode;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ExitKind {
+    Internal,
+    Config,
+    Unavailable,
+}
+
+impl ExitKind {
+    /// Numeric exit code for this kind. The single source of truth for the
+    /// process-exit contract; `const` so exit paths that bypass `ExitCode`
+    /// (e.g. the shutdown watchdog's `std::process::exit`) reuse the same
+    /// table instead of hardcoding a copy.
+    pub(crate) const fn raw_code(self) -> u8 {
+        match self {
+            Self::Internal => 1,
+            Self::Config => 2,
+            Self::Unavailable => 3,
+        }
+    }
+
+    pub(crate) fn exit_code(self) -> ExitCode {
+        ExitCode::from(self.raw_code())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ProcessReport {
+    pub(crate) code: &'static str,
+    pub(crate) message: &'static str,
+    pub(crate) exit_kind: ExitKind,
+    pub(crate) fields: Vec<(&'static str, String)>,
+}
+
+impl ProcessReport {
+    pub(crate) fn stderr_line(&self) -> String {
+        let mut line = self.code.to_owned();
+        for (key, value) in &self.fields {
+            line.push(' ');
+            line.push_str(key);
+            line.push('=');
+            line.push_str(&sanitize_field(value));
+        }
+        line.push_str(": ");
+        line.push_str(self.message);
+        line
+    }
+}
+
+fn sanitize_field(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| if ch.is_ascii_graphic() && ch != ':' { ch } else { '_' })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exit_kind_maps_to_process_exit_codes() {
+        assert_eq!(ExitKind::Internal.exit_code(), ExitCode::from(1));
+        assert_eq!(ExitKind::Config.exit_code(), ExitCode::from(2));
+        assert_eq!(ExitKind::Unavailable.exit_code(), ExitCode::from(3));
+        // raw_code is the same table exposed as a number; the values are an
+        // external supervisor contract and must not drift.
+        assert_eq!(ExitKind::Internal.raw_code(), 1);
+        assert_eq!(ExitKind::Config.raw_code(), 2);
+        assert_eq!(ExitKind::Unavailable.raw_code(), 3);
+    }
+
+    #[test]
+    fn stderr_line_starts_with_stable_code() {
+        let report = ProcessReport {
+            code: "MCP_ENV_MISSING",
+            message: "missing required environment variable",
+            exit_kind: ExitKind::Config,
+            fields: vec![("subcommand", "mcp-team-stdio".into()), ("env", "TEAM_MCP_PORT".into())],
+        };
+
+        assert_eq!(
+            report.stderr_line(),
+            "MCP_ENV_MISSING subcommand=mcp-team-stdio env=TEAM_MCP_PORT: missing required environment variable"
+        );
+        assert_eq!(report.exit_kind.exit_code(), ExitCode::from(2));
+    }
+
+    #[test]
+    fn stderr_line_sanitizes_field_values() {
+        let report = ProcessReport {
+            code: "BOOTSTRAP_BIND_FAILED",
+            message: "failed to bind HTTP listener",
+            exit_kind: ExitKind::Unavailable,
+            fields: vec![("stage", "bind.listener\nsecret".into())],
+        };
+
+        assert_eq!(
+            report.stderr_line(),
+            "BOOTSTRAP_BIND_FAILED stage=bind.listener_secret: failed to bind HTTP listener"
+        );
+    }
+}

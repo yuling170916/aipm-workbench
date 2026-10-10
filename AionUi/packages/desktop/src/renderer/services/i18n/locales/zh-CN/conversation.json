@@ -1,0 +1,786 @@
+{
+  "welcome": {
+    "title": "Hi，今天有什么安排？",
+    "placeholder": "发消息、上传文件、打开文件夹、创建定时任务，或输入 / 唤起命令...",
+    "linkFolder": "打开文件夹",
+    "newConversation": "新建对话",
+    "selectModel": "选择模型",
+    "useCliModel": "选择模型",
+    "modelSwitchNotSupported": "首次连接后将显示可用模型列表。请先发送消息以连接并加载可用模型。",
+    "specifyWorkspace": "选择项目",
+    "currentWorkspace": "当前项目",
+    "clearWorkspace": "移除项目",
+    "openFolder": "打开文件夹",
+    "none": "无",
+    "quickActionsTitle": "AIPM工作台 能做什么？",
+    "quickActionFeedback": "反馈问题",
+    "quickActionStar": "喜欢我们？点个星吧",
+    "skillsMarket": "AIPM工作台 Skills Market",
+    "skillsMarketDesc": "按需搜索并调用社区 Skills，一次配置，所有Agent通用。",
+    "skillsMarketDetails": "详情 >>"
+  },
+  "history": {
+    "recents": "最近",
+    "noHistory": "暂无对话历史",
+    "deleteTitle": "删除",
+    "deleteConfirm": "确定删除该对话吗？",
+    "confirmDelete": "删除",
+    "cancelDelete": "取消",
+    "editName": "编辑名称",
+    "saveName": "保存",
+    "cancelEdit": "取消",
+    "rename": "重命名",
+    "createCronTask": "创建定时任务",
+    "renameTitle": "重命名对话",
+    "renamePlaceholder": "请输入新名称",
+    "renameSuccess": "重命名成功",
+    "renameFailed": "重命名失败",
+    "batchManage": "批量管理",
+    "batchModeExit": "退出批量管理",
+    "selectAll": "全选",
+    "selectedCount": "已选 {{count}} 项",
+    "batchExport": "批量导出",
+    "batchExportConfirm": "确定导出已选的 {{count}} 个话题吗？",
+    "batchDelete": "批量删除",
+    "batchDeleteConfirm": "确定删除已选的 {{count}} 个话题吗？",
+    "batchDeleteConfirm_one": "确定删除已选的 {{count}} 个话题吗？",
+    "batchDeleteConfirm_other": "确定删除已选的 {{count}} 个话题吗？",
+    "batchDeleteSuccess": "已删除 {{count}} 个话题",
+    "batchDeleteSuccess_one": "已删除 {{count}} 个话题",
+    "batchDeleteSuccess_other": "已删除 {{count}} 个话题",
+    "batchNoSelection": "请先选择话题",
+    "export": "导出",
+    "exportDialogTitle": "导出话题",
+    "exportDialogSingleDescription": "将导出当前话题的会话记录（JSON + Markdown）及项目文件，并打包为 ZIP。",
+    "exportDialogBatchDescription": "将导出已选 {{count}} 个话题的会话记录（JSON + Markdown）及项目文件，并打包为 ZIP。",
+    "exportTargetFolder": "导出到文件夹",
+    "exportSelectFolder": "请选择导出文件夹",
+    "exportDialogHint": "目录选择与\"更换项目\"一致；确认后开始导出。",
+    "exporting": "导出中...",
+    "exportSuccess": "导出成功",
+    "exportCanceled": "已取消导出",
+    "exportFailed": "导出失败",
+    "pin": "置顶",
+    "unpin": "取消置顶",
+    "markAsUnread": "标为未读",
+    "markAsRead": "标为已读",
+    "pinned": "已置顶",
+    "pinFailed": "置顶操作失败",
+    "pinnedSection": "置顶",
+    "deleteSuccess": "删除成功",
+    "deleteFailed": "删除失败",
+    "today": "今天",
+    "yesterday": "昨天",
+    "recent7Days": "最近7天",
+    "earlier": "更早",
+    "projectsSection": "项目",
+    "conversationsSection": "对话",
+    "newConversationInProject": "在此项目中新建对话",
+    "deleting": "删除中...",
+    "reorderPinned": "拖动以调整置顶会话顺序",
+    "forkedFrom": "分叉自「{{name}}」",
+    "forkedConversation": "分叉会话",
+    "archive": "归档",
+    "archiveSuccess": "已归档",
+    "archiveFailed": "归档失败",
+    "batchArchive": "批量归档",
+    "batchArchiveConfirm": "确定归档已选的 {{count}} 个话题吗？归档后可在设置的归档页恢复或删除。",
+    "batchArchiveSuccess": "已归档 {{count}} 个话题",
+    "archiveProject": "归档项目",
+    "archiveProjectTitle": "归档项目",
+    "archiveProjectConfirm": "确定归档项目「{{name}}」吗？项目下的 {{count}} 个对话也会一起归档。归档后可在设置的归档页恢复或删除。",
+    "archiving": "归档中..."
+  },
+  "historySearch": {
+    "tooltip": "检索会话",
+    "title": "检索会话内容",
+    "shortTitle": "搜索",
+    "description": "输入关键词搜索历史消息，支持分页加载并跳转到对应消息。",
+    "placeholder": "搜索消息内容...",
+    "idle": "输入关键词检索历史消息",
+    "empty": "没有找到匹配的消息",
+    "loadingMore": "正在加载更多...",
+    "untitled": "未命名会话"
+  },
+  "dropdown": {
+    "cliAgents": "CLI Agents",
+    "presetAssistants": "预设助手"
+  },
+  "noAgentsAvailable": "没有可用的 Agent",
+  "noModelConfigured": "未配置模型，请前往设置页面配置。",
+  "createFailed": "创建会话失败",
+  "createError": {
+    "pathVariants": {
+      "WORKSPACE_PATH_UNAVAILABLE": "所选工作区路径不可用。请确保工作区路径“{{workspacePath}}”真实存在且可访问。"
+    },
+    "codes": {
+      "TEAM_ASSISTANT_ID_REQUIRED": "创建团队前请先选择助手。",
+      "TEAM_ASSISTANT_NOT_FOUND": "助手 {{assistantId}} 已不可用。请刷新助手列表后重新选择。",
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": "请使用 assistant_id，不要再传 {{field}}。"
+    }
+  },
+  "agentError": {
+    "fallbackTitle": "Agent 未能回复",
+    "errorCode": "错误码",
+    "retryable": "可重试",
+    "notRetryable": "需先处理配置",
+    "resolutionPrefix": "建议：",
+    "resolution": {
+      "retry": "稍后重试，或重新发送这条消息。",
+      "wait_for_current_response": "请等待当前回复结束后再发送下一条消息。",
+      "start_new_session": "请新建一个对话后继续。",
+      "reconnect_agent": "请重启或重新连接所选 Agent 后重试。",
+      "check_agent_login": "请先登录所选 Agent，或刷新它的凭证。",
+      "check_agent_installation": "请检查 Agent 的安装状态和本地命令配置。",
+      "check_agent_version": "请检查 Agent 协议和版本兼容性。",
+      "check_local_command": "请安装缺失的命令，或确认它已经加入 PATH。",
+      "check_provider_credentials": "请在设置中检查模型服务商的 API Key 或账号凭证。",
+      "check_provider_billing": "请检查模型服务商的余额、额度或配额。",
+      "check_provider_base_url": "请检查模型服务商的 Base URL、接口路径、代理和 API 兼容性。",
+      "change_model": "请选择当前账号可用且支持该请求的模型。",
+      "reduce_context": "请减少消息内容、引用文件或上下文大小后重试。",
+      "send_feedback": "请提交反馈并附带日志，方便团队排查。"
+    },
+    "ownership": {
+      "aionui": "应用",
+      "user_agent": "Agent",
+      "user_llm_provider": "模型服务商",
+      "unknown_upstream": "上游"
+    },
+    "codes": {
+      "AIONUI_STREAM_BROKEN": {
+        "title": "响应流异常中断",
+        "body": "消息已发送，但响应流异常结束。请先重试；如果反复出现，可以提交反馈。"
+      },
+      "AIONUI_STATE_INCONSISTENT": {
+        "title": "会话状态不一致",
+        "body": "当前对话状态和后台记录不同步。请重新打开应用或新建会话后再试。"
+      },
+      "AIONUI_PERMISSION_ERROR": {
+        "title": "无法访问所需资源",
+        "body": "本地权限或文件访问检查失败。请确认项目路径和应用权限后重试。"
+      },
+      "AIONUI_INTERNAL_ERROR": {
+        "title": "应用处理失败",
+        "body": "本次请求在应用处理过程中失败。请先重试一次；如果仍然出现，可以提交反馈。"
+      },
+      "AIONUI_CONVERSATION_BUSY": {
+        "title": "会话正在处理上一条消息",
+        "body": "当前会话还有回复未结束。请等待本次回复完成后再发送新的消息。"
+      },
+      "USER_AGENT_NOT_INSTALLED": {
+        "title": "所选 Agent 未安装",
+        "body": "请先安装该 Agent 依赖的 CLI 或应用，然后在设置中重新连接。"
+      },
+      "USER_AGENT_STARTUP_FAILED": {
+        "title": "所选 Agent 启动失败",
+        "body": "Agent 进程在准备完成前退出了。请检查安装、登录状态和本地命令配置。"
+      },
+      "USER_AGENT_OPENCLAW_GATEWAY_UNREACHABLE": {
+        "title": "OpenClaw Gateway 未运行",
+        "body": "OpenClaw Gateway 未运行，或无法连接到 127.0.0.1:18789。\n\n请启动 OpenClaw Gateway 后重试。你可以在终端运行：\nopenclaw gateway status\nopenclaw gateway start"
+      },
+      "USER_AGENT_DISCONNECTED": {
+        "title": "所选 Agent 已断开连接",
+        "body": "Agent 在处理本次消息时断开了连接。请重启或重新连接 Agent 后重试。"
+      },
+      "USER_AGENT_AUTH_REQUIRED": {
+        "title": "所选 Agent 需要登录",
+        "body": "请先登录该 Agent 或刷新凭证，然后重新发送消息。"
+      },
+      "USER_AGENT_SESSION_NOT_FOUND": {
+        "title": "Agent 会话已丢失",
+        "body": "Agent 报告找不到当前会话，或已不再识别该会话。"
+      },
+      "USER_AGENT_UNSUPPORTED_METHOD": {
+        "title": "所选 Agent 不支持该操作",
+        "body": "Agent 报告请求的 ACP 方法不受支持，或当前不可用。"
+      },
+      "USER_AGENT_INVALID_PARAMS": {
+        "title": "所选 Agent 拒绝了请求",
+        "body": "Agent 报告请求参数无效。"
+      },
+      "USER_AGENT_HANDSHAKE_FAILED": {
+        "title": "Agent 握手失败",
+        "body": "所选 Agent 未能完成启动握手。请重启或重新连接该 Agent 后重试。"
+      },
+      "USER_AGENT_HANDSHAKE_TIMEOUT": {
+        "title": "Agent 握手超时",
+        "body": "所选 Agent 未在预期时间内完成启动握手。请确认它没有卡在启动或登录流程中，然后重试。"
+      },
+      "USER_AGENT_ACP_INIT_FAILED": {
+        "title": "Agent 协议初始化失败",
+        "body": "应用无法和该 Agent 初始化 Agent Client Protocol 会话。"
+      },
+      "USER_AGENT_PROTOCOL_PARSE_ERROR": {
+        "title": "Agent 报告了协议解析错误",
+        "body": "所选 Agent 报告某条 ACP/JSON-RPC 消息无法解析。"
+      },
+      "USER_AGENT_INVALID_REQUEST": {
+        "title": "Agent 报告协议请求无效",
+        "body": "所选 Agent 报告 ACP/JSON-RPC 请求对象无效。"
+      },
+      "USER_AGENT_RESOURCE_NOT_FOUND": {
+        "title": "Agent 找不到所需资源",
+        "body": "所选 Agent 报告找不到所需资源，例如某个文件。"
+      },
+      "USER_AGENT_PROTOCOL_ERROR": {
+        "title": "Agent 返回了协议错误",
+        "body": "所选 Agent 返回了非标准 ACP 错误码。"
+      },
+      "USER_AGENT_PROTOCOL_MISMATCH": {
+        "title": "Agent 协议版本不兼容",
+        "body": "应用和所选 Agent 无法使用兼容的 ACP 协议版本。"
+      },
+      "USER_AGENT_NO_PREVIOUS_SESSION": {
+        "title": "无法恢复上一次 Agent 会话",
+        "body": "Agent 无法恢复之前的会话状态。请新建对话后继续。"
+      },
+      "USER_AGENT_COMMAND_NOT_FOUND": {
+        "title": "找不到 Agent 命令",
+        "body": "未找到已配置的 Agent 命令。请先安装该命令，或在设置中更新命令路径。"
+      },
+      "USER_AGENT_MISSING_ENV": {
+        "title": "Agent 缺少必要环境变量",
+        "body": "该 Agent 需要的环境变量尚未配置。请在设置或 shell 环境中补齐后重新连接。"
+      },
+      "USER_LLM_PROVIDER_AUTH_FAILED": {
+        "title": "模型服务商鉴权失败",
+        "body": "所选服务商拒绝了 API Key 或账号凭证。请检查模型设置后重试。"
+      },
+      "USER_LLM_PROVIDER_AWS_SSO_EXPIRED": {
+        "title": "AWS SSO 会话已过期",
+        "body": "AWS SSO 会话已过期。请在终端为对应 profile 运行 'aws sso login'，然后重新发送消息。"
+      },
+      "USER_LLM_PROVIDER_CONFIG_ERROR": {
+        "title": "模型服务商配置无效",
+        "body": "当前设置无法构造服务商请求。请检查凭证、区域、Base URL 和服务商专属配置后再重试。"
+      },
+      "USER_LLM_PROVIDER_MODEL_NOT_FOUND": {
+        "title": "找不到所选模型",
+        "body": "服务商不识别当前模型名。请在设置中选择可用模型后重试。"
+      },
+      "USER_LLM_PROVIDER_RATE_LIMITED": {
+        "title": "模型服务商触发限流",
+        "body": "服务商暂时限制了请求。请稍后重试、降低请求频率，或切换模型。"
+      },
+      "USER_LLM_PROVIDER_TIMEOUT": {
+        "title": "模型服务商响应超时",
+        "body": "服务商没有及时返回结果。请稍后重试，或切换到更稳定的服务商。"
+      },
+      "USER_LLM_PROVIDER_NETWORK_ERROR": {
+        "title": "无法连接模型服务商",
+        "body": "网络或 DNS 错误导致无法访问服务商。请检查网络、代理和 Base URL。"
+      },
+      "USER_LLM_PROVIDER_GATEWAY_ERROR": {
+        "title": "模型服务商暂不可用",
+        "body": "服务商返回了网关或服务异常。请稍后重试，或切换到其他服务商。"
+      },
+      "USER_LLM_PROVIDER_PERMISSION_DENIED": {
+        "title": "模型服务商无权处理请求",
+        "body": "当前服务商账号没有使用该模型或执行该操作的权限。请检查账号权限，或切换其他模型。"
+      },
+      "USER_LLM_PROVIDER_BILLING_REQUIRED": {
+        "title": "模型服务商需要开通计费",
+        "body": "所选服务商需要有效的计费、余额或额度后才能完成请求。请处理后重试。"
+      },
+      "USER_LLM_PROVIDER_UNSUPPORTED_MODEL": {
+        "title": "模型不支持本次请求",
+        "body": "所选模型不可用，或不支持本次请求所需能力。请切换到受支持的模型后重试。"
+      },
+      "USER_LLM_PROVIDER_ENDPOINT_NOT_FOUND": {
+        "title": "找不到模型服务商接口",
+        "body": "服务商接口或 API 路径不存在。请检查 Base URL、部署名称和 API 兼容性。"
+      },
+      "USER_LLM_PROVIDER_INVALID_REQUEST": {
+        "title": "模型服务商拒绝了请求",
+        "body": "服务商认为本次请求无效。请简化消息内容，或检查模型和服务商设置。"
+      },
+      "USER_LLM_PROVIDER_INVALID_TOOL_SCHEMA": {
+        "title": "模型服务商拒绝了工具定义",
+        "body": "服务商拒绝了本次请求中的工具定义。请更新 Agent，或禁用不兼容的工具后重试。"
+      },
+      "USER_LLM_PROVIDER_CONTEXT_TOO_LARGE": {
+        "title": "上下文超出模型限制",
+        "body": "本次请求超出了模型上下文限制。请减少消息内容、引用文件或对话历史后重试。"
+      },
+      "USER_LLM_PROVIDER_EMPTY_RESPONSE": {
+        "title": "模型服务商返回了空响应",
+        "body": "服务商完成了请求，但没有返回可用内容。请先重试一次；如果反复出现，可切换服务商。"
+      },
+      "WORKSPACE_PATH_RUNTIME_UNAVAILABLE": {
+        "title": "当前 Agent 在该工作区路径下运行失败",
+        "body": "请确保当前工作区路径真实存在。",
+        "bodyWithPath": "当前 Agent 在该工作区路径下运行失败。请确保工作区路径“{{workspacePath}}”真实存在。"
+      },
+      "UNKNOWN_UPSTREAM_ERROR": {
+        "title": "上游 Agent 或模型服务商出错",
+        "body": "收到上游错误，但暂时无法判断它来自 Agent、模型服务商、网络还是本地环境。"
+      },
+      "MCP_HTTP_RESPONSE_READ_FAILED": {
+        "title": "读取团队辅助进程响应失败",
+        "body": "AIPM工作台 无法读取本地团队辅助进程的响应。请先重试一次，如果持续出现，再重启应用。"
+      },
+      "MCP_TOOL_REMOTE_ERROR": {
+        "title": "本地团队辅助进程拒绝了这次请求",
+        "body": "本地团队辅助进程在处理这次请求时返回了错误。请查看下面的详情，调整团队操作后再重试。"
+      },
+      "MCP_TOOL_RESPONSE_UNEXPECTED": {
+        "title": "团队辅助进程返回了异常响应",
+        "body": "AIPM工作台 收到了本地团队辅助进程的异常响应。请先重试一次，如果持续出现再反馈问题。"
+      },
+      "MCP_TCP_READ_FAILED": {
+        "title": "读取本地团队辅助进程失败",
+        "body": "AIPM工作台 无法读取本地团队辅助进程的 TCP 响应。请先重试一次，如仍失败可重启应用。"
+      },
+      "TEAM_SERVICE_UNAVAILABLE": {
+        "title": "团队服务尚未就绪",
+        "body": "本地团队会话仍在启动中，或刚刚被中断。请稍等片刻后重试。"
+      },
+      "TEAM_ASSISTANT_ID_REQUIRED": {
+        "title": "必须先选择队友助手",
+        "body": "创建或拉起队友前，请先从可用助手目录中选择一个真实的 assistant。"
+      },
+      "TEAM_ASSISTANT_NOT_FOUND": {
+        "title": "所选助手已不可用",
+        "body": "请刷新助手目录，然后为这个队友重新选择一个助手。"
+      },
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": {
+        "title": "请求仍在使用旧的团队身份字段",
+        "body": "这个团队操作必须使用 assistant_id，不能再使用旧的 backend 或 agent 字段。"
+      }
+    }
+  },
+  "workspace": {
+    "title": "项目",
+    "pasteConfirm_title": "粘贴文件",
+    "pasteConfirm_message": "确定要将 '{{name}}' 粘贴到选中的文件夹 ({{target}}) 吗？",
+    "pasteConfirm_paste": "粘贴",
+    "pasteConfirm_cancel": "取消",
+    "pasteConfirm_noAsk": "不再提示",
+    "pasteConfirm_fileName": "文件名",
+    "pasteConfirm_targetFolder": "目标文件夹",
+    "pasteConfirm_multipleFiles": "{{count}} 个文件",
+    "empty": "项目为空",
+    "emptyDescription": "上传文件或打开文件夹后，文件将显示在这里",
+    "searchPlaceholder": "搜索文件...",
+    "createNewConversation": "当前空间创建新会话",
+    "search.empty": "搜索结果为空",
+    "addFile": "添加文件",
+    "refresh": "刷新",
+    "temporarySpace": "临时空间",
+    "dragOverlayTitle": "拖拽导入",
+    "dragOverlayDesc": "将文件或文件夹拖到此处，即可复制到当前项目。",
+    "dragOverlayHint": "提示：若已选择文件夹，将直接导入该文件夹。",
+    "dragNoFiles": "未检测到有效的文件或目录，请从资源管理器或访达中拖拽。",
+    "dragFailed": "拖拽导入失败，请重试。",
+    "contextMenu": {
+      "open": "打开",
+      "openLocation": "打开文件所在目录",
+      "preview": "预览",
+      "previewFailed": "预览失败",
+      "deleteTitle": "删除文件",
+      "deleteConfirm": "此操作会删除系统所在文件,确认删除吗?",
+      "deleteSuccess": "删除成功",
+      "deleteFailed": "删除失败",
+      "rename": "重命名",
+      "renameTitle": "重命名",
+      "renamePlaceholder": "输入新的名称",
+      "renameSuccess": "重命名成功",
+      "renameFailed": "重命名失败",
+      "renameEmpty": "名称不能为空",
+      "renameTimeout": "重命名请求超时，请重试",
+      "addToChat": "添加到聊天",
+      "addedToChat": "已添加到聊天",
+      "openFailed": "打开失败",
+      "revealFailed": "无法打开所在目录",
+      "download": "下载",
+      "downloadSuccess": "下载成功",
+      "downloadFailed": "下载失败"
+    },
+    "preview": {
+      "errors": {
+        "outsideSandbox": "文件不在项目范围内，无法预览。",
+        "notFound": "文件不存在或已被删除。",
+        "timeout": "读取文件超时，请稍后重试。"
+      }
+    },
+    "changes": {
+      "tab": "变更",
+      "filesTab": "文件",
+      "currentBranchLabel": "当前分支",
+      "summary": "{{count}} 个文件已变更",
+      "insertions": "+{{count}} 行新增",
+      "deletions": "-{{count}} 行删除",
+      "empty": "暂无变更",
+      "emptyDescription": "AI 修改文件后，变更记录将显示在此处",
+      "refresh": "刷新",
+      "staged": "已暂存的更改",
+      "unstaged": "更改",
+      "changedFiles": "已更改的文件",
+      "stage": "暂存",
+      "stageAll": "暂存所有更改",
+      "unstage": "取消暂存",
+      "unstageAll": "取消暂存所有更改",
+      "discard": "放弃更改",
+      "reset": "还原更改",
+      "noUnstaged": "没有未暂存的更改",
+      "noStaged": "没有已暂存的更改"
+    },
+    "openWorkspace": "打开项目文件夹",
+    "openWith": {
+      "vscode": "VS Code",
+      "terminal": "终端",
+      "explorer": "文件资源管理器",
+      "browser": "浏览器"
+    }
+  },
+  "minimap": {
+    "searchAria": "搜索会话",
+    "searchHint": "点击这里搜索关键词",
+    "empty": "暂无问答内容",
+    "noMatch": "未找到匹配内容",
+    "count": "{{count}} 条",
+    "count_one": "{{count}} 条",
+    "count_other": "{{count}} 条"
+  },
+  "chat": {
+    "noModelSelected": "当前会话未选择模型，无法发送消息",
+    "sendMessageTo": "发送消息到 {{model}}",
+    "processing": "正在处理中……",
+    "quotaExceededTitle": "模型额度已用尽",
+    "quotaExceededBody": "当前模型额度已用尽，是否切换到 {{model}}？",
+    "quotaExceededNoFallback": "当前模型额度已用尽，请切换到其他可用模型。",
+    "quotaSwitched": "已切换到 {{model}}。",
+    "apiErrorNoCli": "API 错误，没有可用的 CLI 代理进行回退。",
+    "apiErrorSwitchFailed": "创建回退会话失败。",
+    "apiErrorSwitched": "API 错误，已自动切换到 {{cli}} CLI",
+    "confirmationLoadError": "确认对话框加载失败",
+    "tryAnotherAgent": "尝试其他 Agent：",
+    "switchAgentFailed": "切换 Agent 失败",
+    "speech": {
+      "recordTooltip": "开始语音输入",
+      "recordTooltipWithShortcut": "语音输入 cmd+M",
+      "pickFileTooltip": "选择音频文件",
+      "stopTooltip": "停止录音",
+      "processing": "正在转写音频...",
+      "unsupported": "当前环境不支持语音输入",
+      "startShort": "语音",
+      "stopShort": "停止",
+      "transcribingShort": "...",
+      "audioCaptureError": "未检测到可用麦克风",
+      "emptyTranscript": "未识别到语音内容",
+      "fileTooLarge": "音频文件过大",
+      "networkError": "音频转写时网络异常",
+      "notConfigured": "语音转文字尚未配置",
+      "permissionDenied": "麦克风权限被拒绝",
+      "recordingUnsupported": "当前环境不支持直接录音，请改为上传音频文件",
+      "transcriptionFailed": "音频转写失败",
+      "genericError": "语音输入失败，请重试"
+    }
+  },
+  "sideQuestion": {
+    "title": "顺便问一下",
+    "description": "针对当前对话快速提一个小问题",
+    "started": "正在发起顺便提问...",
+    "answered": "顺便提问已返回结果。",
+    "noAnswer": "当前会话里没有明确的答案。",
+    "loading": "思考中...",
+    "parentTaskRunning": "主任务仍在后台继续运行。",
+    "dismissHint": "按 Escape、Enter 或 Space 关闭",
+    "unsupported": "当前会话暂不支持顺便提问。",
+    "alreadyRunning": "已有一个顺便提问正在进行中。",
+    "attachmentsNotAllowed": "顺便提问不能附带文件或 DOM 片段。",
+    "emptyQuestion": "请在 /btw 后输入问题。",
+    "toolsRequired": "/btw 只能根据当前对话中已有的内容作答，无法搜索、浏览或获取新信息。",
+    "error": "顺便提问失败。"
+  },
+  "commandQueue": {
+    "title": "草稿箱",
+    "clear": "清空草稿箱",
+    "edit": "编辑",
+    "editing": "编辑中",
+    "editPlaceholder": "可以在执行前先修改这条排队指令。",
+    "cancelEdit": "取消",
+    "saveEdit": "保存",
+    "moreActions": "更多操作",
+    "reorder": "拖动以调整排队指令顺序",
+    "remove": "移除",
+    "files": "{{count}} 个文件",
+    "files_one": "{{count}} 个文件",
+    "files_other": "{{count}} 个文件",
+    "pausedAfterFailure": "下一条排队指令启动失败。请编辑、调整顺序或移除后再继续。",
+    "emptyInput": "排队指令不能为空。",
+    "queueFull": "队列已满，请先移除部分指令再继续添加。",
+    "inputTooLong": "排队指令内容过长，请缩短后再发送。",
+    "tooManyFiles": "这条排队指令附加的文件过多。",
+    "queueTooLarge": "队列数据过大，无法安全缓存，请先移除部分排队指令。",
+    "sendNow": "立即发送",
+    "modeToggle": "切换发送模式",
+    "help": "使用说明",
+    "helpIntro": "AI 回复期间你发送的消息会先存到这里。",
+    "helpAuto": "：AI 每轮回复结束后自动依次发送。",
+    "helpManual": "：只暂存不自动发送，逐条点「立即发送」。",
+    "clearConfirmTitle": "确定清空发送草稿箱？",
+    "clearConfirmContent": "所有待发送的消息都会被移除，且无法恢复。",
+    "mode": {
+      "auto": "自动发送",
+      "manual": "手动发送"
+    },
+    "addToQueue": "存到草稿箱",
+    "addToQueueShortcut": "⌘ + Enter / Ctrl + Enter",
+    "midturnBlocked": "当前 Agent 正在处理，暂时不能直接发送。可以先存到草稿箱，稍后发送。",
+    "enterShortcut": "Enter",
+    "actionMode": "Choose send action",
+    "midturnBlockedSendHint": "当前 Agent 正在处理，暂时不能直接发送。可以先存到草稿箱，稍后发送。",
+    "addToQueueBusyHint": "先存到草稿箱，稍后发送。"
+  },
+  "contextUsage": {
+    "contextUsed": "上下文已使用",
+    "tokensUsed": "已使用 {{tokens}} tokens",
+    "windowUnknown": "上下文窗口大小未知",
+    "sessionCost": "会话成本",
+    "input": "输入",
+    "output": "输出",
+    "thought": "思考",
+    "cachedRead": "缓存读",
+    "cachedWrite": "缓存写"
+  },
+  "skill_generator": {
+    "title": "生成 Skill/规则",
+    "generate": "生成",
+    "description": "分析会话历史，自动生成：",
+    "type_skill": "技能（Python）",
+    "type_rule": "规则（JSON/Markdown）",
+    "name_label": "智能体名称：",
+    "name_placeholder": "例如：Excel 翻译助手",
+    "menu_generate": "根据历史生成",
+    "menu_load": "加载规则/技能",
+    "load_title": "加载 Rule/Skill",
+    "load_error": "读取项目文件失败",
+    "no_files": "项目中没有匹配的文件",
+    "read_error": "读取文件失败",
+    "rule_loaded": "规则已应用",
+    "no_workspace": "未配置项目，无法生成",
+    "name_required": "请先填写名称",
+    "no_history": "没有会话历史记录",
+    "request_sent": "生成请求已发送",
+    "failed": "生成失败",
+    "preset_registered": "已保存为全局预设"
+  },
+  "thinking": {
+    "complete": "思考完成",
+    "label": "思考中..."
+  },
+  "skills": {
+    "loaded": "已加载技能",
+    "slashHint": "技能"
+  },
+  "mcp": {
+    "loaded": "已加载 MCP",
+    "managementHint": "如果某个 MCP 加载异常，通常是 MCP JSON 配置有问题。请到工具设置页检查并手动检测。",
+    "openSettings": "前往工具设置",
+    "status": {
+      "loaded": "已加载",
+      "failed": "失败",
+      "unsupported": "不支持"
+    },
+    "selected": "已选 MCP"
+  },
+  "runtimePreparing": {
+    "sendboxHint": "正在准备运行环境。首次启动可能会稍慢一些。"
+  },
+  "sendbox": {
+    "hint": "输入 / 唤起命令，@ 引用文件，↑/↓ 切换历史消息",
+    "mediaPathFallback": "该 Agent 不原生支持此文件类型，将以文件路径形式发送。",
+    "hintWithSessions": "输入 / 唤起命令，@ 引用文件，@@ 引用会话，↑/↓ 切换历史消息"
+  },
+  "agentTip": {
+    "codes": {
+      "ACP_EMPTY_TURN": {
+        "body": "这次请求没有产生任何可见回复。"
+      },
+      "ACP_EMPTY_TURN_NEEDS_AUTH": {
+        "body": "这次请求没有产生任何可见回复。若你已登录，可能是后端瞬时或连接问题，请重试或新建对话；若尚未登录，可尝试登录：{{hint}}。"
+      },
+      "ACP_EMPTY_TURN_TOKEN_LIMIT": {
+        "body": "这次请求没有产生任何可见回复。当前会话可能已接近上下文长度上限，建议重试，或新建对话后再试。"
+      },
+      "ACP_EMPTY_TURN_MAX_TOKENS": {
+        "body": "这次请求在产生任何可见回复前已达到模型输出 token 上限。"
+      },
+      "ACP_EMPTY_TURN_MAX_TURN_REQUESTS": {
+        "body": "这次请求在产生任何可见回复前已达到模型单轮请求上限。"
+      },
+      "ACP_EMPTY_TURN_REFUSAL": {
+        "body": "模型在产生任何可见回复前拒绝了这次请求。"
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "本轮有 {{count}} 个步骤失败且未生效。agy 仍会把这类轮次标记为成功，请核对实际结果而非回复内容。"
+      },
+      "CLI_VERSION_OLDER": {
+        "body": "已安装的 {{cli}} 低于 AIPM工作台 验证过的版本，部分功能可能缺失。建议升级 {{cli}}。 （本地 {{reported}} / AIPM工作台 验证过 {{verified}}）"
+      },
+      "CLI_VERSION_NEWER": {
+        "body": "已安装的 {{cli}} 高于 AIPM工作台 验证过的版本。通常仍可正常使用；如遇异常行为请反馈。 （本地 {{reported}} / AIPM工作台 验证过 {{verified}}）"
+      },
+      "CODEX_RETRYING": {
+        "body": "{{detail}}（累计第 {{attempts}} 次重试，已等待 {{elapsed}}——Agent 的服务方反复中断连接，AIPM工作台 正在等待重连。）"
+      }
+    }
+  },
+  "notFound": "会话不存在或已被删除",
+  "explorer": {
+    "addFolder": "添加文件夹到项目",
+    "refreshFiles": "刷新文件",
+    "refreshChanges": "刷新变更",
+    "collapseAll": "全部折叠",
+    "removeFolder": "从项目移除",
+    "attachDuplicate": "该文件夹已在项目中",
+    "attachOverlap": "该文件夹与项目中已有文件夹重叠",
+    "attachFailed": "添加文件夹失败",
+    "removeFailed": "移除文件夹失败",
+    "contextMenu": {
+      "rename": "重命名",
+      "addToChat": "添加到聊天",
+      "copyRelativePath": "复制相对路径",
+      "copyAbsolutePath": "复制绝对路径",
+      "newFile": "新建文件",
+      "newDir": "新建目录"
+    },
+    "namePlaceholder": "名称",
+    "deleteConfirm": "删除“{{name}}”？此操作无法撤销。",
+    "renameFailed": "重命名失败",
+    "newFileFailed": "新建文件失败",
+    "newDirFailed": "新建目录失败",
+    "tabs": {
+      "files": "文件",
+      "changes": "变更"
+    },
+    "addedToChat": "已将 {{name}} 添加到聊天",
+    "imported": "已导入 {{count}} 个文件",
+    "importPartialFailed": "已复制 {{copied}} 个，{{failed}} 个失败（重名或不支持）",
+    "importFailed": "导入文件失败",
+    "copyNodeFailed": "复制失败",
+    "moveNodeFailed": "移动失败",
+    "search": {
+      "placeholder": "按文件名搜索",
+      "searching": "搜索中…",
+      "empty": "没有匹配的文件",
+      "limitReached": "仅显示前 {{count}} 项 — 请缩小范围"
+    },
+    "scm": {
+      "notARepository": "该文件夹未纳入版本控制",
+      "noChanges": "没有变更",
+      "loading": "正在加载变更…",
+      "loadFailed": "无法加载变更",
+      "groups": {
+        "staged": "已暂存的变更",
+        "unstaged": "变更",
+        "changes": "变更",
+        "blocked": "需先解决"
+      },
+      "sections": {
+        "repositories": "仓库",
+        "changes": "变更"
+      },
+      "viewAsTree": "以树状视图显示",
+      "viewAsList": "以列表视图显示",
+      "worktree": "工作树",
+      "expandWorktrees": "显示工作树",
+      "collapseWorktrees": "隐藏工作树",
+      "state": {
+        "created": "新增",
+        "modified": "已修改",
+        "deleted": "已删除",
+        "renamed": "已重命名",
+        "conflicted": "冲突",
+        "unknown": "未识别的状态"
+      },
+      "badge": {
+        "created": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "conflicted": "!",
+        "unknown": "?"
+      },
+      "conflictedHint": "请先在 AIPM工作台 之外解决此冲突",
+      "opaqueHint": "该状态来自更新版本的后端 — 仅供查看",
+      "degraded": "由于无法更新 git 索引，刷新正以较慢的模式运行",
+      "truncated": "变更过多，仅显示前一部分",
+      "renamedFrom": "{{from}} → {{to}}",
+      "diff": {
+        "loading": "正在加载差异…",
+        "failed": "无法加载差异",
+        "binary": "二进制文件 — 无文本差异",
+        "truncated": "差异已截断（文件过大）",
+        "empty": "没有文本变更",
+        "close": "关闭差异"
+      },
+      "actions": {
+        "stage": "暂存更改",
+        "unstage": "取消暂存",
+        "discard": "丢弃更改",
+        "stageAll": "全部暂存",
+        "unstageAll": "全部取消暂存",
+        "blockedHint": "请先在 AIPM工作台 之外解决冲突，然后再暂存或丢弃",
+        "confirmDiscardTitle": "要丢弃更改吗？",
+        "confirmDiscardTracked": "{{count}} 个文件的修改将丢失，且无法撤销。",
+        "confirmDiscardUntracked": "{{count}} 个新文件将被移到回收站。",
+        "confirmDiscardMixed": "{{tracked}} 个文件的修改将丢失且无法撤销；{{untracked}} 个新文件将被移到回收站。",
+        "discardConfirmButton": "丢弃",
+        "okStage": "已暂存 {{count}} 个文件",
+        "okStage_one": "已暂存 {{count}} 个文件",
+        "okStage_other": "已暂存 {{count}} 个文件",
+        "okUnstage": "已取消暂存 {{count}} 个文件",
+        "okUnstage_one": "已取消暂存 {{count}} 个文件",
+        "okUnstage_other": "已取消暂存 {{count}} 个文件",
+        "okDiscard": "已丢弃 {{count}} 个文件",
+        "okDiscard_one": "已丢弃 {{count}} 个文件",
+        "okDiscard_other": "已丢弃 {{count}} 个文件",
+        "partial": "已完成 {{succeeded}}/{{total}} —— {{failed}} 个未能完成",
+        "partialDetail": "未完成：{{files}}",
+        "rejectedBlocked": "未改动任何内容 —— 请先解决冲突",
+        "rejectedUnsupported": "该仓库不支持此操作",
+        "rejectedFailed": "操作未能完成",
+        "retry": "重试",
+        "notSent": "请求没有发出到后端，未改动任何内容。可以重试。",
+        "outcomeUnknown": "连接在收到答复前已重置——此操作可能已完成，也可能未完成。请刷新并核对文件列表，确认后再决定是否重试。",
+        "allFailed": "{{count}} 个文件都未能处理",
+        "allFailed_one": "{{count}} 个文件都未能处理",
+        "allFailed_other": "{{count}} 个文件都未能处理"
+      }
+    },
+    "pathCopied": "已复制路径",
+    "copyFailed": "复制路径失败"
+  },
+  "terminal": {
+    "running": "运行中",
+    "stopped": "已停止",
+    "exited": "退出码 {{code}}",
+    "stop": "停止",
+    "truncated": "(较早输出已截断)"
+  },
+  "emptyState": {
+    "greeting": "你好！说说你的需求，我这就开始。"
+  },
+  "crossSession": {
+    "mentionAgain": "在输入框中提及会话 {{name}}",
+    "mentionAgainHint": "点击以在输入框中提及此会话",
+    "mentionUnavailable": "该会话已无法提及",
+    "mentionFailed": "无法提及该会话",
+    "fromBadge": "来自会话「{{name}}」",
+    "otherWorkspace": "不同工作目录",
+    "rateLimitedTitle": "跨会话消息可能在空转",
+    "rateLimited": "会话「{{from}}」与「{{to}}」之间的自动消息过于频繁，可能在空转。",
+    "stopBoth": "停止这两个会话",
+    "disableFeature": "关闭跨会话消息"
+  },
+  "planBar": {
+    "title": "计划",
+    "progress": "{{completed}}/{{total}}",
+    "expand": "展开计划",
+    "collapse": "收起计划"
+  }
+}

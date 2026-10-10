@@ -1,0 +1,786 @@
+{
+  "welcome": {
+    "title": "Hi, what's your plan for today?",
+    "placeholder": "Send a message, upload files, open a folder, create a scheduled task, or type / for commands...",
+    "linkFolder": "Open Folder",
+    "newConversation": "New conversation",
+    "selectModel": "Select Model",
+    "useCliModel": "Select Model",
+    "modelSwitchNotSupported": "Model list will be available after first connection. Send a message to connect and load available models.",
+    "specifyWorkspace": "Chat in Project",
+    "currentWorkspace": "Current Project",
+    "clearWorkspace": "Remove project",
+    "openFolder": "Open Folder",
+    "none": "None",
+    "quickActionsTitle": "What can AIPM工作台 do?",
+    "quickActionFeedback": "Report Issue",
+    "quickActionStar": "Like us? Give us a star!",
+    "skillsMarket": "AIPM工作台 Skills Market",
+    "skillsMarketDesc": "Search and activate community Skills on demand. Configure once, available for all agents.",
+    "skillsMarketDetails": "View More >>"
+  },
+  "history": {
+    "recents": "Recents",
+    "noHistory": "No chat history",
+    "deleteTitle": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this chat?",
+    "confirmDelete": "Delete",
+    "cancelDelete": "Cancel",
+    "editName": "Edit Name",
+    "saveName": "Save",
+    "cancelEdit": "Cancel",
+    "rename": "Rename",
+    "createCronTask": "Create scheduled task",
+    "renameTitle": "Rename Chat",
+    "renamePlaceholder": "Please enter a new name",
+    "renameSuccess": "Renamed successfully",
+    "renameFailed": "Rename failed",
+    "batchManage": "Batch Manage",
+    "batchModeExit": "Exit Batch Mode",
+    "selectAll": "Select All",
+    "selectedCount": "{{count}} selected",
+    "batchExport": "Batch Export",
+    "batchExportConfirm": "Export {{count}} selected topics?",
+    "batchDelete": "Batch Delete",
+    "batchDeleteConfirm": "Delete {{count}} selected topics?",
+    "batchDeleteConfirm_one": "Delete {{count}} selected topic?",
+    "batchDeleteConfirm_other": "Delete {{count}} selected topics?",
+    "batchDeleteSuccess": "{{count}} topics deleted",
+    "batchDeleteSuccess_one": "{{count}} topic deleted",
+    "batchDeleteSuccess_other": "{{count}} topics deleted",
+    "batchNoSelection": "Please select topics first",
+    "export": "Export",
+    "exportDialogTitle": "Export Topics",
+    "exportDialogSingleDescription": "Export current topic conversation records (JSON + Markdown) and project files into a ZIP package.",
+    "exportDialogBatchDescription": "Export {{count}} selected topics' conversation records (JSON + Markdown) and project files into one ZIP package.",
+    "exportTargetFolder": "Export To Folder",
+    "exportSelectFolder": "Please select an export folder",
+    "exportDialogHint": "Folder selection follows the same interaction as changing the project.",
+    "exporting": "Exporting...",
+    "exportSuccess": "Export succeeded",
+    "exportCanceled": "Export canceled",
+    "exportFailed": "Export failed",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "markAsUnread": "Mark as unread",
+    "markAsRead": "Mark as read",
+    "pinned": "Pinned",
+    "pinFailed": "Pin operation failed",
+    "pinnedSection": "Pinned",
+    "deleteSuccess": "Deleted successfully",
+    "deleteFailed": "Delete failed",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "recent7Days": "Last 7 Days",
+    "earlier": "Earlier",
+    "projectsSection": "Projects",
+    "conversationsSection": "Conversations",
+    "newConversationInProject": "New chat in this project",
+    "deleting": "Deleting...",
+    "reorderPinned": "Drag to reorder pinned conversation",
+    "forkedFrom": "Forked from “{{name}}”",
+    "forkedConversation": "Forked conversation",
+    "archive": "Archive",
+    "archiveSuccess": "Archived",
+    "archiveFailed": "Archive failed",
+    "batchArchive": "Batch archive",
+    "batchArchiveConfirm": "Archive {{count}} selected topics? You can restore or delete them from Archived in Settings.",
+    "batchArchiveSuccess": "Archived {{count}} topics",
+    "archiveProject": "Archive project",
+    "archiveProjectTitle": "Archive project",
+    "archiveProjectConfirm": "Archive project \"{{name}}\"? Its {{count}} conversation(s) will be archived too. You can restore or delete them from Archived in Settings.",
+    "archiving": "Archiving..."
+  },
+  "historySearch": {
+    "tooltip": "Search messages",
+    "title": "Search conversation content",
+    "shortTitle": "Search",
+    "description": "Search historical messages by keyword, load more on scroll, and jump to the matched message.",
+    "placeholder": "Search message content...",
+    "idle": "Enter keywords to search messages",
+    "empty": "No matching messages found",
+    "loadingMore": "Loading more...",
+    "untitled": "Untitled conversation"
+  },
+  "dropdown": {
+    "cliAgents": "CLI Agents",
+    "presetAssistants": "Preset Assistants"
+  },
+  "noAgentsAvailable": "No agents available",
+  "noModelConfigured": "No model configured. Please configure in settings.",
+  "createFailed": "Failed to create conversation",
+  "createError": {
+    "pathVariants": {
+      "WORKSPACE_PATH_UNAVAILABLE": "The selected workspace path is unavailable. Make sure the workspace path \"{{workspacePath}}\" exists and is accessible."
+    },
+    "codes": {
+      "TEAM_ASSISTANT_ID_REQUIRED": "Please select an assistant before creating the team.",
+      "TEAM_ASSISTANT_NOT_FOUND": "Assistant {{assistantId}} is no longer available. Refresh the assistant list and choose another one.",
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": "Use assistant_id instead of {{field}}."
+    }
+  },
+  "agentError": {
+    "fallbackTitle": "The agent could not reply",
+    "errorCode": "Error code",
+    "retryable": "Retryable",
+    "notRetryable": "Needs configuration",
+    "resolutionPrefix": "Suggestion: ",
+    "resolution": {
+      "retry": "Retry later, or send this message again.",
+      "wait_for_current_response": "Wait for the current response to finish before sending another message.",
+      "start_new_session": "Start a new conversation before continuing.",
+      "reconnect_agent": "Restart or reconnect the selected agent, then retry.",
+      "check_agent_login": "Log in to the selected agent, or refresh its credentials.",
+      "check_agent_installation": "Check the agent installation and local command configuration.",
+      "check_agent_version": "Check the agent protocol and version compatibility.",
+      "check_local_command": "Install the missing command, or confirm it has been added to PATH.",
+      "check_provider_credentials": "Check the model provider API key or account credentials in settings.",
+      "check_provider_billing": "Check the model provider balance, credits, or quota.",
+      "check_provider_base_url": "Check the model provider Base URL, API path, proxy, and API compatibility.",
+      "change_model": "Choose a model that is available for the current account and supports this request.",
+      "reduce_context": "Reduce the message content, referenced files, or context size, then retry.",
+      "send_feedback": "Send feedback with logs so the team can investigate."
+    },
+    "ownership": {
+      "aionui": "App",
+      "user_agent": "Agent",
+      "user_llm_provider": "Model provider",
+      "unknown_upstream": "Upstream"
+    },
+    "codes": {
+      "AIONUI_STREAM_BROKEN": {
+        "title": "Response stream was interrupted",
+        "body": "The app accepted your message but the response stream ended unexpectedly. Please retry; if it happens again, send feedback."
+      },
+      "AIONUI_STATE_INCONSISTENT": {
+        "title": "Conversation state is out of sync",
+        "body": "The conversation state is out of sync. Restart this chat or reload the app before retrying."
+      },
+      "AIONUI_PERMISSION_ERROR": {
+        "title": "Could not access the requested resource",
+        "body": "A local permission or filesystem check failed. Check the project path and app permissions, then retry."
+      },
+      "AIONUI_INTERNAL_ERROR": {
+        "title": "Request failed in the app",
+        "body": "The request failed while the app was processing it. Please retry once; if it repeats, send feedback."
+      },
+      "AIONUI_CONVERSATION_BUSY": {
+        "title": "Conversation is busy",
+        "body": "Another response is still running. Wait for it to finish before sending a new message."
+      },
+      "USER_AGENT_NOT_INSTALLED": {
+        "title": "The selected agent is not installed",
+        "body": "Install the CLI or app required by this agent, then reconnect it in settings."
+      },
+      "USER_AGENT_STARTUP_FAILED": {
+        "title": "The selected agent failed to start",
+        "body": "The agent process exited before it was ready. Check its installation, login status, and local command configuration."
+      },
+      "USER_AGENT_OPENCLAW_GATEWAY_UNREACHABLE": {
+        "title": "OpenClaw Gateway is not reachable",
+        "body": "OpenClaw Gateway is not running or cannot be reached at 127.0.0.1:18789.\n\nStart OpenClaw Gateway and try again. You can run:\nopenclaw gateway status\nopenclaw gateway start"
+      },
+      "USER_AGENT_DISCONNECTED": {
+        "title": "The selected agent disconnected",
+        "body": "The agent connection closed while handling this message. Restart or reconnect the agent, then retry."
+      },
+      "USER_AGENT_AUTH_REQUIRED": {
+        "title": "The selected agent needs authentication",
+        "body": "Log in to the selected agent or refresh its credentials, then send the message again."
+      },
+      "USER_AGENT_SESSION_NOT_FOUND": {
+        "title": "The agent session was lost",
+        "body": "The agent reported that this session was not found or is no longer known to it."
+      },
+      "USER_AGENT_UNSUPPORTED_METHOD": {
+        "title": "The selected agent does not support this action",
+        "body": "The agent reported that the requested ACP method is not supported or is not available."
+      },
+      "USER_AGENT_INVALID_PARAMS": {
+        "title": "The selected agent rejected the request",
+        "body": "The agent reported that the request parameters were invalid."
+      },
+      "USER_AGENT_HANDSHAKE_FAILED": {
+        "title": "Agent handshake failed",
+        "body": "The selected agent could not complete its startup handshake. Restart or reconnect the agent, then retry."
+      },
+      "USER_AGENT_HANDSHAKE_TIMEOUT": {
+        "title": "Agent handshake timed out",
+        "body": "The selected agent did not finish its startup handshake in time. Check whether it is still starting or blocked, then retry."
+      },
+      "USER_AGENT_ACP_INIT_FAILED": {
+        "title": "Agent protocol initialization failed",
+        "body": "The app could not initialize an Agent Client Protocol session with this agent."
+      },
+      "USER_AGENT_PROTOCOL_PARSE_ERROR": {
+        "title": "Agent reported a protocol parse error",
+        "body": "The selected agent reported that an ACP/JSON-RPC message could not be parsed."
+      },
+      "USER_AGENT_INVALID_REQUEST": {
+        "title": "Agent reported an invalid protocol request",
+        "body": "The selected agent reported that the ACP/JSON-RPC request object was invalid."
+      },
+      "USER_AGENT_RESOURCE_NOT_FOUND": {
+        "title": "Agent could not find a required resource",
+        "body": "The selected agent reported that a required resource, such as a file, was not found."
+      },
+      "USER_AGENT_PROTOCOL_ERROR": {
+        "title": "Agent returned a protocol error",
+        "body": "The selected agent returned a non-standard ACP error code."
+      },
+      "USER_AGENT_PROTOCOL_MISMATCH": {
+        "title": "Agent protocol versions are incompatible",
+        "body": "The app and selected agent could not use a compatible ACP protocol version."
+      },
+      "USER_AGENT_NO_PREVIOUS_SESSION": {
+        "title": "Previous agent session is unavailable",
+        "body": "The agent cannot resume the previous session. Start a new conversation to continue."
+      },
+      "USER_AGENT_COMMAND_NOT_FOUND": {
+        "title": "Agent command was not found",
+        "body": "The configured agent command could not be found. Install it or update the command path in settings."
+      },
+      "USER_AGENT_MISSING_ENV": {
+        "title": "Agent environment is missing required variables",
+        "body": "The agent needs environment variables that are not configured. Add them in settings or your shell environment, then reconnect."
+      },
+      "USER_LLM_PROVIDER_AUTH_FAILED": {
+        "title": "Model provider authentication failed",
+        "body": "The selected provider rejected the API key or account credentials. Check the provider settings and try again."
+      },
+      "USER_LLM_PROVIDER_AWS_SSO_EXPIRED": {
+        "title": "AWS SSO session expired",
+        "body": "Your AWS SSO session has expired. Run 'aws sso login' for the matching profile, then send the message again."
+      },
+      "USER_LLM_PROVIDER_CONFIG_ERROR": {
+        "title": "Model provider configuration is invalid",
+        "body": "The provider request could not be built from the current settings. Check credentials, region, Base URL, and provider-specific configuration before retrying."
+      },
+      "USER_LLM_PROVIDER_MODEL_NOT_FOUND": {
+        "title": "The selected model was not found",
+        "body": "The provider does not recognize this model name. Choose an available model from settings and retry."
+      },
+      "USER_LLM_PROVIDER_RATE_LIMITED": {
+        "title": "Model provider rate limit reached",
+        "body": "The provider is temporarily limiting requests. Wait a moment, reduce request frequency, or switch models."
+      },
+      "USER_LLM_PROVIDER_TIMEOUT": {
+        "title": "Model provider request timed out",
+        "body": "The provider did not respond in time. Retry later or switch to a more stable provider."
+      },
+      "USER_LLM_PROVIDER_NETWORK_ERROR": {
+        "title": "Could not reach the model provider",
+        "body": "A network or DNS error prevented access to the provider. Check your network, proxy, and Base URL."
+      },
+      "USER_LLM_PROVIDER_GATEWAY_ERROR": {
+        "title": "Model provider service is unavailable",
+        "body": "The provider returned a gateway or service error. Retry later or use another provider."
+      },
+      "USER_LLM_PROVIDER_PERMISSION_DENIED": {
+        "title": "Model provider permission denied",
+        "body": "The provider account does not have permission for this model or operation. Check account permissions or choose another model."
+      },
+      "USER_LLM_PROVIDER_BILLING_REQUIRED": {
+        "title": "Model provider billing is required",
+        "body": "The selected provider needs active billing, credits, or quota before it can complete this request."
+      },
+      "USER_LLM_PROVIDER_UNSUPPORTED_MODEL": {
+        "title": "Model does not support this request",
+        "body": "The selected model is unavailable or does not support the requested capability. Choose a supported model and retry."
+      },
+      "USER_LLM_PROVIDER_ENDPOINT_NOT_FOUND": {
+        "title": "Model provider endpoint was not found",
+        "body": "The provider endpoint or API path was not found. Check the Base URL, deployment name, and API compatibility."
+      },
+      "USER_LLM_PROVIDER_INVALID_REQUEST": {
+        "title": "Model provider rejected the request",
+        "body": "The provider reported that the request was invalid. Simplify the message or check model/provider settings."
+      },
+      "USER_LLM_PROVIDER_INVALID_TOOL_SCHEMA": {
+        "title": "Tool schema was rejected by the provider",
+        "body": "The provider rejected a tool definition in this request. Update the agent or disable the incompatible tool, then retry."
+      },
+      "USER_LLM_PROVIDER_CONTEXT_TOO_LARGE": {
+        "title": "Context is too large for the model",
+        "body": "The request exceeds the model context limit. Reduce message content, referenced files, or conversation history, then retry."
+      },
+      "USER_LLM_PROVIDER_EMPTY_RESPONSE": {
+        "title": "Model provider returned an empty response",
+        "body": "The provider completed the request without usable content. Retry once or switch providers if it repeats."
+      },
+      "WORKSPACE_PATH_RUNTIME_UNAVAILABLE": {
+        "title": "The current Agent failed to run in this workspace path",
+        "body": "Make sure the current workspace path exists.",
+        "bodyWithPath": "The current Agent failed to run in the workspace path \"{{workspacePath}}\". Make sure the workspace path exists."
+      },
+      "UNKNOWN_UPSTREAM_ERROR": {
+        "title": "The upstream agent or provider failed",
+        "body": "The app received an upstream error but could not classify whether it came from the agent, provider, network, or local environment."
+      },
+      "MCP_HTTP_RESPONSE_READ_FAILED": {
+        "title": "Failed to read the team helper response",
+        "body": "AIPM工作台 could not read the local team helper response. Retry once, and if it keeps happening, restart the app."
+      },
+      "MCP_TOOL_REMOTE_ERROR": {
+        "title": "The local team helper rejected the request",
+        "body": "The local team helper returned an error while processing this request. Review the details below and retry after adjusting the team action."
+      },
+      "MCP_TOOL_RESPONSE_UNEXPECTED": {
+        "title": "The team helper returned an unexpected response",
+        "body": "AIPM工作台 received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
+      },
+      "MCP_TCP_READ_FAILED": {
+        "title": "Failed to read from the local team helper",
+        "body": "AIPM工作台 could not read the local team helper TCP response. Retry once, and restart the app if it keeps failing."
+      },
+      "TEAM_SERVICE_UNAVAILABLE": {
+        "title": "Team service is not ready yet",
+        "body": "The local team session is still starting or has been interrupted. Wait a moment and retry."
+      },
+      "TEAM_ASSISTANT_ID_REQUIRED": {
+        "title": "A teammate assistant must be selected",
+        "body": "Choose a real assistant from the available assistant catalog before creating or spawning a teammate."
+      },
+      "TEAM_ASSISTANT_NOT_FOUND": {
+        "title": "The selected assistant is no longer available",
+        "body": "Refresh the assistant catalog, then choose another assistant for this teammate."
+      },
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": {
+        "title": "The request used a legacy team identity field",
+        "body": "This team action must use assistant_id instead of legacy backend or agent fields."
+      }
+    }
+  },
+  "workspace": {
+    "title": "Project",
+    "pasteConfirm_title": "Paste files",
+    "pasteConfirm_message": "Are you sure you want to paste '{{name}}' into the selected folder ({{target}})?",
+    "pasteConfirm_paste": "Paste",
+    "pasteConfirm_cancel": "Cancel",
+    "pasteConfirm_noAsk": "Do not ask me again",
+    "pasteConfirm_fileName": "File name",
+    "pasteConfirm_targetFolder": "Target folder",
+    "pasteConfirm_multipleFiles": "{{count}} files",
+    "empty": "It's empty",
+    "emptyDescription": "Files will appear here after uploading files or opening a folder",
+    "searchPlaceholder": "Search files...",
+    "createNewConversation": "Create new chat in current project",
+    "search.empty": "The search result is empty",
+    "addFile": "Add File",
+    "refresh": "Refresh",
+    "temporarySpace": "Temporary Space",
+    "dragOverlayTitle": "Drop to import",
+    "dragOverlayDesc": "Drag files or folders here to copy them into this project.",
+    "dragOverlayHint": "Tip: drop anywhere to import into the selected folder.",
+    "dragNoFiles": "No valid files detected. Please drag from Finder/Explorer.",
+    "dragFailed": "Failed to import dropped files.",
+    "contextMenu": {
+      "open": "Open",
+      "openLocation": "Show in folder",
+      "preview": "Preview",
+      "previewFailed": "Failed to preview",
+      "deleteTitle": "Delete file",
+      "deleteConfirm": "This will delete the file from your system. Continue?",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "rename": "Rename",
+      "renameTitle": "Rename",
+      "renamePlaceholder": "Enter new name",
+      "renameSuccess": "Renamed successfully",
+      "renameFailed": "Rename failed",
+      "renameEmpty": "Name cannot be empty",
+      "renameTimeout": "Rename request timed out, please try again",
+      "addToChat": "Add to chat",
+      "addedToChat": "Added to chat",
+      "openFailed": "Failed to open",
+      "revealFailed": "Failed to open containing folder",
+      "download": "Download",
+      "downloadSuccess": "Download successful",
+      "downloadFailed": "Download failed"
+    },
+    "preview": {
+      "errors": {
+        "outsideSandbox": "File is outside the project sandbox, cannot preview.",
+        "notFound": "File does not exist or has been deleted.",
+        "timeout": "Reading file timed out. Please retry."
+      }
+    },
+    "changes": {
+      "tab": "Changes",
+      "filesTab": "Files",
+      "currentBranchLabel": "Current branch",
+      "summary": "{{count}} file(s) changed",
+      "insertions": "+{{count}} insertions",
+      "deletions": "-{{count}} deletions",
+      "empty": "No changes yet",
+      "emptyDescription": "File changes will appear here when AI modifies files",
+      "refresh": "Refresh",
+      "staged": "Staged Changes",
+      "unstaged": "Changes",
+      "changedFiles": "Changed Files",
+      "stage": "Stage",
+      "stageAll": "Stage All Changes",
+      "unstage": "Unstage",
+      "unstageAll": "Unstage All Changes",
+      "discard": "Discard Changes",
+      "reset": "Revert Changes",
+      "noUnstaged": "No unstaged changes",
+      "noStaged": "No staged changes"
+    },
+    "openWorkspace": "Open project folder",
+    "openWith": {
+      "vscode": "VS Code",
+      "terminal": "Terminal",
+      "explorer": "File Explorer",
+      "browser": "Browser"
+    }
+  },
+  "minimap": {
+    "searchAria": "Search conversation",
+    "searchHint": "Click here to search keywords",
+    "empty": "No Q&A turns yet",
+    "noMatch": "No matching content found",
+    "count": "{{count}} turns",
+    "count_one": "{{count}} turn",
+    "count_other": "{{count}} turns"
+  },
+  "chat": {
+    "noModelSelected": "No model selected for current session, cannot send message",
+    "sendMessageTo": "Send message to {{model}}",
+    "processing": "Processing...",
+    "quotaExceededTitle": "Model quota reached",
+    "quotaExceededBody": "The current model quota is exhausted. Switch to {{model}} to continue?",
+    "quotaExceededNoFallback": "Model quota reached. Please switch to another available model.",
+    "quotaSwitched": "Switched to {{model}}.",
+    "apiErrorNoCli": "API error occurred. No CLI agent available for fallback.",
+    "apiErrorSwitchFailed": "Failed to create fallback conversation.",
+    "apiErrorSwitched": "API error, auto-switched to {{cli}} CLI",
+    "confirmationLoadError": "Failed to load confirmation dialog",
+    "tryAnotherAgent": "Try another agent:",
+    "switchAgentFailed": "Failed to switch agent",
+    "speech": {
+      "recordTooltip": "Start voice input",
+      "recordTooltipWithShortcut": "Voice input cmd+M",
+      "pickFileTooltip": "Select an audio file",
+      "stopTooltip": "Stop recording",
+      "processing": "Transcribing audio...",
+      "unsupported": "Voice input is not available in this environment",
+      "startShort": "Mic",
+      "stopShort": "Stop",
+      "transcribingShort": "...",
+      "audioCaptureError": "No microphone was detected",
+      "emptyTranscript": "No speech was detected",
+      "fileTooLarge": "Audio file is too large",
+      "networkError": "Network error while transcribing audio",
+      "notConfigured": "Speech-to-text is not configured yet",
+      "permissionDenied": "Microphone permission was denied",
+      "recordingUnsupported": "Live recording is not supported here. Please upload an audio file instead",
+      "transcriptionFailed": "Audio transcription failed",
+      "genericError": "Voice input failed. Please try again"
+    }
+  },
+  "sideQuestion": {
+    "title": "Side Question",
+    "description": "Ask a quick question about the current conversation",
+    "started": "Starting side question...",
+    "answered": "Side question answered.",
+    "noAnswer": "The side question did not have a clear answer in the current conversation.",
+    "loading": "Thinking...",
+    "parentTaskRunning": "Main task still running in the background.",
+    "dismissHint": "Press Escape, Enter, or Space to dismiss",
+    "unsupported": "Side questions are not available for this conversation.",
+    "alreadyRunning": "A side question is already running.",
+    "attachmentsNotAllowed": "Side questions cannot include files or DOM snippets.",
+    "emptyQuestion": "Please enter a side question after /btw.",
+    "toolsRequired": "/btw can only answer questions based on what's already in this conversation. It doesn't have access to search, browse, or fetch new information.",
+    "error": "Failed to answer the side question."
+  },
+  "commandQueue": {
+    "title": "Draft box",
+    "clear": "Clear draft box",
+    "edit": "Edit",
+    "editing": "Editing",
+    "editPlaceholder": "Update the queued command before it runs.",
+    "cancelEdit": "Cancel",
+    "saveEdit": "Save",
+    "moreActions": "More actions",
+    "reorder": "Drag to reorder queued command",
+    "remove": "Remove",
+    "files": "{{count}} files",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files",
+    "pausedAfterFailure": "The next queued command could not start. Edit, reorder, or remove it to continue.",
+    "emptyInput": "Queued commands cannot be empty.",
+    "queueFull": "Queue is full. Remove a command before adding more.",
+    "inputTooLong": "This queued command is too long. Shorten it before sending.",
+    "tooManyFiles": "Too many files are attached to this queued command.",
+    "queueTooLarge": "Queue data is too large to persist safely. Remove some queued commands first.",
+    "sendNow": "Send now",
+    "modeToggle": "Toggle send mode",
+    "help": "Help",
+    "helpIntro": "Messages you send while the AI is replying wait here.",
+    "helpAuto": ": sent automatically one by one after each reply finishes.",
+    "helpManual": ": kept here without sending; send each with Send now.",
+    "clearConfirmTitle": "Clear the send draft box?",
+    "clearConfirmContent": "All pending messages will be removed. This cannot be undone.",
+    "mode": {
+      "auto": "Auto send",
+      "manual": "Manual send"
+    },
+    "addToQueue": "Save to Draft box",
+    "addToQueueShortcut": "⌘ + Enter / Ctrl + Enter",
+    "midturnBlocked": "This agent is still working, so the message can’t be sent directly. Save it to Draft box and send it later.",
+    "enterShortcut": "Enter",
+    "actionMode": "Choose send action",
+    "midturnBlockedSendHint": "This agent is still working, so the message can’t be sent directly. Save it to Draft box and send it later.",
+    "addToQueueBusyHint": "Save to Draft box and send it later."
+  },
+  "contextUsage": {
+    "contextUsed": "context used",
+    "tokensUsed": "{{tokens}} tokens used",
+    "windowUnknown": "Context window size unknown",
+    "sessionCost": "Session cost",
+    "input": "Input",
+    "output": "Output",
+    "thought": "Thinking",
+    "cachedRead": "Cache read",
+    "cachedWrite": "Cache write"
+  },
+  "skill_generator": {
+    "title": "Generate Skill/Rule",
+    "generate": "Generate",
+    "description": "Analyze conversation history to generate:",
+    "type_skill": "Skill (Python)",
+    "type_rule": "Rule (JSON/MD)",
+    "name_label": "Agent Name:",
+    "name_placeholder": "e.g. Excel Translator",
+    "menu_generate": "Generate from History",
+    "menu_load": "Load Rule/Skill",
+    "load_title": "Load Rule/Skill",
+    "load_error": "Failed to load files",
+    "no_files": "No relevant files found in project",
+    "read_error": "Failed to read file",
+    "rule_loaded": "Rule loaded successfully",
+    "no_workspace": "No project configured",
+    "name_required": "Please enter a name for the preset",
+    "no_history": "No conversation history found",
+    "request_sent": "Request sent to agent",
+    "failed": "Failed to generate",
+    "preset_registered": "Agent preset registered successfully!"
+  },
+  "thinking": {
+    "complete": "Thought complete",
+    "label": "Thinking..."
+  },
+  "skills": {
+    "loaded": "Loaded Skills",
+    "slashHint": "Skill"
+  },
+  "mcp": {
+    "loaded": "Loaded MCP",
+    "managementHint": "If an MCP looks abnormal, it is usually caused by the MCP JSON configuration. Go to Tools settings and test it there.",
+    "openSettings": "Open Tools settings",
+    "status": {
+      "loaded": "Loaded",
+      "failed": "Failed",
+      "unsupported": "Unsupported"
+    },
+    "selected": "Selected MCP"
+  },
+  "runtimePreparing": {
+    "sendboxHint": "Preparing the runtime environment. First startup can take a little longer."
+  },
+  "sendbox": {
+    "hint": "Type / for commands, @ to reference files, ↑/↓ for message history",
+    "mediaPathFallback": "This agent has no native support for this file type; it will be sent as a file path.",
+    "hintWithSessions": "Type / for commands, @ for files, @@ for conversations, ↑/↓ for history"
+  },
+  "agentTip": {
+    "codes": {
+      "ACP_EMPTY_TURN": {
+        "body": "This request produced no visible reply."
+      },
+      "ACP_EMPTY_TURN_NEEDS_AUTH": {
+        "body": "This request produced no visible reply. If you're already signed in, this may be a transient backend or connection issue — try again or start a new conversation. If you're not signed in yet, you can sign in — {{hint}}."
+      },
+      "ACP_EMPTY_TURN_TOKEN_LIMIT": {
+        "body": "This request produced no visible reply. The current conversation may be approaching the context length limit — try again, or start a new conversation and retry."
+      },
+      "ACP_EMPTY_TURN_MAX_TOKENS": {
+        "body": "This request hit the model's output token limit before any visible reply was produced."
+      },
+      "ACP_EMPTY_TURN_MAX_TURN_REQUESTS": {
+        "body": "This request hit the model's request limit before any visible reply was produced."
+      },
+      "ACP_EMPTY_TURN_REFUSAL": {
+        "body": "The model refused this request before producing any visible reply."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "{{count}} step(s) failed and did NOT take effect. agy ends such turns as successful, so check the result rather than the reply."
+      },
+      "CLI_VERSION_OLDER": {
+        "body": "The installed {{cli}} is older than the version AIPM工作台 verified; some features may be missing. Consider upgrading {{cli}}. (installed {{reported}} / verified by AIPM工作台: {{verified}})"
+      },
+      "CLI_VERSION_NEWER": {
+        "body": "The installed {{cli}} is newer than the version AIPM工作台 verified. It should still work; report anything that behaves oddly. (installed {{reported}} / verified by AIPM工作台: {{verified}})"
+      },
+      "CODEX_RETRYING": {
+        "body": "{{detail}} (attempt {{attempts}}, {{elapsed}} so far — the agent's provider keeps dropping the connection; AIPM工作台 is waiting it out.)"
+      }
+    }
+  },
+  "notFound": "Conversation not found or has been deleted",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "refreshFiles": "Refresh files",
+    "refreshChanges": "Refresh changes",
+    "collapseAll": "Collapse all",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Rename",
+      "newFile": "New file",
+      "newDir": "New folder",
+      "addToChat": "Add to chat",
+      "copyRelativePath": "Copy relative path",
+      "copyAbsolutePath": "Copy absolute path"
+    },
+    "namePlaceholder": "Name",
+    "deleteConfirm": "Delete “{{name}}”? This can’t be undone.",
+    "renameFailed": "Couldn't rename",
+    "newFileFailed": "Couldn't create file",
+    "newDirFailed": "Couldn't create folder",
+    "tabs": {
+      "files": "Files",
+      "changes": "Changes"
+    },
+    "addedToChat": "Added {{name}} to chat",
+    "imported": "Imported {{count}} file(s)",
+    "importPartialFailed": "{{copied}} copied, {{failed}} failed (name conflicts or unsupported)",
+    "importFailed": "Failed to import files",
+    "copyNodeFailed": "Failed to copy",
+    "moveNodeFailed": "Failed to move",
+    "search": {
+      "placeholder": "Search files by name",
+      "searching": "Searching…",
+      "empty": "No files match",
+      "limitReached": "Showing first {{count}} — refine to narrow"
+    },
+    "scm": {
+      "notARepository": "Not a version-controlled folder",
+      "noChanges": "No changes",
+      "loading": "Loading changes…",
+      "loadFailed": "Couldn't load changes",
+      "groups": {
+        "staged": "Staged changes",
+        "unstaged": "Changes",
+        "changes": "Changes",
+        "blocked": "Needs resolving"
+      },
+      "sections": {
+        "repositories": "Repositories",
+        "changes": "Changes"
+      },
+      "viewAsTree": "View as tree",
+      "viewAsList": "View as list",
+      "worktree": "Worktree",
+      "expandWorktrees": "Show worktrees",
+      "collapseWorktrees": "Hide worktrees",
+      "state": {
+        "created": "Added",
+        "modified": "Modified",
+        "deleted": "Deleted",
+        "renamed": "Renamed",
+        "conflicted": "Conflict",
+        "unknown": "Unrecognized state"
+      },
+      "badge": {
+        "created": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "conflicted": "!",
+        "unknown": "?"
+      },
+      "conflictedHint": "Resolve this conflict outside AIPM工作台 first",
+      "opaqueHint": "This state comes from a newer backend — shown read-only",
+      "degraded": "Refresh is running in a slower mode because git's index can't be updated",
+      "truncated": "Too many changes to list — showing the first part only",
+      "renamedFrom": "{{from}} → {{to}}",
+      "diff": {
+        "loading": "Loading diff…",
+        "failed": "Couldn't load the diff",
+        "binary": "Binary file — no text diff",
+        "truncated": "Diff truncated (large file)",
+        "empty": "No textual changes",
+        "close": "Close diff"
+      },
+      "actions": {
+        "stage": "Stage changes",
+        "unstage": "Unstage changes",
+        "discard": "Discard changes",
+        "stageAll": "Stage all",
+        "unstageAll": "Unstage all",
+        "blockedHint": "Resolve the conflict outside AIPM工作台 before staging or discarding",
+        "confirmDiscardTitle": "Discard changes?",
+        "confirmDiscardTracked": "Edits to {{count}} files will be lost. This can’t be undone.",
+        "confirmDiscardUntracked": "{{count}} new files will be moved to the trash.",
+        "confirmDiscardMixed": "Edits to {{tracked}} file(s) will be lost and can’t be undone; {{untracked}} new file(s) go to the trash.",
+        "discardConfirmButton": "Discard",
+        "okStage": "Staged {{count}} files",
+        "okStage_one": "Staged {{count}} file",
+        "okStage_other": "Staged {{count}} files",
+        "okUnstage": "Unstaged {{count}} files",
+        "okUnstage_one": "Unstaged {{count}} file",
+        "okUnstage_other": "Unstaged {{count}} files",
+        "okDiscard": "Discarded {{count}} files",
+        "okDiscard_one": "Discarded {{count}} file",
+        "okDiscard_other": "Discarded {{count}} files",
+        "partial": "{{succeeded}} of {{total}} done — {{failed}} couldn’t be completed",
+        "partialDetail": "Not completed: {{files}}",
+        "rejectedBlocked": "Nothing was changed — resolve the conflict first",
+        "rejectedUnsupported": "This repository doesn’t support that action",
+        "rejectedFailed": "The action couldn’t be completed",
+        "retry": "Retry",
+        "notSent": "The request didn't reach the backend — nothing was changed. You can try again.",
+        "outcomeUnknown": "The connection reset before a reply arrived — this action may or may not have completed. Refresh and check the file list before retrying.",
+        "allFailed": "None of the {{count}} file(s) could be processed",
+        "allFailed_one": "{{count}} file could not be processed",
+        "allFailed_other": "None of the {{count}} files could be processed"
+      }
+    },
+    "pathCopied": "Path copied",
+    "copyFailed": "Failed to copy path"
+  },
+  "terminal": {
+    "running": "Running",
+    "stopped": "Stopped",
+    "exited": "Exit {{code}}",
+    "stop": "Stop",
+    "truncated": "(earlier output truncated)"
+  },
+  "emptyState": {
+    "greeting": "Hi! Tell me what you need and I'll get started."
+  },
+  "crossSession": {
+    "mentionAgain": "Mention conversation {{name}} in the message box",
+    "mentionAgainHint": "Click to mention this conversation in the message box",
+    "mentionUnavailable": "That conversation can no longer be mentioned.",
+    "mentionFailed": "Could not mention that conversation.",
+    "fromBadge": "From conversation {{name}}",
+    "otherWorkspace": "different workspace",
+    "rateLimitedTitle": "Cross-conversation messages may be looping",
+    "rateLimited": "Automatic messages between \"{{from}}\" and \"{{to}}\" are unusually frequent and may be looping.",
+    "stopBoth": "Stop both conversations",
+    "disableFeature": "Turn off cross-conversation messages"
+  },
+  "planBar": {
+    "title": "Plan",
+    "progress": "{{completed}}/{{total}}",
+    "expand": "Expand plan",
+    "collapse": "Collapse plan"
+  }
+}

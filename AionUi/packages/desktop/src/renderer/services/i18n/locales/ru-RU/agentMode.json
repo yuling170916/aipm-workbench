@@ -1,0 +1,22 @@
+{
+  "plan": "Режим планирования",
+  "default": "По умолчанию",
+  "acceptEdits": "Принимать изменения",
+  "autoEdit": "Автоизменение",
+  "auto_edit": "Автоизменение",
+  "read-only": "Только чтение",
+  "full-access": "Полный доступ",
+  "yolo": "Авто (YOLO)",
+  "yoloNoSandbox": "Полный автомат (без песочницы)",
+  "auto": "Автоматически",
+  "dontAsk": "Не спрашивать",
+  "bypass": "Обход (YOLO)",
+  "bypassPermissions": "Авто (YOLO)",
+  "smart": "Умный",
+  "build": "Режим сборки",
+  "permission": "Разрешение",
+  "switchMode": "Режим разрешений",
+  "switchSuccess": "Режим успешно сменён",
+  "switchPendingNextTurn": "Вступит в силу со следующего хода",
+  "switchFailed": "Не удалось сменить режим"
+}

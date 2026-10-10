@@ -1,0 +1,38 @@
+[package]
+name = "aionui-team"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+aionui-common.workspace = true
+aionui-db.workspace = true
+aionui-project.workspace = true
+aionui-api-types.workspace = true
+aionui-realtime.workspace = true
+aionui-ai-agent.workspace = true
+aionui-team-prompts.workspace = true
+aionui-auth.workspace = true
+axum.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+dashmap.workspace = true
+regex.workspace = true
+agent-client-protocol = "2.0.0"
+futures-util.workspace = true
+
+[dev-dependencies]
+sqlx.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
+futures-util.workspace = true
+reqwest.workspace = true
+tempfile.workspace = true
+# Capture structured tracing fields so the AC11 recognition-log test can assert
+# the info log carries the command NAME/source but never the raw content/args.
+tracing-subscriber.workspace = true
+# Enable the `AgentInstance::Mock` variant so tests can build fake agents
+# through the trait-object escape hatch without spawning real CLI processes.
+aionui-ai-agent = { workspace = true, features = ["test-support"] }

@@ -1,0 +1,94 @@
+/* Chat layout header styles */
+
+.chat-layout-header--mobile-unified {
+  height: 46px !important;
+  min-height: 46px;
+  padding: 0 12px !important;
+  background: var(--bg-1) !important;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.chat-layout-header--glass {
+  position: relative;
+  isolation: isolate;
+  contain: paint;
+  background-color: var(--bg-1) !important;
+}
+
+.chat-layout-header--glass::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+  bottom: -12px;
+  height: 12px;
+  pointer-events: none;
+  background: transparent;
+}
+
+@supports ((-webkit-backdrop-filter: blur(6px)) or (backdrop-filter: blur(6px))) {
+  .chat-layout-header--glass {
+    -webkit-backdrop-filter: saturate(110%) blur(6px);
+    backdrop-filter: saturate(110%) blur(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (max-width: 768px) {
+  .chat-layout-header--glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: var(--bg-1) !important;
+  }
+
+  .chat-layout-header--glass::after {
+    display: none;
+  }
+}
+
+/* Workspace open button dropdown styles */
+.workspace-open-dropdown {
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-popover);
+  color: var(--color-text-1);
+}
+
+/* Header model pill — only cap width on mobile, where the titlebar slot has
+   limited horizontal room. Desktop lets the pill grow to fit the full name. */
+@media (max-width: 767px) {
+  .header-model-btn {
+    max-width: 140px;
+  }
+}
+
+/* Mobile: conversation header pills */
+@media (max-width: 767px) {
+  .agent-mode-compact-pill {
+    min-height: 32px !important;
+    height: 32px !important;
+    padding: 0 10px !important;
+    border-radius: 999px !important;
+  }
+
+  .agent-mode-compact-pill .arco-btn-content {
+    line-height: 1;
+  }
+
+  .agent-mode-compact-pill--readonly,
+  .agent-mode-compact-pill--readonly:hover,
+  .agent-mode-compact-pill--readonly:active,
+  .agent-mode-compact-pill--readonly:focus,
+  .agent-mode-compact-pill--readonly:focus-visible {
+    cursor: default !important;
+    pointer-events: none !important;
+    background: var(--color-fill-2) !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .chat-header-cron-pill {
+    margin-inline-end: 4px;
+  }
+}

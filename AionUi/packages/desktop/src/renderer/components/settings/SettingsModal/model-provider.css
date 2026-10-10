@@ -1,0 +1,15 @@
+/* Provider actions use the shared default button family in both themes. */
+.model-provider-action-btn.arco-btn {
+  background-color: var(--button-default-bg) !important;
+  border-color: var(--button-default-border) !important;
+  color: var(--button-default-text) !important;
+  box-shadow: none !important;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.model-provider-action-btn.arco-btn:hover,
+.model-provider-action-btn.arco-btn:focus-visible {
+  border-color: var(--button-primary-bg) !important;
+}

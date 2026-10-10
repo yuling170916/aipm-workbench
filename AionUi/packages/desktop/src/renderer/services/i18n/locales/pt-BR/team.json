@@ -1,0 +1,193 @@
+{
+  "sider": {
+    "title": "Equipes",
+    "createTeam": "Nova Equipe",
+    "pin": "Fixar",
+    "unpin": "Desafixar",
+    "rename": "Renomear",
+    "delete": "Excluir",
+    "renameTitle": "Renomear Equipe",
+    "renamePlaceholder": "Nome da equipe",
+    "deleteConfirm": "Excluir esta equipe?",
+    "deleteConfirmContent": "Esta ação não pode ser desfeita.",
+    "deleteOk": "Excluir",
+    "deleteCancel": "Cancelar",
+    "renameOk": "Salvar",
+    "renameCancel": "Cancelar",
+    "renameSuccess": "Equipe renomeada",
+    "deleteSuccess": "Equipe excluída",
+    "archive": "Archive",
+    "archiveSuccess": "Team archived",
+    "archiveFailed": "Failed to archive team"
+  },
+  "newAgent": "Novo Assistente",
+  "noMessages": "Nenhuma mensagem ainda.",
+  "agentNotConfigured": "Assistente ainda não configurado.",
+  "stopAgentFailed": "Falha ao parar este assistente. Tente novamente.",
+  "work": {
+    "processingWithQueued": "Processando… {{count}} na fila",
+    "queued": "{{count}} na fila",
+    "runtimeStarting": "Aguardando este membro iniciar…",
+    "runtimeFailed": "Não foi possível iniciar este membro.",
+    "removing": "Removendo este membro…",
+    "sessionStopped": "A sessão da equipe foi encerrada.",
+    "retryStart": "Tentar iniciar novamente"
+  },
+  "sendBox": {
+    "placeholder": "Enviar mensagem ao assistente líder da equipe..."
+  },
+  "create": {
+    "title": "New Team",
+    "namePlaceholder": "Nome da equipe",
+    "dispatchAgentPlaceholder": "Selecione o líder da equipe",
+    "subAgentsPlaceholder": "Selecione os assistentes da equipe",
+    "confirm": "Confirm Create",
+    "noSupportedAgents": "Nenhum assistente compatível disponível",
+    "supportedAgentsHint": "Atualmente oferece suporte a assistentes Claude e Aion CLI. Mais assistentes em breve.",
+    "leaderDesc": "Entende seus objetivos e coordena assistentes para concluir tarefas",
+    "searchPlaceholder": "Search",
+    "noSearchResults": "Nenhum resultado encontrado",
+    "step": {
+      "dispatch": "Líder da Equipe",
+      "subAgents": "Membros da equipe",
+      "workspace": "Projeto"
+    },
+    "nameRequired": "Por favor, insira o nome da equipe",
+    "leaderRequired": "Por favor, selecione um líder para a equipe",
+    "selectFolder": "Select folder",
+    "recentLabel": "Recente",
+    "chooseDifferentFolder": "Escolher uma pasta diferente",
+    "error": "Falha ao criar equipe",
+    "selectedMembers": "Selected members",
+    "teamLeader": "Team Leader",
+    "currentLeader": "Current Leader",
+    "setAsLeader": "Set as Leader",
+    "teammate": "Teammate",
+    "selectAtLeastOneMember": "Select at least one assistant as the Team Leader.",
+    "selectOneLeader": "Select one Team Leader",
+    "subtitle": "Let multiple AI assistants team up and collaborate. We suggest one team focuses on a single goal — create separate teams for different tasks.",
+    "nameLabel": "Team name",
+    "workspaceLabel": "Workspace",
+    "allAssistantsWithCount": "All assistants ({{count}})",
+    "selectedMembersWithCount": "Selected members {{count}} · ⚑ = Leader",
+    "selectedMembersTitleWithCount": "Selected members {{count}}",
+    "leaderLegend": "= Leader",
+    "membersHelper": "Choose team members and assign one Leader. The same assistant can be selected multiple times.",
+    "memberHint": "No suitable assistant as a member? After creation, let the Leader create temporary team members in chat."
+  },
+  "removeAgent": {
+    "confirmTitle": "Remover Membro da Equipe",
+    "confirmContent": "Remove this member from the team?",
+    "confirmContentActive": "This member is working. Remove it anyway? Its current work will be interrupted."
+  },
+  "emptyState": {
+    "subtitle": "Descreva seu objetivo e farei a equipe trabalhar nisso",
+    "suggestions": {
+      "debate": "Organizar um debate com assistentes defendendo lados diferentes",
+      "interview": "Planejar uma entrevista aprofundada entre assistentes",
+      "expert_review": "Ter vários especialistas analisando o mesmo problema",
+      "add_member": "Help me add a member good at ___ to the team"
+    },
+    "leaderGreeting": "Hi, I'm the Leader. I understand your goal and coordinate the team — describe what you want and I'll arrange it.",
+    "memberGreeting": "Hi, I'm a team member. I take direction from the Leader and you."
+  },
+  "addMember": {
+    "title": "Add member",
+    "subtitle": "The same assistant can be added repeatedly",
+    "searchAssistants": "Search assistants...",
+    "addFailed": "Failed to add member",
+    "noSearchResults": "No results found",
+    "tellLeaderHint": "Not a good fit? You can also ask the Leader to arrange it.",
+    "tellLeaderCta": "Tell the Leader →",
+    "tellLeaderPrefill": "Help me add a member good at ___ to the team"
+  },
+  "view": {
+    "label": "View",
+    "parallel": "Parallel",
+    "single": "Single",
+    "board": "Quadro"
+  },
+  "warmup": {
+    "title": "Waking up the team…",
+    "subtitle": "Preparando os membros",
+    "memberFailedTitle": "Member {{name}} failed to start",
+    "leaderFailedTitle": "Lead {{name}} failed to start",
+    "genericFailedTitle": "The team could not start",
+    "multiFailedTitle": "{{count}} members failed to start",
+    "leaderSuffix": " (Lead)",
+    "unknownError": "failed to start",
+    "memberFailedHint": "Switch its model above, or remove it from the bar on top, then retry.",
+    "leaderFailedHint": "Switch its model above, then retry.",
+    "retry": "Retry"
+  },
+  "reorderMember": "Arraste para reordenar o membro",
+  "interruptAndSend": "Interromper e enviar",
+  "interruptAgentFailed": "Não foi possível interromper o agente. Tente novamente.",
+  "agentActions": {
+    "label": "Ações do agente",
+    "reconnectDescription": "Reinicia o processo do agente e mantém o contexto atual.",
+    "disabled": {
+      "initializing": "O agente está inicializando.",
+      "busy": "Aguarde a resposta atual e o trabalho na fila terminarem.",
+      "dormant": "Ative este membro primeiro.",
+      "failed": "Tente iniciar este membro novamente primeiro.",
+      "removing": "Este membro está sendo removido.",
+      "sessionStopped": "A sessão da equipe foi encerrada.",
+      "unsupported": "Este agente não oferece suporte a um novo contexto.",
+      "leaderNotTargetable": "Não é possível iniciar um novo contexto para o líder da equipe."
+    },
+    "contextReset": {
+      "title": "Iniciar novo contexto",
+      "description": "Cria uma nova sessão de backend. O histórico e as tarefas são mantidos.",
+      "confirmTitle": "Iniciar um novo contexto para {{memberName}}?",
+      "confirmContent": "A sessão atual do agente será encerrada e uma nova sessão de backend será criada com a próxima mensagem. O histórico, as tarefas, os arquivos, o modelo e as configurações do membro serão mantidos, mas o agente perderá o contexto de raciocínio da sessão anterior.",
+      "confirm": "Iniciar novo contexto",
+      "success": "Um novo contexto foi iniciado para {{memberName}}.",
+      "partialSuccess": "O contexto de {{memberName}} foi redefinido, mas o agente não reiniciou. Use “Tentar iniciar novamente”.",
+      "notApplied": "Não foi possível iniciar um novo contexto. O contexto atual foi mantido.",
+      "failed": "Falha ao iniciar um novo contexto. Tente novamente."
+    }
+  },
+  "systemNotice": {
+    "sender": "Equipe",
+    "contextResetSuccess": "Um novo contexto foi iniciado para {{memberName}}.",
+    "contextResetRuntimeFailed": "O contexto de {{memberName}} foi redefinido, mas o agente não reiniciou."
+  },
+  "activity": {
+    "control": {
+      "sortNewest": "Mais recente",
+      "sortOldest": "Mais antigo",
+      "filterAll": "Tudo",
+      "filterMessages": "Mensagens",
+      "filterTasks": "Tarefas",
+      "allMembers": "Todos os membros",
+      "showSystem": "Mensagens do sistema",
+      "showTerminal": "Tarefas concluídas"
+    },
+    "fallbackLane": "Não atribuído / externo",
+    "empty": "Sem atividade",
+    "userIdentity": "Usuário / externo",
+    "broadcast": "Transmitir a todos",
+    "read": "Lido",
+    "unread": "Não lido",
+    "attachments": "{{count}} arquivos",
+    "attachments_one": "{{count}} arquivo",
+    "attachments_other": "{{count}} arquivos",
+    "expand": "Expandir",
+    "collapse": "Recolher",
+    "blockedBy": "bloqueado por #{{id}}",
+    "blockedByNamed": "bloqueado por {{name}}",
+    "blockerUnknown": "Tarefa indisponível",
+    "status": {
+      "pending": "Pendente",
+      "in_progress": "Em andamento",
+      "completed": "Concluído",
+      "deleted": "Excluído"
+    },
+    "msgType": {
+      "message": "Mensagem",
+      "idle_notification": "Aviso de inatividade",
+      "shutdown_request": "Pedido de encerramento"
+    }
+  }
+}

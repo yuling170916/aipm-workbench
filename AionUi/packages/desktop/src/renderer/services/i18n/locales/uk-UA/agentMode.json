@@ -1,0 +1,22 @@
+{
+  "plan": "Режим планування",
+  "default": "За замовчуванням",
+  "acceptEdits": "Приймати правки",
+  "autoEdit": "Авторедагування",
+  "auto_edit": "Авторедагування",
+  "read-only": "Лише читання",
+  "full-access": "Повний доступ",
+  "yolo": "YOLO",
+  "yoloNoSandbox": "Повний автопілот (без пісочниці)",
+  "auto": "Авто",
+  "dontAsk": "Не запитувати",
+  "bypass": "Обхід (YOLO)",
+  "bypassPermissions": "YOLO",
+  "smart": "Розумний",
+  "build": "Режим збірки",
+  "permission": "Дозвіл",
+  "switchMode": "Режим дозволів",
+  "switchSuccess": "Режим успішно змінено",
+  "switchPendingNextTurn": "Набуде чинності з наступного ходу",
+  "switchFailed": "Не вдалося змінити режим"
+}

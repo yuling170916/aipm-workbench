@@ -1,0 +1,370 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import type { BackendStartupFailureInfo } from '@/common/types/platform/electron';
+
+type ErrorWithDetails = Error & {
+  details?: {
+    stage?: unknown;
+    serverListeningObserved?: unknown;
+    healthTimeoutKeptAlive?: unknown;
+    isPackaged?: unknown;
+    causeMessage?: unknown;
+    stderrTail?: unknown;
+    stdoutTail?: unknown;
+    backendBoundaryCode?: unknown;
+    backendBoundaryStage?: unknown;
+    runtimeKey?: unknown;
+    binaryName?: unknown;
+    bundledDirExists?: unknown;
+    runtimeDirExists?: unknown;
+    resourcesDirEntries?: unknown;
+    runtimeDirEntries?: unknown;
+    packageArch?: unknown;
+    deviceArch?: unknown;
+    expectedDownloadArch?: unknown;
+    isRosettaTranslated?: unknown;
+  };
+};
+
+const GLIBC_VERSION_RE = /GLIBC_(\d+\.\d+)/g;
+const GLIBC_NOT_FOUND_RE = /GLIBC_\d+\.\d+[\s\S]{0,160}not found|not found[\s\S]{0,160}GLIBC_\d+\.\d+/i;
+const PACKAGED_APP_MARKER_ENTRIES = new Set(['app.asar', 'app.asar.unpacked/']);
+const DATA_MIGRATION_BOUNDARY_STAGES = new Set(['database.migration', 'database.schema_repair']);
+// aioncore's downgrade detection: the local database was written by a NEWER
+// AionUi than the one currently running (see AionCore `database.rs`,
+// DATABASE_NEWER_THAN_APP_STAGE). The database is intact — the fix is
+// upgrading, so this must not fall into the generic migration-failure bucket.
+const DATABASE_NEWER_THAN_APP_BOUNDARY_STAGE = 'database.newer_than_app';
+const RECOVERABLE_DATABASE_CORRUPTION_BOUNDARY_STAGE = 'database.recoverable_corruption';
+const LOCAL_DATA_REPAIR_BOUNDARY_CODE = 'BOOTSTRAP_SERVICE_INIT_FAILED';
+const LOCAL_DATA_REPAIR_BOUNDARY_STAGE = 'services.init';
+const LOAD_AGENT_METADATA_RE = /\bload agent_metadata\b/i;
+const DATABASE_QUERY_FAILED_RE = /\bDatabase query failed\b/i;
+const INVALID_UTF8_RE = /\binvalid utf-?8\b/i;
+const AGENT_METADATA_CACHE_FIELD_RE =
+  /\b(agent_capabilities|auth_methods|config_options|available_modes|available_models|available_commands)\b/i;
+const STARTUP_DIRECTORY_FAILURE_STAGES = new Set(['spawn']);
+const STARTUP_DIRECTORY_PERMISSION_RE = /\b(?:EACCES|EPERM)\b|permission denied|operation not permitted/i;
+const STARTUP_DIRECTORY_UNAVAILABLE_RE =
+  /startup directory preparation failed|(?:\b(?:ENOENT|ENOTDIR|EEXIST)\b[\s\S]{0,160}\bmkdir\b)|(?:\bmkdir\b[\s\S]{0,160}\b(?:ENOENT|ENOTDIR|EEXIST)\b)/i;
+const ASSISTANT_STORAGE_BOOTSTRAP_BOUNDARY_CODE = 'BOOTSTRAP_SERVER_FAILED';
+// Benign boundary code emitted by an aioncore instance that yielded the
+// data-dir instance guard to a peer (Sentry 135525166 Option A).
+const TRANSIENT_CONCURRENT_STARTUP_PEER_CODE = 'BOOTSTRAP_PEER_ALREADY_RUNNING';
+// Distinct bootstrap stage emitted when assistant storage bootstrap loses a
+// concurrent-startup race and exhausts its retries (Sentry 135525166 Option B).
+const ASSISTANT_BOOTSTRAP_CONTENTION_STAGE = 'router.assistant.bootstrap.concurrency_contended';
+const MAX_REPORTED_DIR_ENTRIES = 20;
+
+function collectBackendStartupText(error: unknown): string {
+  const parts: string[] = [];
+  if (error instanceof Error) parts.push(error.message);
+  if (typeof error === 'string') parts.push(error);
+
+  const details = (error as ErrorWithDetails | undefined)?.details;
+  for (const value of [details?.causeMessage, details?.stderrTail, details?.stdoutTail]) {
+    if (typeof value === 'string') parts.push(value);
+  }
+
+  return parts.join('\n');
+}
+
+function extractMissingGlibcVersions(text: string): string[] {
+  if (!GLIBC_NOT_FOUND_RE.test(text)) return [];
+
+  const versions = new Set<string>();
+  for (const match of text.matchAll(GLIBC_VERSION_RE)) {
+    versions.add(match[1]);
+  }
+
+  return [...versions].toSorted((a, b) => {
+    const [aMajor, aMinor] = a.split('.').map(Number);
+    const [bMajor, bMinor] = b.split('.').map(Number);
+    return aMajor - bMajor || aMinor - bMinor;
+  });
+}
+
+function getBackendStartupDetails(error: unknown): ErrorWithDetails['details'] | undefined {
+  return (error as ErrorWithDetails | undefined)?.details;
+}
+
+function getStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const strings = value.filter((item): item is string => typeof item === 'string');
+  return strings.length === value.length ? strings : undefined;
+}
+
+function getString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function classifyPackageArchitectureMismatch(
+  details: ErrorWithDetails['details']
+): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'startup_architecture_check') return undefined;
+
+  return {
+    reason: 'backend_package_architecture_mismatch',
+    packageArch: getString(details.packageArch),
+    deviceArch: getString(details.deviceArch),
+    expectedDownloadArch: getString(details.expectedDownloadArch),
+    isRosettaTranslated: typeof details.isRosettaTranslated === 'boolean' ? details.isRosettaTranslated : undefined,
+  };
+}
+
+function getMissingDirectoryFlag(entries: string[], directoryName: string): boolean | undefined {
+  if (entries.includes(directoryName)) return false;
+  return entries.length < MAX_REPORTED_DIR_ENTRIES ? true : undefined;
+}
+
+function classifyIncompleteInstallation(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'resolve_binary' || details.isPackaged !== true) return undefined;
+
+  const resourcesDirEntries = getStringArray(details.resourcesDirEntries);
+  if (!resourcesDirEntries) return undefined;
+
+  const hasPackagedApp = resourcesDirEntries.some((entry) => PACKAGED_APP_MARKER_ENTRIES.has(entry));
+  if (!hasPackagedApp) return undefined;
+
+  const missingBundledAioncoreDir = !resourcesDirEntries.includes('bundled-aioncore/');
+  const missingRuntimeDir = details.runtimeDirExists === false && typeof details.runtimeKey === 'string';
+  const missingResources = missingBundledAioncoreDir ? ['bundled-aioncore/'] : [];
+  if (details.runtimeDirExists === false && typeof details.runtimeKey === 'string') {
+    missingResources.push(`bundled-aioncore/${details.runtimeKey}/`);
+  }
+  const runtimeDirEntries = getStringArray(details.runtimeDirEntries);
+  const missingManagedResourcesDir =
+    details.runtimeDirExists === true &&
+    typeof details.runtimeKey === 'string' &&
+    runtimeDirEntries !== undefined &&
+    !runtimeDirEntries.includes('managed-resources/');
+  if (missingManagedResourcesDir && typeof details.runtimeKey === 'string') {
+    missingResources.push(`bundled-aioncore/${details.runtimeKey}/managed-resources/`);
+  }
+  const missingRuntimeBinary =
+    details.runtimeDirExists === true &&
+    typeof details.runtimeKey === 'string' &&
+    typeof details.binaryName === 'string' &&
+    runtimeDirEntries !== undefined &&
+    !runtimeDirEntries.includes(details.binaryName);
+  if (missingRuntimeBinary && typeof details.runtimeKey === 'string' && typeof details.binaryName === 'string') {
+    missingResources.push(`bundled-aioncore/${details.runtimeKey}/${details.binaryName}`);
+  }
+
+  if (missingResources.length === 0) return undefined;
+
+  return {
+    incompleteInstallationKind:
+      missingBundledAioncoreDir || missingRuntimeDir || missingManagedResourcesDir
+        ? 'missing_directory_resources'
+        : 'missing_backend_binary',
+    missingBackendBinary:
+      missingBundledAioncoreDir || missingRuntimeDir || missingManagedResourcesDir || missingRuntimeBinary,
+    missingBundledAioncoreDir,
+    missingHubDir: getMissingDirectoryFlag(resourcesDirEntries, 'hub/'),
+    missingPetStatesDir: getMissingDirectoryFlag(resourcesDirEntries, 'pet-states/'),
+    missingPwaDir: getMissingDirectoryFlag(resourcesDirEntries, 'pwa/'),
+    reason: 'backend_incomplete_installation',
+    missingResources,
+    missingRuntimeDir,
+  };
+}
+
+function classifyLocalDataRepairFailure(
+  backendBoundaryCode: string | undefined,
+  backendBoundaryStage: string | undefined,
+  text: string
+): BackendStartupFailureInfo | undefined {
+  if (backendBoundaryCode !== LOCAL_DATA_REPAIR_BOUNDARY_CODE) return undefined;
+  if (backendBoundaryStage !== LOCAL_DATA_REPAIR_BOUNDARY_STAGE) return undefined;
+  if (!LOAD_AGENT_METADATA_RE.test(text)) return undefined;
+  if (!DATABASE_QUERY_FAILED_RE.test(text)) return undefined;
+  if (!INVALID_UTF8_RE.test(text)) return undefined;
+  if (!AGENT_METADATA_CACHE_FIELD_RE.test(text)) return undefined;
+
+  return {
+    reason: 'backend_local_data_repair_failed',
+    backendBoundaryCode,
+    backendBoundaryStage,
+    localDataIssueKind: 'agent_metadata_invalid_utf8',
+  };
+}
+
+// A transient concurrent-startup race (two aioncore instances briefly bootstrapping
+// the same data directory) is self-recoverable and must NOT be reported as local
+// data corruption. It is signalled either by the benign peer-yield boundary code
+// (Option A) or by the assistant-bootstrap contention stage after retries are
+// exhausted (Option B). Everything else — including an ordinary
+// `router.assistant.bootstrap` failure — is intentionally left to the generic
+// `backend_startup_failed` bucket rather than the old unconditional
+// "local data repair failed" false alarm (Sentry 135525166).
+function classifyTransientConcurrentStartupFailure(
+  backendBoundaryCode: string | undefined,
+  backendBoundaryStage: string | undefined
+): BackendStartupFailureInfo | undefined {
+  const isPeerYield = backendBoundaryCode === TRANSIENT_CONCURRENT_STARTUP_PEER_CODE;
+  const isAssistantBootstrapContention =
+    backendBoundaryCode === ASSISTANT_STORAGE_BOOTSTRAP_BOUNDARY_CODE &&
+    backendBoundaryStage === ASSISTANT_BOOTSTRAP_CONTENTION_STAGE;
+
+  if (!isPeerYield && !isAssistantBootstrapContention) return undefined;
+
+  return {
+    reason: 'backend_transient_concurrent_startup',
+    backendBoundaryCode,
+    backendBoundaryStage,
+  };
+}
+
+function classifyStartupDirectoryFailure(
+  details: ErrorWithDetails['details'],
+  text: string
+): BackendStartupFailureInfo | undefined {
+  if (!details || typeof details.stage !== 'string') return undefined;
+  if (!STARTUP_DIRECTORY_FAILURE_STAGES.has(details.stage)) return undefined;
+
+  if (STARTUP_DIRECTORY_PERMISSION_RE.test(text)) {
+    return {
+      reason: 'backend_startup_directory_unavailable',
+      startupDirectoryIssueKind: 'permission_denied',
+    };
+  }
+
+  if (STARTUP_DIRECTORY_UNAVAILABLE_RE.test(text)) {
+    return {
+      reason: 'backend_startup_directory_unavailable',
+      startupDirectoryIssueKind: 'missing_or_unavailable_directory',
+    };
+  }
+
+  return undefined;
+}
+
+// A health_timeout whose process was observed listening AND kept alive (pending)
+// is a recoverable "slow startup", not a broken installation. The kept-alive
+// gate excludes health_timeouts on paths that kill the process (e.g. database
+// recovery, `allowPendingOnHealthTimeout: false`), which must fall through to
+// their existing classification instead of being shown as "still starting".
+function classifyPendingSlowStartup(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'health_timeout') return undefined;
+  if (details.serverListeningObserved !== true) return undefined;
+  if (details.healthTimeoutKeptAlive !== true) return undefined;
+
+  return { reason: 'backend_startup_pending_slow' };
+}
+
+// A process that was observed listening but then exited before becoming ready is
+// an honest startup failure — never a missing-resource / reinstall case. Both
+// exit paths share stage `early_exit` (exit within the health window and exit
+// after the pending health timeout), so this single gate covers both.
+function classifyBackendStartupExited(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'early_exit') return undefined;
+  if (details.serverListeningObserved !== true) return undefined;
+
+  return { reason: 'backend_startup_exited' };
+}
+
+// A spawned process that never reported its listening port within the
+// port-report window (stage `listen_timeout`) timed out while starting — it is
+// NOT a broken installation. Unlike pending-slow/exited this gate must not
+// require `serverListeningObserved === true`: on this stage it is always false
+// by definition (Sentry 136646113).
+function classifyPortReportTimeout(details: ErrorWithDetails['details']): BackendStartupFailureInfo | undefined {
+  if (!details) return undefined;
+  if (details.stage !== 'listen_timeout') return undefined;
+
+  return { reason: 'backend_startup_port_report_timeout' };
+}
+
+export function classifyBackendStartupFailure(error: unknown): BackendStartupFailureInfo {
+  const details = getBackendStartupDetails(error);
+  const packageArchitectureMismatch = classifyPackageArchitectureMismatch(details);
+  if (packageArchitectureMismatch) return packageArchitectureMismatch;
+
+  const incompleteInstallation = classifyIncompleteInstallation(details);
+  if (incompleteInstallation) return incompleteInstallation;
+
+  const text = collectBackendStartupText(error);
+  const startupDirectoryFailure = classifyStartupDirectoryFailure(details, text);
+  if (startupDirectoryFailure) return startupDirectoryFailure;
+
+  const requiredVersions = extractMissingGlibcVersions(text);
+  if (requiredVersions.length > 0) {
+    return {
+      reason: 'backend_incompatible_runtime',
+      runtime: 'glibc',
+      requiredVersions,
+    };
+  }
+
+  const backendBoundaryCode =
+    typeof details?.backendBoundaryCode === 'string' ? details.backendBoundaryCode : undefined;
+  const backendBoundaryStage =
+    typeof details?.backendBoundaryStage === 'string' ? details.backendBoundaryStage : undefined;
+
+  const localDataRepairFailure = classifyLocalDataRepairFailure(backendBoundaryCode, backendBoundaryStage, text);
+  if (localDataRepairFailure) return localDataRepairFailure;
+
+  const transientConcurrentStartupFailure = classifyTransientConcurrentStartupFailure(
+    backendBoundaryCode,
+    backendBoundaryStage
+  );
+  if (transientConcurrentStartupFailure) return transientConcurrentStartupFailure;
+
+  if (
+    backendBoundaryCode === 'BOOTSTRAP_DATA_INIT_FAILED' &&
+    backendBoundaryStage === DATABASE_NEWER_THAN_APP_BOUNDARY_STAGE
+  ) {
+    return {
+      reason: 'backend_database_newer_than_app',
+      backendBoundaryCode,
+      backendBoundaryStage,
+    };
+  }
+
+  if (
+    backendBoundaryCode === 'BOOTSTRAP_DATA_INIT_FAILED' &&
+    backendBoundaryStage === RECOVERABLE_DATABASE_CORRUPTION_BOUNDARY_STAGE
+  ) {
+    return {
+      reason: 'backend_recoverable_database_corruption',
+      backendBoundaryCode,
+      backendBoundaryStage,
+    };
+  }
+
+  if (
+    backendBoundaryCode === 'BOOTSTRAP_DATA_INIT_FAILED' &&
+    backendBoundaryStage &&
+    DATA_MIGRATION_BOUNDARY_STAGES.has(backendBoundaryStage)
+  ) {
+    return {
+      reason: 'backend_data_migration_failed',
+      backendBoundaryCode,
+      backendBoundaryStage,
+    };
+  }
+
+  const pendingSlowStartup = classifyPendingSlowStartup(details);
+  if (pendingSlowStartup) return pendingSlowStartup;
+
+  const backendStartupExited = classifyBackendStartupExited(details);
+  if (backendStartupExited) return backendStartupExited;
+
+  const portReportTimeout = classifyPortReportTimeout(details);
+  if (portReportTimeout) return portReportTimeout;
+
+  return {
+    reason: 'backend_startup_failed',
+    backendBoundaryCode,
+    backendBoundaryStage,
+  };
+}

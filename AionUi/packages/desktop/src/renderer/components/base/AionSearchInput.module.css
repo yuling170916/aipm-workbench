@@ -1,0 +1,106 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* 统一搜索框样式 —— 基准取自会话标题搜索面板 (ConversationTitleMinimap) */
+
+.searchbar {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 12px;
+  background: var(--button-default-bg);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.searchbar:hover {
+  border-color: var(--color-neutral-4);
+  background: var(--button-default-bg);
+}
+
+.searchbar:focus-within {
+  border-color: rgb(var(--primary-6));
+  background: var(--color-bg-2);
+  box-shadow:
+    0 0 0 3px rgba(var(--primary-6), 0.1),
+    0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--button-icon-slot);
+  height: var(--button-icon-slot);
+  line-height: 0;
+  color: var(--color-text-3);
+}
+
+.icon svg {
+  width: var(--button-icon-size);
+  height: var(--button-icon-size);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-3);
+}
+
+.input:focus,
+.input:focus-visible {
+  outline: none;
+}
+
+.clearBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--button-default-border);
+  border-radius: var(--radius-control);
+  color: var(--button-icon);
+  background: var(--button-default-bg);
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.clearBtn:hover {
+  border-color: var(--button-primary-bg);
+  color: var(--button-default-text);
+}
+
+.clearBtn:focus-visible {
+  outline: 2px solid rgba(var(--primary-6), 0.42);
+  outline-offset: 1px;
+}
+
+.clearBtn svg {
+  display: block;
+  width: var(--button-icon-size);
+  height: var(--button-icon-size);
+}

@@ -1,0 +1,57 @@
+/* Settings share the same quiet canvas as the main workbench. */
+.settings-page-wrapper {
+  color: var(--text-primary);
+  background: var(--bg-1);
+}
+
+/* Settings mobile top nav */
+@media (max-width: 767px) {
+  .settings-mobile-top-nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-top: 14px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+
+  .settings-mobile-top-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-mobile-top-nav__item {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-base);
+    background: var(--surface-card);
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .settings-mobile-top-nav__item--active {
+    background: var(--bg-active);
+    color: var(--primary);
+    border-color: var(--border-base);
+  }
+
+  .settings-mobile-top-nav__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+  }
+
+  .settings-mobile-top-nav__label {
+    white-space: nowrap;
+    font-weight: 500;
+  }
+}

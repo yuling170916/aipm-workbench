@@ -1,0 +1,22 @@
+{
+  "plan": "حالت برنامه‌ریزی",
+  "default": "پیش‌فرض",
+  "acceptEdits": "تأیید ویرایش‌ها",
+  "autoEdit": "ویرایش خودکار",
+  "auto_edit": "ویرایش خودکار",
+  "read-only": "فقط خواندنی",
+  "full-access": "دسترسی کامل",
+  "yolo": "YOLO",
+  "yoloNoSandbox": "خودکار کامل (بدون سندباکس)",
+  "auto": "خودکار",
+  "dontAsk": "سؤال نکن",
+  "bypass": "عبور (YOLO)",
+  "bypassPermissions": "YOLO",
+  "smart": "هوشمند",
+  "build": "حالت ساخت",
+  "permission": "مجوز",
+  "switchMode": "حالت مجوز",
+  "switchSuccess": "حالت با موفقیت جابه‌جا شد",
+  "switchPendingNextTurn": "از نوبت بعدی اعمال می‌شود",
+  "switchFailed": "جابه‌جایی حالت ناموفق بود"
+}

@@ -1,0 +1,26 @@
+AIPM工作台 / AIPM Workbench
+
+Product design, development and maintenance: yuling
+
+Copyright 2026 yuling
+This notice applies only to original additions and modifications in this
+project to the extent owned by yuling. These code contributions are licensed
+under the Apache License, Version 2.0. It does not claim ownership of
+upstream code, third-party material, or underlying components.
+
+Upstream projects:
+- AionUi: https://github.com/iOfficeAI/AionUi
+- AionCore: https://github.com/iOfficeAI/AionCore
+
+Both upstream LICENSE files contain:
+Copyright 2025 AionUi (aionui.com)
+Licensed under the Apache License, Version 2.0.
+
+The upstream LICENSE files and existing source copyright notices are
+retained. Other bundled third-party notices and licenses continue to apply.
+See docs/MODIFICATIONS.md for the file-by-file customization inventory and
+upstream baseline commits. This root NOTICE is added by this fork; it is
+not presented as a NOTICE file supplied by either upstream project.
+
+The product name and presentation identify this customized distribution.
+No upstream endorsement or third-party trademark rights are claimed.

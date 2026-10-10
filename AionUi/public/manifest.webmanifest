@@ -1,0 +1,23 @@
+{
+  "name": "AIPM工作台",
+  "short_name": "AIPM工作台",
+  "description": "面向产品经理的 AI 专属工作台。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2860E8",
+  "icons": [
+    {
+      "src": "./pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

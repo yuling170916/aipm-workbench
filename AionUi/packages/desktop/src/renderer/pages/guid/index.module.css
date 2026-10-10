@@ -1,0 +1,881 @@
+.guidLayout {
+  width: min(100%, 1108px);
+  max-width: 100%;
+  padding: 26px 34px 38px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  container-type: inline-size;
+}
+
+.heroHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 225px;
+  gap: 24px;
+  margin-bottom: 42px;
+}
+
+.homeBreadcrumb {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  margin-bottom: 16px;
+}
+
+.heroCopy {
+  min-width: 0;
+  padding-block: 22px;
+}
+
+.heroEyebrow {
+  margin: 0 0 12px;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.heroDescription {
+  margin: 14px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.heroMascot {
+  width: 250px;
+  max-width: 34%;
+  height: 225px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 12px 14px color-mix(in srgb, var(--primary) 8%, transparent));
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: clamp(25px, 2.6vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.4;
+  color: var(--text-primary);
+  text-align: start;
+}
+
+/* The assistant lives in the same composer row as the other task controls. */
+.compactAssistantSelector {
+  width: auto;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.compactAssistantSelector > div {
+  justify-content: flex-start;
+}
+
+.assistantSelectorBar {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+}
+
+.controlButton:global(.arco-btn),
+.materialTrigger:global(.arco-btn),
+.workspaceEmptyBtn:global(.arco-btn),
+.workspacePillMain:global(.arco-btn),
+.wsDropdownItem:global(.arco-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+  min-width: 0;
+  box-shadow: none;
+}
+
+.controlButton:global(.arco-btn):hover,
+.materialTrigger:global(.arco-btn):hover,
+.workspaceEmptyBtn:global(.arco-btn):hover,
+.wsDropdownItem:global(.arco-btn):hover {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border-color: var(--button-primary-bg, var(--primary));
+}
+
+.controlButton:global(.arco-btn):focus-visible,
+.materialTrigger:global(.arco-btn):focus-visible,
+.workspaceEmptyBtn:global(.arco-btn):focus-visible,
+.workspacePillMain:global(.arco-btn):focus-visible,
+.wsDropdownItem:global(.arco-btn):focus-visible {
+  outline: 2px solid var(--button-primary-bg, var(--primary));
+  outline-offset: 2px;
+}
+
+.controlIcon,
+.controlButton :global(.arco-btn-icon),
+.materialTrigger :global(.arco-btn-icon) {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0;
+  line-height: 0;
+  color: var(--text-muted);
+}
+
+.controlIcon svg,
+.controlButton :global(.arco-btn-icon svg),
+.materialTrigger :global(.arco-btn-icon svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.iconButton:global(.arco-btn) {
+  width: 38px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.assistantFullWidth:global(.arco-btn) {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.assistantSelected:global(.arco-btn),
+.assistantSelected:global(.arco-btn):hover,
+.workspacePillMain:global(.arco-btn),
+.workspacePillMain:global(.arco-btn):hover,
+.wsDropdownItemActive:global(.arco-btn),
+.wsDropdownItemActive:global(.arco-btn):hover {
+  color: var(--button-primary-text);
+  background: var(--button-primary-bg, var(--primary));
+  border-color: var(--button-primary-bg, var(--primary));
+}
+
+.assistantSelected .controlIcon,
+.workspacePillMain .controlIcon,
+.wsDropdownItemActive .controlIcon {
+  color: inherit;
+}
+
+.assistantAvatar {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.promptExamples {
+  margin-top: 20px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.promptExamples summary {
+  width: fit-content;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.promptExamples summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+
+.assistantPromptHint {
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.guidInputCard {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.guidInputCardWrap {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-base);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.guidInputInner {
+  padding: 22px;
+  background: var(--bg-base);
+  border: 0;
+  border-radius: 18px;
+  box-sizing: border-box;
+}
+
+.guidInputBody {
+  display: flex;
+  flex-direction: column;
+  min-height: 94px;
+}
+
+.guidInputBody :global(.arco-textarea) {
+  flex: 1 0 auto;
+}
+
+.homeDecoration {
+  display: block;
+  width: 120px;
+  height: 112px;
+  margin: 24px 18px 0 auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--text-primary) 6%, transparent));
+}
+
+.actionRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.actionTools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.actionEntry {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.actionConfigGroup {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+}
+
+.actionConfigGroup :global(.sendbox-model-btn) {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 38px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--border-base) !important;
+  border-radius: 12px !important;
+  background: var(--bg-base) !important;
+  color: var(--text-primary) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.actionConfigGroup :global(.sendbox-model-btn:hover) {
+  border-color: var(--button-primary-bg, var(--primary)) !important;
+}
+
+.actionConfigGroup :global(.sendbox-model-btn .arco-btn-content),
+.actionConfigGroup :global(.sendbox-model-btn .arco-btn-content > span:first-child) {
+  gap: 8px !important;
+  min-width: 0;
+}
+
+.actionConfigGroup :global(.guid-model-label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 150px;
+}
+
+.actionConfigGroup :global(.i-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.actionConfigGroup :global(.i-icon svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.actionSubmit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  min-width: 0;
+}
+
+.sendButton:global(.arco-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  min-width: 92px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 12px !important;
+  border: 1px solid var(--button-primary-bg, var(--primary)) !important;
+  background: var(--button-primary-bg, var(--primary)) !important;
+  color: var(--button-primary-text) !important;
+  clip-path: inset(0 round 12px);
+}
+
+.sendButton:global(.arco-btn-disabled) {
+  opacity: 0.5;
+}
+
+.workspaceFootnote {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.workspacePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.workspacePillMain:global(.arco-btn) {
+  justify-content: flex-start;
+  max-width: 220px;
+}
+
+.workspacePillName,
+.wsDropdownItemName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspacePillClose:global(.arco-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  background: var(--bg-base);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* workspace dropdown popup — portal-rendered, position set via JS */
+.wsDropdown {
+  background: var(--bg-base);
+  border: 1px solid var(--color-border-2);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: var(--shadow-popover);
+  min-width: 230px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.wsDropdownItem:global(.arco-btn) {
+  width: 100%;
+  justify-content: flex-start;
+  margin-block: 3px;
+}
+
+.wsDropdownSep {
+  height: 1px;
+  background: var(--color-border-2);
+  margin: 4px 0;
+}
+
+.lightPlaceholder::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.plusButtonRotate {
+  animation: rotate-animation 0.3s ease-in-out;
+}
+
+@keyframes rotate-animation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(45deg);
+  }
+}
+
+/* Skeleton shimmer animation */
+@keyframes guid-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-fill-2) 25%, var(--color-fill-3) 50%, var(--color-fill-2) 75%);
+  background-size: 200% 100%;
+  animation: guid-shimmer 1.5s ease-in-out infinite;
+  border-radius: 50%;
+}
+
+.skeletonPill {
+  background: linear-gradient(90deg, var(--color-fill-2) 25%, var(--color-fill-3) 50%, var(--color-fill-2) 75%);
+  background-size: 200% 100%;
+  animation: guid-shimmer 1.5s ease-in-out infinite;
+  border-radius: 100px;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .guidLayout {
+    width: 100%;
+    padding: 20px 24px 32px;
+    box-sizing: border-box;
+  }
+
+  .guidInputCard {
+    width: 100%;
+  }
+
+  .actionRow {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .actionTools {
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: visible;
+    white-space: normal;
+    flex-wrap: wrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .actionTools::-webkit-scrollbar {
+    display: none;
+  }
+
+  .actionTools > * {
+    flex: 0 0 auto;
+  }
+
+  .actionEntry {
+    margin-inline-end: 0;
+  }
+
+  .actionConfigGroup {
+    gap: 8px;
+  }
+
+  .actionConfigGroup :global(.sendbox-model-btn .guid-model-label) {
+    max-width: 90px;
+  }
+
+  .actionConfigGroupWithDivider > :first-child::after {
+    inset-inline-end: -6px;
+    height: 16px;
+  }
+
+  .actionSubmit {
+    flex-shrink: 0;
+    margin-inline-start: 8px;
+  }
+
+  .sendButton:global(.arco-btn) {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+  }
+
+  .homeDecoration {
+    display: none;
+  }
+}
+
+/* 小屏手机再收窄一点安全边距，提升可操作面积 */
+@media (max-width: 420px) {
+  .guidLayout {
+    width: clamp(var(--app-min-width, 360px), calc(100% - 20px), 100%);
+    padding: 0 10px;
+  }
+}
+
+/* 移动端容器滚动支持 */
+.guidContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* 整体内容块略往上移，减轻「重心偏下」的感觉 */
+.guidContainer .guidLayout {
+  margin-top: 0;
+}
+
+/* Agent 选中时：先放大再回落至略大（pop 动效） */
+@keyframes agentSelectPop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+
+.agentItemSelected {
+  background-color: var(--fill-0);
+  transition:
+    opacity 0.5s cubic-bezier(0.2, 0.8, 0.3, 1),
+    background-color 0.25s ease-out;
+  animation: agentSelectPop 0.4s ease-out forwards;
+}
+
+/* 更多 Agent 面板：细微且快速的下滑淡入 */
+@keyframes assistantOverflowPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.assistantOverflowPanel {
+  min-width: 260px;
+  max-width: min(560px, calc(100vw - 48px));
+  background: var(--bg-base);
+  transform-origin: top center;
+  animation: assistantOverflowPanelIn 0.16s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+:global([data-theme='dark']) .assistantSelectorInactive {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+/* 底部快捷按钮：基础间距 + 安全区 */
+.guidQuickActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: static !important;
+  margin: 8px auto 18px;
+  flex-wrap: wrap;
+  transform: none !important;
+}
+
+@media (max-width: 768px) {
+  .guidContainer {
+    justify-content: flex-start;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .guidContainer .guidLayout {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .guidLayout {
+    width: 100%;
+    padding-inline: 18px;
+  }
+
+  .heroHeader {
+    min-height: 160px;
+  }
+
+  .heroMascot {
+    width: 135px;
+    height: 140px;
+    max-width: 32%;
+  }
+
+  .heroTitle {
+    font-size: 25px;
+  }
+
+  .heroDescription {
+    font-size: 12px;
+  }
+
+  .compactAssistantSelector {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .guidInputInner {
+    padding: 16px;
+  }
+}
+
+/* 浅色占位符 */
+.lightPlaceholder :global(textarea::placeholder) {
+  color: var(--text-muted) !important;
+  opacity: 1 !important;
+}
+
+/* 助手卡片网格（首页 list view） */
+.assistantCardScrollWrap {
+  position: relative;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-block: 4px;
+  padding-inline-start: 4px;
+  padding-inline-end: 6px;
+  scrollbar-width: thin;
+}
+
+.assistantCardScrollWrapScrollable {
+  -webkit-mask-image: linear-gradient(to bottom, black 0, black calc(100% - 56px), transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0, black calc(100% - 56px), transparent 100%);
+}
+
+.assistantCardScrollWrap::-webkit-scrollbar {
+  width: 6px;
+}
+
+.assistantCardScrollWrap::-webkit-scrollbar-thumb {
+  background: var(--color-fill-3);
+  border-radius: 3px;
+}
+
+.assistantCardScrollWrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.assistantCardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.assistantCard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-base);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.assistantCard:hover {
+  border-color: var(--brand);
+  box-shadow: var(--shadow-card);
+}
+
+.assistantCardAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-fill-2);
+  overflow: hidden;
+}
+
+.assistantCardAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.assistantCardEmoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.assistantCardMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.assistantCardName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assistantCardDesc {
+  font-size: 12px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assistantCardAdd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  padding: 12px 14px;
+  background: var(--color-fill-1);
+  border: 1px dashed color-mix(in srgb, var(--color-border-2) 70%, transparent);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  color: var(--color-text-3);
+}
+
+.assistantCardAdd:hover {
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+}
+
+@media (max-width: 640px) {
+  .assistantCardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .actionTools {
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: visible;
+    white-space: normal;
+    flex-wrap: wrap;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+}
+
+/* iPhone专门优化 */
+@supports (-webkit-touch-callout: none) {
+  .actionRow {
+    flex-wrap: nowrap !important;
+  }
+
+  .actionTools {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: visible;
+    white-space: normal;
+    flex-wrap: wrap;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+
+  .actionSubmit {
+    flex-shrink: 0;
+  }
+
+  .presetAgentTagName {
+    max-width: 100px;
+  }
+}
+
+.promptExampleButton:global(.arco-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: auto;
+  min-height: 38px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: start;
+  white-space: normal;
+}
+
+@container (max-width: 760px) {
+  .heroHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .heroCopy {
+    padding-block: 12px;
+  }
+
+  .heroMascot {
+    align-self: center;
+    width: 220px;
+    max-width: 100%;
+    height: 180px;
+  }
+}
+
+@container (max-width: 420px) {
+  .heroMascot {
+    width: 160px;
+    height: 140px;
+  }
+}

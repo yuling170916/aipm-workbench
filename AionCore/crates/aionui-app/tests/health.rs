@@ -1,0 +1,164 @@
+use axum::body::Body;
+use axum::http::{Request, StatusCode};
+use http_body_util::BodyExt;
+use tower::ServiceExt;
+
+use aionui_app::{AppConfig, AppServices};
+
+fn build_request(method: &str, uri: &str) -> Request<Body> {
+    Request::builder()
+        .method(method)
+        .uri(uri)
+        .body(Body::empty())
+        .expect("failed to build request")
+}
+
+async fn response_json(body: Body) -> serde_json::Value {
+    let bytes = body.collect().await.expect("failed to read body").to_bytes();
+    serde_json::from_slice(&bytes).expect("failed to parse JSON")
+}
+
+async fn build_app() -> axum::Router {
+    let db = aionui_db::init_database_memory().await.unwrap();
+    let services = AppServices::from_config(db, &AppConfig::default()).await.unwrap();
+    aionui_app::create_router(&services).await.expect("build router")
+}
+
+#[tokio::test]
+async fn health_check_returns_ok() {
+    let app = build_app().await;
+
+    let response = app
+        .oneshot(build_request("GET", "/health"))
+        .await
+        .expect("request failed");
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let json = response_json(response.into_body()).await;
+    assert_eq!(json["status"], "ok");
+}
+
+#[tokio::test]
+async fn health_check_returns_ok_when_agent_metadata_cache_field_has_invalid_utf8() {
+    let db = aionui_db::init_database_memory().await.unwrap();
+    sqlx::query("UPDATE agent_metadata SET config_options = CAST(x'FF' AS TEXT) WHERE agent_id = ?")
+        .bind("2d23ff1c")
+        .execute(db.pool())
+        .await
+        .unwrap();
+
+    let services = AppServices::from_config(db, &AppConfig::default())
+        .await
+        .expect("services init should repair invalid UTF-8 agent cache data");
+    let app = aionui_app::create_router(&services).await.expect("build router");
+
+    let response = app
+        .oneshot(build_request("GET", "/health"))
+        .await
+        .expect("request failed");
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let json = response_json(response.into_body()).await;
+    assert_eq!(json["status"], "ok");
+}
+
+#[tokio::test]
+async fn health_check_post_blocked_by_csrf() {
+    let app = build_app().await;
+
+    // POST without CSRF token is rejected by the global CSRF middleware
+    let response = app
+        .oneshot(build_request("POST", "/health"))
+        .await
+        .expect("request failed");
+
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn unknown_route_returns_not_found() {
+    let app = build_app().await;
+
+    let response = app
+        .oneshot(build_request("GET", "/nonexistent"))
+        .await
+        .expect("request failed");
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+    let json = response_json(response.into_body()).await;
+    assert_eq!(json["success"], false);
+    assert_eq!(json["code"], "NOT_FOUND");
+    assert!(json["error"].is_string());
+}
+
+#[tokio::test]
+async fn default_body_limit_returns_error_response() {
+    let app = build_app().await;
+
+    let body = format!(
+        r#"{{"username":"admin","password":"{}"}}"#,
+        "x".repeat(11 * 1024 * 1024)
+    );
+    let request = Request::builder()
+        .method("POST")
+        .uri("/login")
+        .header("content-type", "application/json")
+        .body(Body::from(body))
+        .expect("failed to build request");
+
+    let response = app.oneshot(request).await.expect("request failed");
+
+    assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    let json = response_json(response.into_body()).await;
+    assert_eq!(json["success"], false);
+    assert_eq!(json["code"], "PAYLOAD_TOO_LARGE");
+    assert!(json["error"].is_string());
+}
+
+#[tokio::test]
+async fn health_check_has_security_headers() {
+    let app = build_app().await;
+
+    let response = app
+        .oneshot(build_request("GET", "/health"))
+        .await
+        .expect("request failed");
+
+    assert_eq!(response.headers().get("x-frame-options").unwrap(), "DENY");
+    assert_eq!(response.headers().get("x-content-type-options").unwrap(), "nosniff");
+    assert_eq!(response.headers().get("x-xss-protection").unwrap(), "1; mode=block");
+    assert_eq!(
+        response.headers().get("referrer-policy").unwrap(),
+        "strict-origin-when-cross-origin"
+    );
+}
+
+#[tokio::test]
+async fn office_proxy_routes_allow_same_origin_framing() {
+    // Regression for iOfficeAI/AionUi#3177: the global security headers
+    // middleware must not overwrite the office preview proxies' framing
+    // policy with DENY, or the preview iframe is blanked in browsers.
+    let app = build_app().await;
+
+    for uri in ["/api/ppt-proxy/59999", "/api/office-watch-proxy/59999"] {
+        let response = app
+            .clone()
+            .oneshot(build_request("GET", uri))
+            .await
+            .expect("request failed");
+
+        assert_eq!(
+            response.headers().get("x-frame-options").unwrap(),
+            "SAMEORIGIN",
+            "{uri} must stay frameable by the same-origin web UI"
+        );
+        assert_eq!(
+            response.headers().get("content-security-policy").unwrap(),
+            "frame-ancestors 'self'",
+            "{uri} should carry the modern frame-ancestors policy"
+        );
+    }
+}

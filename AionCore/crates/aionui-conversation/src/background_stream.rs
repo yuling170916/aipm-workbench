@@ -1,0 +1,1281 @@
+//! Out-of-turn stream delivery for direct-CLI (Session) conversations.
+//!
+//! The per-turn [`StreamRelay`] breaks at the turn's Finish — but a claude
+//! session keeps talking after that:
+//!
+//! - **CLI-initiated turns.** When a background task (bash / Task subagent /
+//!   workflow) completes, the CLI starts an UNPROMPTED turn to report the result
+//!   (live 2026-08-03: BackendBound → tool check → MessageDelta ~30s after the
+//!   launch turn ended). With only per-turn relays, that entire report was
+//!   dropped: no WebSocket frames, no DB rows — the conversation looked dead.
+//! - **Progress-card refreshes.** A background task's card ticks and settles
+//!   between turns. Un-persisted settles left the stored row `running` forever,
+//!   so the View Steps spinner never stopped after a reload.
+//!
+//! One watcher per live Session instance closes both gaps. It subscribes to the
+//! instance's broadcast channel permanently and acts ONLY while no user turn is
+//! active (the per-turn relay owns everything else):
+//!
+//! - `WorkflowProgress` → forwarded + persisted inline (a card refresh is not a
+//!   turn).
+//! - Turn content (text / thinking / tool calls / permissions…) → an **orphan
+//!   turn**: a standard [`StreamRelay`] with freshly minted msg/turn ids, fed
+//!   until the unprompted turn's own Finish. Full parity — segments,
+//!   persistence, `turn.completed` — because it IS the normal relay.
+
+use std::sync::Arc;
+
+use aionui_ai_agent::protocol::events::MessageLifecyclePhase;
+use aionui_ai_agent::protocol::events::{AgentStreamEvent, WorkflowProgressData};
+use aionui_common::{ErrorChain, normalize_keys_to_snake_case};
+use aionui_db::IConversationRepository;
+use aionui_realtime::EventBroadcaster;
+use serde_json::json;
+use tokio::sync::broadcast;
+use tracing::{info, warn};
+
+use crate::runtime_persistence::RuntimePersistenceCoordinator;
+use crate::runtime_state::ConversationRuntimeStateService;
+use crate::service::ConversationService;
+use crate::stream_persistence::StreamPersistenceAdapter;
+use crate::stream_relay::StreamRelay;
+
+/// An orphan turn with NO frame for this long is presumed abandoned (a stray
+/// content frame with no terminal); the feeder closes and the relay finalizes
+/// with what it has, so the watcher can never be wedged forever.
+const ORPHAN_TURN_IDLE_MS: u64 = 180_000;
+
+/// How long a `MessageLifecycle{Started}` echo stays armed as "the next
+/// agent-started turn serves a user message" before it is presumed lost.
+///
+/// The design spec's measured data (docs/superpowers/specs/
+/// 2026-08-12-midturn-interjection-design.md §6.1, real claude 2.1.226 run)
+/// shows `started` firing at the boundary where the message is consumed into a
+/// turn, with that turn's content following within seconds (12.24s started →
+/// 16.74s assistant text); the pure-text follow-up turn opens immediately after
+/// the current turn's `result` (§五 table). 30s is an order of magnitude of
+/// headroom over that, while staying far below the minutes a detached exec can
+/// run — so a Started whose terminal `completed`/`cancelled` echo was lost
+/// (broadcast lag, CLI crash between phases) cannot claim an unrelated
+/// background continuation and lock the input box (#758's design intent).
+pub(crate) const PENDING_STARTED_TTL: std::time::Duration = std::time::Duration::from_secs(30);
+
+pub(crate) struct BackgroundStreamWatcher {
+    pub conversation_id: String,
+    pub user_id: String,
+    pub repo: Arc<dyn IConversationRepository>,
+    pub broadcaster: Arc<dyn EventBroadcaster>,
+    pub persistence: RuntimePersistenceCoordinator,
+    pub runtime_state: Arc<ConversationRuntimeStateService>,
+    /// True for non-Session (ACP manager) instances: consume ONLY agent
+    /// session titles and leave every other frame to the existing ACP
+    /// delivery paths (orphan turns / card refreshes are Session semantics).
+    pub title_only: bool,
+    /// Expiry for a pending `MessageLifecycle{Started}` (see
+    /// [`PENDING_STARTED_TTL`]); injectable so tests can use a short bound.
+    pub pending_started_ttl: std::time::Duration,
+}
+
+impl BackgroundStreamWatcher {
+    /// Is this frame the start of CLI-initiated turn CONTENT (as opposed to a
+    /// card refresh or bookkeeping noise)?
+    fn is_orphan_turn_content(ev: &AgentStreamEvent) -> bool {
+        matches!(
+            ev,
+            AgentStreamEvent::Text(_)
+                | AgentStreamEvent::Thinking(_)
+                | AgentStreamEvent::ToolCall(_)
+                | AgentStreamEvent::AcpToolCall(_)
+                | AgentStreamEvent::ToolGroup(_)
+                | AgentStreamEvent::Plan(_)
+                | AgentStreamEvent::Permission(_)
+                | AgentStreamEvent::AcpPermission(_)
+                | AgentStreamEvent::Ask(_)
+                | AgentStreamEvent::Error(_)
+        )
+        // Deliberately absent: Tips. Tips are OUR pump-side diagnostics, never
+        // how a CLI-initiated turn begins (those open with thinking/tool/text) —
+        // a stray out-of-turn tip fabricating a whole orphan turn is exactly how
+        // the duplicate-terminal ACP_EMPTY_TURN bubble reached the user. A tip
+        // INSIDE a running orphan turn still flows: the feeder forwards
+        // everything once a turn is open.
+    }
+
+    pub async fn run(self, mut rx: broadcast::Receiver<AgentStreamEvent>) {
+        info!(
+            conversation_id = %self.conversation_id,
+            "background stream watcher started"
+        );
+        // Mid-turn interjection (Task 3): the client_msg_id of the user message
+        // the NEXT agent-started turn serves, taken from the most recent
+        // `MessageLifecycle{Started}` echo and consumed by exactly one orphan
+        // turn (or cleared by the message's Completed/Cancelled echo). The
+        // arming instant bounds its lifetime: a Started whose terminal echo was
+        // lost must not claim an unrelated later turn (see PENDING_STARTED_TTL).
+        let mut pending_user_msg: Option<(String, std::time::Instant)> = None;
+        loop {
+            let ev = match rx.recv().await {
+                Ok(ev) => ev,
+                Err(broadcast::error::RecvError::Lagged(n)) => {
+                    warn!(
+                        conversation_id = %self.conversation_id,
+                        lagged = n,
+                        "background stream watcher lagged; frames dropped"
+                    );
+                    continue;
+                }
+                // Instance torn down (conversation deleted / process replaced).
+                Err(broadcast::error::RecvError::Closed) => break,
+            };
+            // Agent session titles are consumed HERE unconditionally — the
+            // active-turn gate below must NOT apply:
+            // - claude: the generate_session_title reply lands seconds AFTER the
+            //   first turn's Finish (live 2026-08-04: TurnResult 07:21:33 →
+            //   title frame 07:21:36) — the per-turn relay is already gone.
+            // - ACP agents (pi/omp, live 2026-08-04): session_info_update fires
+            //   at session-open (no turn yet) and ~1ms BEFORE the turn's Finish
+            //   — racing the relay's exit.
+            // The StreamRelay ALSO applies titles (live 2026-08-19, conv
+            // a7f2838a: a reply landing 0.6s into an orphan turn — while this
+            // watcher's receiver was lent to `run_orphan_turn` — was otherwise
+            // lost with the latch already completed). apply_agent_title is
+            // guarded (name_source) and idempotent (same-title no-op), so the
+            // watcher/relay overlap is never harmful.
+            if let AgentStreamEvent::AcpSessionInfo(payload) = &ev {
+                if let Some(title) = payload
+                    .get("title")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::trim)
+                    .filter(|t| !t.is_empty())
+                {
+                    if let Err(e) = crate::service::apply_agent_title(
+                        &self.repo,
+                        &self.broadcaster,
+                        &self.user_id,
+                        &self.conversation_id,
+                        title,
+                        "watcher",
+                    )
+                    .await
+                    {
+                        warn!(
+                            conversation_id = %self.conversation_id,
+                            error = %e,
+                            "agent session title apply failed (background)"
+                        );
+                    }
+                } else {
+                    tracing::debug!(
+                        conversation_id = %self.conversation_id,
+                        "session info frame without title ignored"
+                    );
+                }
+                continue;
+            }
+            // Lifecycle echoes are pure bookkeeping, handled BEFORE the
+            // active-turn gate: `Started` can race the previous turn claim's
+            // release by a frame, and missing it would leave claude's
+            // follow-up turn unclaimed. Only Session instances emit these.
+            if let AgentStreamEvent::MessageLifecycle(data) = &ev {
+                // B5 receipt badge (Task 4): any consumption/terminal echo means
+                // the agent TOOK the message — flip its persisted status from
+                // "pending" (待接收) to "finish" (已接收) and broadcast
+                // message.statusChanged. Guarded to rows currently "pending", so
+                // an echo can never touch an ordinary message. Cancelled also
+                // counts: claude only cancels an echo it had already started
+                // (still-queued messages are unaffected by an interrupt and
+                // self-start later — spec §6甲.7).
+                if !matches!(data.phase, MessageLifecyclePhase::Queued) {
+                    crate::service::apply_message_receipt(
+                        &self.repo,
+                        &self.broadcaster,
+                        &self.user_id,
+                        &self.conversation_id,
+                        &data.client_msg_id,
+                        crate::service::MIDTURN_STATUS_RECEIVED,
+                        true,
+                    )
+                    .await;
+                }
+                match data.phase {
+                    MessageLifecyclePhase::Started => {
+                        if let Some((prev, _)) = pending_user_msg.as_ref()
+                            && prev != &data.client_msg_id
+                        {
+                            // A Started should be terminated by its own
+                            // Completed/Cancelled before the next one arrives;
+                            // an overwrite means that echo was lost or reordered.
+                            warn!(
+                                conversation_id = %self.conversation_id,
+                                prev_client_msg_id = %prev,
+                                client_msg_id = %data.client_msg_id,
+                                "background stream: pending Started overwritten without a terminal echo"
+                            );
+                        }
+                        pending_user_msg = Some((data.client_msg_id.clone(), std::time::Instant::now()));
+                    }
+                    MessageLifecyclePhase::Completed | MessageLifecyclePhase::Cancelled => {
+                        if pending_user_msg
+                            .as_ref()
+                            .is_some_and(|(id, _)| id == &data.client_msg_id)
+                        {
+                            pending_user_msg = None;
+                        }
+                    }
+                    // Not yet consumed into a turn — nothing to correlate.
+                    MessageLifecyclePhase::Queued => {}
+                }
+                continue;
+            }
+            // Title-only watchers (ACP manager instances) stop here: orphan
+            // turns and card refreshes are Session-instance semantics.
+            if self.title_only {
+                continue;
+            }
+            // While a user turn is active its own relay owns the stream.
+            if self.runtime_state.active_turn_id_for(&self.conversation_id).is_some() {
+                continue;
+            }
+            match &ev {
+                AgentStreamEvent::WorkflowProgress(data) => self.handle_card_refresh(data).await,
+                // Config snapshots / mode confirmations arriving BETWEEN turns. These are
+                // exactly the frames that carry "the switch actually took effect" for the
+                // backends that apply one only from the next turn, plus an agent's own
+                // autonomous mode change — and by then no relay exists to carry them.
+                // Dropping them left the picker showing a mode the agent was not in.
+                AgentStreamEvent::AcpConfigOption(_) | AgentStreamEvent::AcpModeInfo(_) => {
+                    self.forward_out_of_turn_frame(&ev)
+                }
+                ev_ref if Self::is_orphan_turn_content(ev_ref) => {
+                    // A serving turn's first frame follows its Started within
+                    // seconds (spec §6.1); anything armed longer than the TTL
+                    // is a leftover from a lost terminal echo and must not
+                    // claim this (unrelated) turn.
+                    let serving_client_msg_id = pending_user_msg.take().and_then(|(id, armed_at)| {
+                        if armed_at.elapsed() <= self.pending_started_ttl {
+                            Some(id)
+                        } else {
+                            warn!(
+                                conversation_id = %self.conversation_id,
+                                client_msg_id = %id,
+                                armed_for_ms = armed_at.elapsed().as_millis() as u64,
+                                "background stream: stale pending Started discarded (terminal echo lost)"
+                            );
+                            None
+                        }
+                    });
+                    self.run_orphan_turn(ev.clone(), &mut rx, serving_client_msg_id).await;
+                }
+                // Start/Finish strays, usage (the pump broadcasts usage itself),
+                // internal signals — nothing to deliver.
+                _ => {}
+            }
+        }
+        info!(
+            conversation_id = %self.conversation_id,
+            "background stream watcher stopped (stream closed)"
+        );
+    }
+
+    /// A between-turns card refresh: forward the two frames the frontend already
+    /// renders, and persist them so a reload shows the truth (the un-persisted
+    /// settle was exactly the "View Steps spinner never ends" bug).
+    async fn handle_card_refresh(&self, data: &WorkflowProgressData) {
+        if data.settle_only {
+            // Update-only settle for a card the pump has no memory of (see the
+            // field's docs): apply to an EXISTING stored row and forward, or
+            // drop silently. Never insert — the same unknown-terminal shape
+            // fires for workflow-internal refs that never had a row, and
+            // inserting for those would conjure junk cards.
+            let adapter = StreamPersistenceAdapter::new(
+                self.user_id.clone(),
+                self.conversation_id.clone(),
+                String::new(),
+                self.repo.clone(),
+                Some(self.persistence.clone()),
+            );
+            if adapter.settle_tool_call_if_present(&data.card).await {
+                self.forward_card_frames(data);
+            }
+            return;
+        }
+        self.forward_card_frames(data);
+        let adapter = StreamPersistenceAdapter::new(
+            self.user_id.clone(),
+            self.conversation_id.clone(),
+            // Only text segments read the adapter's msg_id; tool rows key by call_id.
+            String::new(),
+            self.repo.clone(),
+            Some(self.persistence.clone()),
+        );
+        adapter.persist_tool_call(&data.card).await;
+        if !data.agents.is_empty() {
+            adapter.persist_tool_group(&data.agents).await;
+        }
+    }
+
+    fn forward_card_frames(&self, data: &WorkflowProgressData) {
+        for (kind, msg_id, body) in [
+            ("tool_call", data.card.call_id.clone(), serde_json::to_value(&data.card)),
+            (
+                "tool_group",
+                data.agents.first().map(|a| a.call_id.clone()).unwrap_or_default(),
+                serde_json::to_value(&data.agents),
+            ),
+        ] {
+            // A background-task card has no roster; an empty tool_group would
+            // persist a junk row under a minted id.
+            if kind == "tool_group" && data.agents.is_empty() {
+                continue;
+            }
+            let mut body = match body {
+                Ok(v) => v,
+                Err(e) => {
+                    warn!(error = %ErrorChain(&e), kind, "background stream: serialize failed");
+                    continue;
+                }
+            };
+            normalize_keys_to_snake_case(&mut body);
+            self.broadcaster.broadcast(aionui_api_types::WebSocketMessage::new(
+                "message.stream",
+                json!({
+                    "conversation_id": self.conversation_id,
+                    "user_id": self.user_id,
+                    "msg_id": msg_id,
+                    "turn_id": "",
+                    "type": kind,
+                    "data": body,
+                    "hidden": false,
+                }),
+            ));
+        }
+    }
+
+    /// Forward an out-of-turn frame to the frontend, projected EXACTLY as the per-turn
+    /// relay would project it (`type`/`data` read off the event's own serde tag, keys
+    /// normalized to snake_case — see `StreamRelay::forward_to_websocket_with_msg_id`),
+    /// so the frontend cannot tell which path delivered it.
+    ///
+    /// `msg_id`/`turn_id` are empty: a config snapshot belongs to no message and no
+    /// turn — that is precisely why it has no relay to ride.
+    fn forward_out_of_turn_frame(&self, ev: &AgentStreamEvent) {
+        let mut event_data = match serde_json::to_value(ev) {
+            Ok(v) => v,
+            Err(e) => {
+                warn!(error = %ErrorChain(&e), "background stream: out-of-turn frame serialize failed");
+                return;
+            }
+        };
+        normalize_keys_to_snake_case(&mut event_data);
+        self.broadcaster.broadcast(aionui_api_types::WebSocketMessage::new(
+            "message.stream",
+            json!({
+                "conversation_id": self.conversation_id,
+                "user_id": self.user_id,
+                "msg_id": "",
+                "turn_id": "",
+                "type": event_data.get("type").cloned().unwrap_or(json!("unknown")),
+                "data": event_data.get("data").cloned().unwrap_or(json!({})),
+                "hidden": false,
+            }),
+        ));
+    }
+
+    /// Run a CLI-initiated turn through a REGULAR relay so it gets everything a
+    /// user turn gets: WS forwarding, text segments, persistence, and the
+    /// `turn.completed` bookkeeping (the relay's default `complete_turn`).
+    async fn run_orphan_turn(
+        &self,
+        first: AgentStreamEvent,
+        rx: &mut broadcast::Receiver<AgentStreamEvent>,
+        serving_client_msg_id: Option<String>,
+    ) {
+        let msg_id = ConversationService::mint_msg_id();
+        let turn_id = ConversationService::mint_turn_id();
+        // Claim ONLY when this agent-started turn serves a user message (claude
+        // opens a follow-up turn for a mid-turn message it could not fold into the
+        // running one — design spec §6甲.2). A pure background continuation (a
+        // detached exec still streaming) must NOT be claimed: #758's whole point is
+        // that the user keeps working while it runs.
+        //
+        // Bind by name — `let _ = …` would drop the claim immediately.
+        let _agent_claim = serving_client_msg_id
+            .is_some()
+            .then(|| self.runtime_state.claim_for_agent_turn(&self.conversation_id, &turn_id))
+            .flatten();
+        info!(
+            conversation_id = %self.conversation_id,
+            turn_id = %turn_id,
+            first_frame = frame_kind(&first),
+            serving_client_msg_id = serving_client_msg_id.as_deref(),
+            claimed = _agent_claim.is_some(),
+            "background stream: CLI-initiated turn started"
+        );
+        let relay = StreamRelay::new(
+            self.conversation_id.clone(),
+            msg_id,
+            turn_id.clone(),
+            self.user_id.clone(),
+            self.repo.clone(),
+            self.broadcaster.clone(),
+        )
+        .with_runtime_state(Arc::clone(&self.runtime_state))
+        .with_persistence(self.persistence.clone());
+
+        let (feed_tx, feed_rx) = broadcast::channel::<AgentStreamEvent>(256);
+        let mut relay_task = tokio::spawn(relay.consume(feed_rx));
+        let _ = feed_tx.send(first);
+
+        let idle = std::time::Duration::from_millis(ORPHAN_TURN_IDLE_MS);
+        let outcome = loop {
+            tokio::select! {
+                joined = &mut relay_task => break joined,
+                next = tokio::time::timeout(idle, rx.recv()) => match next {
+                    Ok(Ok(ev)) => {
+                        // A user turn starting mid-orphan-turn takes the stream
+                        // over; stop feeding so two relays never double-process.
+                        // Our OWN claim (an agent turn serving a user message)
+                        // must not trip this — only a FOREIGN turn id counts.
+                        if self
+                            .runtime_state
+                            .active_turn_id_for(&self.conversation_id)
+                            .is_some_and(|active| active != turn_id)
+                        {
+                            warn!(
+                                conversation_id = %self.conversation_id,
+                                turn_id = %turn_id,
+                                "background stream: user turn started mid CLI-initiated turn; closing orphan feed"
+                            );
+                            drop(feed_tx);
+                            break relay_task.await;
+                        }
+                        let _ = feed_tx.send(ev);
+                    }
+                    // Source closed (instance torn down) or idle too long: close
+                    // the feed so the relay finalizes with what it has.
+                    Ok(Err(broadcast::error::RecvError::Closed)) | Err(_) => {
+                        drop(feed_tx);
+                        break relay_task.await;
+                    }
+                    Ok(Err(broadcast::error::RecvError::Lagged(n))) => {
+                        warn!(lagged = n, "background stream: orphan turn feed lagged");
+                        continue;
+                    }
+                },
+            }
+        };
+        match outcome {
+            Ok(outcome) => info!(
+                conversation_id = %self.conversation_id,
+                turn_id = %turn_id,
+                terminal = ?outcome.terminal,
+                "background stream: CLI-initiated turn finished"
+            ),
+            Err(e) => warn!(
+                conversation_id = %self.conversation_id,
+                turn_id = %turn_id,
+                error = %e,
+                "background stream: orphan relay task failed"
+            ),
+        }
+    }
+}
+
+fn frame_kind(ev: &AgentStreamEvent) -> &'static str {
+    match ev {
+        AgentStreamEvent::Text(_) => "text",
+        AgentStreamEvent::Thinking(_) => "thinking",
+        AgentStreamEvent::ToolCall(_) => "tool_call",
+        AgentStreamEvent::AcpToolCall(_) => "acp_tool_call",
+        AgentStreamEvent::ToolGroup(_) => "tool_group",
+        AgentStreamEvent::Plan(_) => "plan",
+        AgentStreamEvent::Permission(_) => "permission",
+        AgentStreamEvent::AcpPermission(_) => "acp_permission",
+        AgentStreamEvent::Ask(_) => "ask",
+        AgentStreamEvent::Tips(_) => "tips",
+        AgentStreamEvent::Error(_) => "error",
+        _ => "other",
+    }
+}
+
+/// Handle for one spawned watcher, used to detect instance replacement.
+pub(crate) struct BackgroundWatcherHandle {
+    pub instance_ptr: usize,
+    pub join: tokio::task::JoinHandle<()>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aionui_ai_agent::protocol::events::tool_call::{
+        ToolCallEventData, ToolCallStatus, ToolGroupEntry, ToolGroupStatus,
+    };
+    use aionui_ai_agent::protocol::events::{FinishEventData, MessageLifecycleData, TextEventData};
+    use aionui_common::now_ms;
+    use aionui_db::models::ConversationRow;
+    use aionui_db::{
+        IConversationRepository, IUserRepository, SqliteConversationRepository, SqliteUserRepository,
+        init_database_memory,
+    };
+
+    struct Rig {
+        user_id: String,
+        repo: Arc<SqliteConversationRepository>,
+        bus: Arc<aionui_realtime::BroadcastEventBus>,
+        runtime_state: Arc<ConversationRuntimeStateService>,
+        tx: broadcast::Sender<AgentStreamEvent>,
+        _watcher: tokio::task::JoinHandle<()>,
+    }
+
+    async fn rig() -> Rig {
+        rig_with_opts(false, PENDING_STARTED_TTL).await
+    }
+
+    async fn rig_with(title_only: bool) -> Rig {
+        rig_with_opts(title_only, PENDING_STARTED_TTL).await
+    }
+
+    async fn rig_with_opts(title_only: bool, pending_started_ttl: std::time::Duration) -> Rig {
+        let db = init_database_memory().await.unwrap();
+        let user_repo = SqliteUserRepository::new(db.pool().clone());
+        let user = user_repo.create_user("user-1", "hash").await.unwrap();
+        let repo = Arc::new(SqliteConversationRepository::new(db.pool().clone()));
+        repo.create(&ConversationRow {
+            id: "conv-1".into(),
+            user_id: user.id.clone(),
+            name: "test".into(),
+            r#type: "claude".into(),
+            extra: "{}".into(),
+            model: None,
+            status: Some("running".into()),
+            source: Some("aionui".into()),
+            channel_chat_id: None,
+            pinned: false,
+            pinned_at: None,
+            created_at: now_ms(),
+            updated_at: now_ms(),
+            project_id: None,
+            folder_id: None,
+            name_source: None,
+        })
+        .await
+        .unwrap();
+        let bus = Arc::new(aionui_realtime::BroadcastEventBus::new(64));
+        let runtime_state = Arc::new(ConversationRuntimeStateService::default());
+        let (tx, _) = broadcast::channel(64);
+        let watcher = BackgroundStreamWatcher {
+            conversation_id: "conv-1".into(),
+            user_id: user.id.clone(),
+            repo: repo.clone(),
+            broadcaster: bus.clone(),
+            persistence: RuntimePersistenceCoordinator::new(Arc::clone(&runtime_state)),
+            runtime_state: Arc::clone(&runtime_state),
+            title_only,
+            pending_started_ttl,
+        };
+        let handle = tokio::spawn(watcher.run(tx.subscribe()));
+        Rig {
+            user_id: user.id,
+            repo,
+            bus,
+            runtime_state,
+            tx,
+            _watcher: handle,
+        }
+    }
+
+    async fn rows_of_type(rig: &Rig, ty: &str) -> Vec<aionui_db::models::MessageRow> {
+        rig.repo
+            .list_messages_page(
+                &rig.user_id,
+                "conv-1",
+                &aionui_db::MessagePageParams {
+                    limit: 100,
+                    direction: aionui_db::MessagePageDirection::InitialLatest,
+                },
+            )
+            .await
+            .unwrap()
+            .items
+            .into_iter()
+            .filter(|m| m.r#type == ty)
+            .collect()
+    }
+
+    /// Poll until `check` yields Some or ~2s passes.
+    async fn eventually<T>(mut check: impl AsyncFnMut() -> Option<T>) -> Option<T> {
+        for _ in 0..40 {
+            if let Some(v) = check().await {
+                return Some(v);
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        None
+    }
+
+    fn settled_card_with(call_id: &str, status: ToolCallStatus) -> AgentStreamEvent {
+        AgentStreamEvent::WorkflowProgress(WorkflowProgressData {
+            card: ToolCallEventData {
+                call_id: call_id.into(),
+                name: "Bash".into(),
+                args: serde_json::json!({"command": "sleep 30"}),
+                status,
+                input: None,
+                output: None,
+                description: Some("sleep 30 · bg task b1 · 00:01".into()),
+                parent_call_id: None,
+            },
+            agents: vec![],
+            settle_only: false,
+        })
+    }
+
+    fn settled_card() -> AgentStreamEvent {
+        AgentStreamEvent::WorkflowProgress(WorkflowProgressData {
+            card: ToolCallEventData {
+                call_id: "toolu_bg".into(),
+                name: "Bash".into(),
+                args: serde_json::json!({"command": "sleep 30"}),
+                status: ToolCallStatus::Completed,
+                input: None,
+                output: None,
+                description: Some("sleep 30 · bg task b1 · 00:30".into()),
+                parent_call_id: None,
+            },
+            agents: vec![ToolGroupEntry {
+                call_id: "toolu_bg:1".into(),
+                name: "run:A".into(),
+                status: ToolGroupStatus::Success,
+                description: None,
+            }],
+            settle_only: false,
+        })
+    }
+
+    /// The spinner bug: an out-of-turn card settle used to reach only the live
+    /// WebSocket. After a reload the stored row still said `running`, so the
+    /// View Steps spinner never ended. The watcher must PERSIST the settle.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn out_of_turn_card_settle_is_persisted_and_forwarded() {
+        let rig = rig().await;
+        let mut ws = rig.bus.subscribe();
+        rig.tx.send(settled_card()).unwrap();
+
+        let row = eventually(async || {
+            rows_of_type(&rig, "tool_call")
+                .await
+                .into_iter()
+                .find(|m| m.id == "toolu_bg")
+        })
+        .await
+        .expect("the settled card must be persisted");
+        assert_eq!(row.status.as_deref(), Some("finish"), "settled → finish, spinner ends");
+        assert!(row.content.contains("00:30"), "latest headline stored: {}", row.content);
+
+        let group = rows_of_type(&rig, "tool_group").await;
+        assert_eq!(group.len(), 1, "agent rows persisted too");
+        assert_eq!(group[0].id, "toolu_bg:1");
+        assert_eq!(group[0].status.as_deref(), Some("finish"));
+
+        // And the live view got both frames.
+        let mut kinds = Vec::new();
+        while let Ok(evt) = ws.try_recv() {
+            if evt.name == "message.stream" {
+                kinds.push(evt.data["type"].as_str().unwrap_or("").to_owned());
+            }
+        }
+        assert!(kinds.contains(&"tool_call".to_owned()), "got {kinds:?}");
+        assert!(kinds.contains(&"tool_group".to_owned()), "got {kinds:?}");
+    }
+
+    /// The dead-conversation bug: after a background task completes, the CLI
+    /// starts an unprompted turn to report the result — previously dropped
+    /// wholesale. The watcher must run it through a REAL relay: text persisted,
+    /// forwarded, and the turn completed.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn cli_initiated_turn_is_delivered_persisted_and_completed() {
+        let rig = rig().await;
+        let mut ws = rig.bus.subscribe();
+        rig.tx
+            .send(AgentStreamEvent::Text(TextEventData {
+                content: "BG_DONE — the sleep finished.".into(),
+            }))
+            .unwrap();
+        rig.tx
+            .send(AgentStreamEvent::Finish(FinishEventData::default()))
+            .unwrap();
+
+        let row = eventually(async || rows_of_type(&rig, "text").await.into_iter().next())
+            .await
+            .expect("the report text must be persisted");
+        assert!(row.content.contains("BG_DONE"), "stored: {}", row.content);
+
+        // Live view saw the content, and the turn was properly closed out.
+        let mut saw_content = false;
+        let mut saw_completed = false;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while std::time::Instant::now() < deadline && !(saw_content && saw_completed) {
+            match tokio::time::timeout(std::time::Duration::from_millis(200), ws.recv()).await {
+                Ok(Ok(evt)) => {
+                    saw_content |= evt.name == "message.stream" && evt.data["type"] == "content";
+                    saw_completed |= evt.name == "turn.completed";
+                }
+                _ => break,
+            }
+        }
+        assert!(saw_content, "the report streams to the live view");
+        assert!(saw_completed, "the orphan turn is book-kept like a real turn");
+    }
+
+    /// A `settle_only` frame updates an EXISTING row and forwards; for an
+    /// unknown row it is dropped silently — never inserted, never forwarded
+    /// (the same unknown-terminal shape fires for workflow-internal refs that
+    /// never had a row; inserting would conjure junk cards).
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn settle_only_updates_existing_rows_and_drops_unknown_ones() {
+        let rig = rig().await;
+        // Seed a live card row the normal way.
+        rig.tx
+            .send(settled_card_with("toolu_seed", ToolCallStatus::Running))
+            .unwrap();
+        eventually(async || {
+            rows_of_type(&rig, "tool_call")
+                .await
+                .into_iter()
+                .find(|m| m.id == "toolu_seed" && m.status.as_deref() == Some("work"))
+        })
+        .await
+        .expect("seed row persisted as running");
+
+        let mut ws = rig.bus.subscribe();
+        // Status-only settle for the seeded row…
+        rig.tx
+            .send(AgentStreamEvent::WorkflowProgress(WorkflowProgressData {
+                card: ToolCallEventData {
+                    call_id: "toolu_seed".into(),
+                    name: String::new(),
+                    args: serde_json::Value::Null,
+                    status: ToolCallStatus::Canceled,
+                    input: None,
+                    output: None,
+                    description: None,
+                    parent_call_id: None,
+                },
+                agents: vec![],
+                settle_only: true,
+            }))
+            .unwrap();
+        // …and one for a row that never existed.
+        rig.tx
+            .send(AgentStreamEvent::WorkflowProgress(WorkflowProgressData {
+                card: ToolCallEventData {
+                    call_id: "toolu_ghost".into(),
+                    name: String::new(),
+                    args: serde_json::Value::Null,
+                    status: ToolCallStatus::Canceled,
+                    input: None,
+                    output: None,
+                    description: None,
+                    parent_call_id: None,
+                },
+                agents: vec![],
+                settle_only: true,
+            }))
+            .unwrap();
+
+        let row = eventually(async || {
+            rows_of_type(&rig, "tool_call")
+                .await
+                .into_iter()
+                .find(|m| m.id == "toolu_seed" && m.status.as_deref() == Some("finish"))
+        })
+        .await
+        .expect("the existing row must settle to finish");
+        // Merge-patch kept the row's own identity: name survives a status-only frame.
+        assert!(row.content.contains("\"name\":\"Bash\""), "name kept: {}", row.content);
+
+        // The ghost never materialized — no row, no WS frame.
+        assert!(
+            !rows_of_type(&rig, "tool_call")
+                .await
+                .iter()
+                .any(|m| m.id == "toolu_ghost"),
+            "a settle-only frame must never insert"
+        );
+        let mut ghost_forwarded = false;
+        while let Ok(evt) = ws.try_recv() {
+            if evt.name == "message.stream" && evt.data["data"]["call_id"] == "toolu_ghost" {
+                ghost_forwarded = true;
+            }
+        }
+        assert!(
+            !ghost_forwarded,
+            "a settle-only frame for an unknown row must not reach the UI"
+        );
+    }
+
+    /// Mid-turn interjection (Task 3): claude opens a follow-up turn for a
+    /// queued user message and announces it with `MessageLifecycle{Started}`.
+    /// That turn SERVES a user message, so the watcher must claim it — the UI
+    /// keeps showing `running` instead of flashing idle while the answer
+    /// streams — and release the claim when the turn finishes.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn agent_turn_serving_a_user_message_is_claimed() {
+        let rig = rig().await;
+        rig.tx
+            .send(AgentStreamEvent::MessageLifecycle(MessageLifecycleData {
+                client_msg_id: "cmsg-1".into(),
+                phase: MessageLifecyclePhase::Started,
+            }))
+            .unwrap();
+        rig.tx
+            .send(AgentStreamEvent::Text(TextEventData {
+                content: "answer to the interjected message".into(),
+            }))
+            .unwrap();
+
+        // The orphan turn must hold the conversation claim while it streams.
+        let turn = eventually(async || rig.runtime_state.active_turn_id_for("conv-1"))
+            .await
+            .expect("agent-started turn serving a user message must be claimed");
+        assert!(!turn.is_empty());
+
+        // …and release it once the turn ends.
+        rig.tx
+            .send(AgentStreamEvent::Finish(FinishEventData::default()))
+            .unwrap();
+        eventually(async || (!rig.runtime_state.is_claimed("conv-1")).then_some(()))
+            .await
+            .expect("the claim must be released after the turn finished");
+    }
+
+    /// B5 receipt badge (Task 4): a `MessageLifecycle{Started}` echo for a
+    /// mid-turn user message flips its persisted status "pending" → "finish"
+    /// and broadcasts `message.statusChanged`, so the 待接收 badge resolves.
+    /// A second echo (Completed) or an echo for an unknown/ordinary message
+    /// must not produce further updates.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn lifecycle_started_flips_pending_user_message_and_broadcasts() {
+        let rig = rig().await;
+        // Seed the mid-turn user row exactly as deliver_midturn_message writes it.
+        rig.repo
+            .insert_message(
+                &rig.user_id,
+                &aionui_db::models::MessageRow {
+                    id: "um-1".into(),
+                    conversation_id: "conv-1".into(),
+                    msg_id: Some("um-1".into()),
+                    r#type: "text".into(),
+                    content: serde_json::json!({"content": "mid-turn interjection"}).to_string(),
+                    position: Some("right".into()),
+                    status: Some("pending".into()),
+                    hidden: false,
+                    created_at: now_ms(),
+                    backend_turn_id: None,
+                },
+            )
+            .await
+            .unwrap();
+        // An ordinary (finish) user row an echo must never touch.
+        rig.repo
+            .insert_message(
+                &rig.user_id,
+                &aionui_db::models::MessageRow {
+                    id: "um-2".into(),
+                    conversation_id: "conv-1".into(),
+                    msg_id: Some("um-2".into()),
+                    r#type: "text".into(),
+                    content: serde_json::json!({"content": "ordinary"}).to_string(),
+                    position: Some("right".into()),
+                    status: Some("finish".into()),
+                    hidden: false,
+                    created_at: now_ms(),
+                    backend_turn_id: None,
+                },
+            )
+            .await
+            .unwrap();
+        let mut ws = rig.bus.subscribe();
+        rig.tx
+            .send(AgentStreamEvent::MessageLifecycle(MessageLifecycleData {
+                client_msg_id: "um-1".into(),
+                phase: MessageLifecyclePhase::Started,
+            }))
+            .unwrap();
+
+        let row = eventually(async || {
+            rows_of_type(&rig, "text")
+                .await
+                .into_iter()
+                .find(|m| m.id == "um-1" && m.status.as_deref() == Some("finish"))
+        })
+        .await
+        .expect("Started echo must flip the pending user row to finish");
+        assert_eq!(row.status.as_deref(), Some("finish"));
+
+        let mut saw_status_changed = false;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while std::time::Instant::now() < deadline && !saw_status_changed {
+            match tokio::time::timeout(std::time::Duration::from_millis(200), ws.recv()).await {
+                Ok(Ok(evt)) => {
+                    if evt.name == "message.statusChanged" {
+                        assert_eq!(evt.data["conversation_id"], "conv-1");
+                        assert_eq!(evt.data["msg_id"], "um-1");
+                        assert_eq!(evt.data["status"], "finish");
+                        saw_status_changed = true;
+                    }
+                }
+                _ => break,
+            }
+        }
+        assert!(saw_status_changed, "message.statusChanged must be broadcast");
+
+        // An echo for an already-finish row is a no-op (guarded flip).
+        rig.tx
+            .send(AgentStreamEvent::MessageLifecycle(MessageLifecycleData {
+                client_msg_id: "um-2".into(),
+                phase: MessageLifecyclePhase::Completed,
+            }))
+            .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let mut extra = 0;
+        while let Ok(evt) = ws.try_recv() {
+            if evt.name == "message.statusChanged" {
+                extra += 1;
+            }
+        }
+        assert_eq!(extra, 0, "an echo for an ordinary message must not broadcast");
+    }
+
+    /// #758 design intent: a pure background continuation (a detached exec
+    /// still streaming, with NO client_msg_id association) must stay UNCLAIMED
+    /// so the user keeps working — claiming it would lock the input box.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn pure_background_continuation_is_not_claimed() {
+        let rig = rig().await;
+        rig.tx
+            .send(AgentStreamEvent::Text(TextEventData {
+                content: "BG_DONE — the sleep finished.".into(),
+            }))
+            .unwrap();
+        // Assert WHILE the turn is still open — a wrongly taken claim would
+        // already be released again after Finish, hiding the bug.
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        assert!(
+            !rig.runtime_state.is_claimed("conv-1"),
+            "a pure background continuation must not be claimed"
+        );
+        rig.tx
+            .send(AgentStreamEvent::Finish(FinishEventData::default()))
+            .unwrap();
+        // And the turn is still delivered (persisted) as before.
+        eventually(async || rows_of_type(&rig, "text").await.into_iter().next())
+            .await
+            .expect("background turn content must still be delivered");
+    }
+
+    /// Review fix (Task 3): a `Started` whose terminal echo was LOST (broadcast
+    /// lag dropping frames, a CLI crash between phases) must not stay armed
+    /// forever — a LATER background continuation is not the turn that Started
+    /// announced (a serving turn's first frame follows Started within seconds)
+    /// and must NOT be claimed, or the input box locks for the whole detached
+    /// exec (#758's regression).
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn stale_started_without_terminal_echo_does_not_claim_a_later_turn() {
+        let rig = rig_with_opts(false, std::time::Duration::from_millis(50)).await;
+        rig.tx
+            .send(AgentStreamEvent::MessageLifecycle(MessageLifecycleData {
+                client_msg_id: "cmsg-lost".into(),
+                phase: MessageLifecyclePhase::Started,
+            }))
+            .unwrap();
+        // No Completed/Cancelled ever arrives; wait past the pending TTL.
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        rig.tx
+            .send(AgentStreamEvent::Text(TextEventData {
+                content: "much later background report".into(),
+            }))
+            .unwrap();
+        // Assert WHILE the turn is still open (a wrongly taken claim would be
+        // released again after Finish, hiding the bug).
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        assert!(
+            !rig.runtime_state.is_claimed("conv-1"),
+            "a stale Started must not claim a later background continuation"
+        );
+        rig.tx
+            .send(AgentStreamEvent::Finish(FinishEventData::default()))
+            .unwrap();
+        eventually(async || rows_of_type(&rig, "text").await.into_iter().next())
+            .await
+            .expect("background turn content must still be delivered");
+    }
+
+    /// A `Completed`/`Cancelled` lifecycle echo consumes the pending Started:
+    /// a LATER agent-started turn with no fresh association is a pure
+    /// background continuation again and must not inherit a stale claim.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn completed_lifecycle_clears_the_pending_user_message() {
+        let rig = rig().await;
+        rig.tx
+            .send(AgentStreamEvent::MessageLifecycle(MessageLifecycleData {
+                client_msg_id: "cmsg-1".into(),
+                phase: MessageLifecyclePhase::Started,
+            }))
+            .unwrap();
+        rig.tx
+            .send(AgentStreamEvent::MessageLifecycle(MessageLifecycleData {
+                client_msg_id: "cmsg-1".into(),
+                phase: MessageLifecyclePhase::Completed,
+            }))
+            .unwrap();
+        rig.tx
+            .send(AgentStreamEvent::Text(TextEventData {
+                content: "later unrelated background report".into(),
+            }))
+            .unwrap();
+        // Assert WHILE the turn is still open (see the test above).
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        assert!(
+            !rig.runtime_state.is_claimed("conv-1"),
+            "a consumed lifecycle must not leave a stale claim behind"
+        );
+        rig.tx
+            .send(AgentStreamEvent::Finish(FinishEventData::default()))
+            .unwrap();
+        eventually(async || rows_of_type(&rig, "text").await.into_iter().next())
+            .await
+            .expect("background turn content must still be delivered");
+    }
+
+    /// While a USER turn is active, its own relay owns every frame — the watcher
+    /// must not double-deliver.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn frames_during_an_active_turn_are_left_to_the_turn_relay() {
+        let rig = rig().await;
+        let claim = rig
+            .runtime_state
+            .try_claim_turn("conv-1", "turn-user")
+            .expect("claimed");
+        rig.tx
+            .send(AgentStreamEvent::Text(TextEventData {
+                content: "in-turn text the relay owns".into(),
+            }))
+            .unwrap();
+        rig.tx
+            .send(AgentStreamEvent::Finish(FinishEventData::default()))
+            .unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        assert!(
+            rows_of_type(&rig, "text").await.is_empty(),
+            "the watcher must stay out of an active turn"
+        );
+        drop(claim);
+    }
+
+    /// A title-only (ACP manager) watcher applies titles even while a user
+    /// turn is ACTIVE — pi/omp fire session_info_update ~1ms before the turn's
+    /// Finish, racing the per-turn relay's exit; the gate-free consumer is the
+    /// only one that reliably sees it. Non-title frames must stay untouched
+    /// (no orphan turns for ACP instances).
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn title_only_watcher_applies_title_even_during_active_turn() {
+        let rig = rig_with(true).await;
+        let claim = rig
+            .runtime_state
+            .try_claim_turn("conv-1", "turn-user")
+            .expect("claimed");
+        rig.tx
+            .send(AgentStreamEvent::AcpSessionInfo(serde_json::json!({
+                "title": "创建带时间戳的JSON文件"
+            })))
+            .unwrap();
+        rig.tx
+            .send(AgentStreamEvent::Text(TextEventData {
+                content: "acp content the manager path owns".into(),
+            }))
+            .unwrap();
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        loop {
+            let row = rig.repo.get(&rig.user_id, "conv-1").await.unwrap().unwrap();
+            if row.name == "创建带时间戳的JSON文件" {
+                assert_eq!(row.name_source.as_deref(), Some("agent"));
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "title-only watcher must apply mid-turn titles, name still {:?}",
+                row.name
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        // The stray text frame must NOT spawn an orphan turn on the ACP path.
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        assert!(
+            rows_of_type(&rig, "text").await.is_empty(),
+            "title-only watcher must never deliver content frames"
+        );
+        drop(claim);
+    }
+
+    /// The claude generate_session_title reply lands seconds AFTER the first
+    /// turn's Finish (live 2026-08-04), between turns — the watcher must apply
+    /// it (guarded rename + nameUpdated broadcast), since the per-turn relay is
+    /// already gone.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn between_turns_agent_title_renames_and_broadcasts() {
+        let rig = rig().await;
+        let mut ws = rig.bus.subscribe();
+        rig.tx
+            .send(AgentStreamEvent::AcpSessionInfo(serde_json::json!({
+                "title": "Fix login bug"
+            })))
+            .unwrap();
+
+        // Poll until the watcher applies the rename (bounded).
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        loop {
+            let row = rig.repo.get(&rig.user_id, "conv-1").await.unwrap().unwrap();
+            if row.name == "Fix login bug" {
+                assert_eq!(row.name_source.as_deref(), Some("agent"));
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "watcher did not apply the between-turns title, name still {:?}",
+                row.name
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+
+        let mut saw_name_updated = false;
+        while let Ok(msg) = ws.try_recv() {
+            if msg.name == "conversation.nameUpdated" {
+                saw_name_updated = true;
+                assert_eq!(msg.data["conversation_id"], "conv-1");
+                assert_eq!(msg.data["name"], "Fix login bug");
+            }
+        }
+        assert!(saw_name_updated, "nameUpdated must be broadcast");
+    }
+
+    /// Live 2026-08-19 (conv a7f2838a): the title reply landed 0.6s AFTER the
+    /// watcher had lent its receiver to a CLI-initiated orphan turn
+    /// (`run_orphan_turn`), so the watcher's own gate-free title arm never saw
+    /// the frame — the nested relay was the only consumer, dropped it, and the
+    /// one-shot claude latch was already completed (no retry). A title frame
+    /// arriving MID-orphan-turn must still rename the conversation.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn title_arriving_mid_orphan_turn_still_renames() {
+        let rig = rig().await;
+        // Orphan-turn content first: the watcher claims the turn and hands its
+        // receiver to the nested relay before the title frame arrives.
+        rig.tx
+            .send(AgentStreamEvent::Text(TextEventData {
+                content: "background continuation".into(),
+            }))
+            .unwrap();
+        rig.tx
+            .send(AgentStreamEvent::AcpSessionInfo(serde_json::json!({
+                "title": "Fix login bug"
+            })))
+            .unwrap();
+        rig.tx
+            .send(AgentStreamEvent::Finish(FinishEventData::default()))
+            .unwrap();
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        loop {
+            let row = rig.repo.get(&rig.user_id, "conv-1").await.unwrap().unwrap();
+            if row.name == "Fix login bug" {
+                assert_eq!(row.name_source.as_deref(), Some("agent"));
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "a title arriving mid-orphan-turn must still be applied, name still {:?}",
+                row.name
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+    }
+
+    /// A config-options snapshot arriving BETWEEN turns must still reach the frontend.
+    ///
+    /// This is exactly when a mode confirmation lands for the backends that apply a
+    /// switch only from the next turn (codex: "for subsequent turns", verified in
+    /// samples/codex-cli/0.146.0/schema/v2/ThreadSettingsUpdateParams.json), and also
+    /// when an agent changes mode on its own (claude's autonomous plan-exit emits a
+    /// `system/status{permissionMode}` while idle). The per-turn relay is gone by then,
+    /// so the watcher is the only path left — dropping the frame here left the picker
+    /// showing a mode the agent was no longer in, with no way to notice.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn between_turns_config_option_snapshot_is_forwarded() {
+        let rig = rig().await;
+        let mut ws = rig.bus.subscribe();
+        rig.tx
+            .send(AgentStreamEvent::AcpConfigOption(serde_json::json!({
+                "config_options": [{
+                    "id": "mode",
+                    "category": "mode",
+                    "type": "select",
+                    "current_value": "plan",
+                    "options": [{"value": "plan"}, {"value": "default"}]
+                }]
+            })))
+            .unwrap();
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        let mut forwarded: Option<aionui_api_types::WebSocketMessage<serde_json::Value>> = None;
+        while std::time::Instant::now() < deadline && forwarded.is_none() {
+            while let Ok(msg) = ws.try_recv() {
+                if msg.name == "message.stream" && msg.data["type"] == "acp_config_option" {
+                    forwarded = Some(msg);
+                    break;
+                }
+            }
+            if forwarded.is_none() {
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+        }
+        let msg = forwarded.expect("an out-of-turn acp_config_option must be forwarded to the frontend");
+        assert_eq!(msg.data["conversation_id"], "conv-1");
+        assert_eq!(
+            msg.data["data"]["config_options"][0]["current_value"], "plan",
+            "the confirmed value must survive the hop"
+        );
+    }
+
+    /// The ACP analogue of the test above. An ACP agent reports an applied mode via
+    /// `current_mode_update`, which translates to `AcpModeInfo` — and per the ACP schema
+    /// the agent may change mode on its own ("Agents may also change modes autonomously
+    /// and notify the client via `current_mode_update`",
+    /// agent-client-protocol-schema-1.5.0/src/v1/agent.rs), i.e. with no turn in flight.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn between_turns_acp_mode_info_is_forwarded() {
+        let rig = rig().await;
+        let mut ws = rig.bus.subscribe();
+        rig.tx
+            .send(AgentStreamEvent::AcpModeInfo(serde_json::json!({
+                "current_mode_id": "plan"
+            })))
+            .unwrap();
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        let mut forwarded: Option<aionui_api_types::WebSocketMessage<serde_json::Value>> = None;
+        while std::time::Instant::now() < deadline && forwarded.is_none() {
+            while let Ok(msg) = ws.try_recv() {
+                if msg.name == "message.stream" && msg.data["type"] == "acp_mode_info" {
+                    forwarded = Some(msg);
+                    break;
+                }
+            }
+            if forwarded.is_none() {
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+        }
+        let msg = forwarded.expect("an out-of-turn acp_mode_info must be forwarded to the frontend");
+        assert_eq!(msg.data["data"]["current_mode_id"], "plan");
+    }
+}

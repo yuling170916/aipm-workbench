@@ -1,0 +1,47 @@
+{
+  "promptExamplesHint": "Bu talimatları deneyin",
+  "defaultPrompts": {
+    "understand": "Bu projeyi incele ve ne yaptığını, nereden başlamam gerektiğini basit bir dille anlat",
+    "cleanup": "Bu klasördeki yinelenen ve gereksiz dosyaları bul, onaylamam için listele",
+    "create": "Bana şık bir kişisel ana sayfa yap ve bitince doğrudan açıp göster"
+  },
+  "selectAssistantHint": "Göreve başlamak için bir asistan seçin",
+  "workspace": {
+    "workInProject": "Projede çalış",
+    "optional": "İsteğe bağlı",
+    "clearWorkspace": "Temizle",
+    "specifyWorkspace": "Proje klasörü seç",
+    "searchPlaceholder": "Proje ara…",
+    "noProject": "Proje Yok"
+  },
+  "home": {
+    "nav": "Ana sayfa",
+    "workspace": "Çalışma alanı",
+    "eyebrow": "Yapay zekâ ürün ortağınız",
+    "title": "İyi fikirleri harika ürünlere dönüştürün.",
+    "description": "Gereksinimlerden PRD’ye uzanan süreçte önemli kararlara daha çok zaman ayırın.",
+    "placeholder": "Ürün fikrinizi anlatın veya gereksinim belgelerini ekleyin…",
+    "addMaterials": "Materyal ekle",
+    "organizeTitle": "Gereksinimleri düzenle",
+    "organizeDescription": "Dağınık bilgileri gereksinim kartlarına dönüştürün",
+    "prdTitle": "PRD yaz",
+    "prdDescription": "Gereksinim kartlarından bir belge oluşturun",
+    "reviewTitle": "Eksikleri bulun",
+    "reviewDescription": "Kuralları, sınır durumlarını ve kabul kriterlerini kontrol edin",
+    "recentTitle": "Son projelerinizden birine devam edin",
+    "projectsLoading": "Projeler yükleniyor…",
+    "projectsEmpty": "Henüz proje yok. Başlamak için bir proje oluşturun.",
+    "projectsError": "Projeler yüklenemedi. Lütfen tekrar deneyin.",
+    "retry": "Yeniden yükle",
+    "refreshProjects": "Projeleri yenile",
+    "createProject": "Yeni proje",
+    "updatedAt": "Güncelleme: {{time}}",
+    "projectWorkspace": "Çalışma alanı: {{path}}",
+    "projectNoActivity": "Henüz etkinlik yok",
+    "prompts": {
+      "organize": "Aşağıdaki ürün fikrini ve materyalleri gereksinim kartlarına dönüştürmeme yardımcı ol. Önce eksik bağlam hakkında sorular sor. Kullanıcı sorununu, hedef kullanıcıları, kullanım senaryolarını, kapsamı, önceliği ve kabul kriterlerini ekle. Gerçekleri ve varsayımları açıkça ayır.\n\nÜrün fikri ve materyaller: ",
+      "prd": "Aşağıdaki gereksinimlerden incelemeye hazır bir PRD yazmama yardımcı ol. Önce eksik bilgileri netleştir; ardından hedefleri, kullanıcı akışlarını, özellikleri, etkileşim kurallarını, sınır durumlarını, kabul kriterlerini ve açık soruları ele al. İş verilerini uydurma.\n\nGereksinimler: ",
+      "review": "Aşağıdaki gereksinimleri veya PRD’yi eksik kurallar, izinler, sınır durumları, hata akışları ve kabul kriterleri açısından incele. Her sorunu etkisi, önerilen çözümü ve doğrulanması gereken sorularla birlikte listele.\n\nGereksinimler veya PRD: "
+    }
+  }
+}

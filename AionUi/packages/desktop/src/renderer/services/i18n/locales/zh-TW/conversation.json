@@ -1,0 +1,786 @@
+{
+  "welcome": {
+    "title": "Hi，今天有什麼安排？",
+    "placeholder": "發送訊息、上傳檔案、開啟資料夾、建立定時任務，或輸入 / 喚起命令...",
+    "linkFolder": "開啟資料夾",
+    "newConversation": "新增對話",
+    "selectModel": "選擇模型",
+    "useCliModel": "選擇模型",
+    "modelSwitchNotSupported": "首次連接後將顯示可用模型列表。請先發送訊息以連接並載入可用模型。",
+    "specifyWorkspace": "選擇專案",
+    "currentWorkspace": "目前專案",
+    "clearWorkspace": "移除專案",
+    "openFolder": "Open Folder",
+    "none": "None",
+    "quickActionsTitle": "AIPM工作台 能做什麼？",
+    "quickActionFeedback": "反饋問題",
+    "quickActionStar": "喜歡我們？點個星吧",
+    "skillsMarket": "AIPM工作台 Skills Market",
+    "skillsMarketDesc": "按需搜尋並啟用社區 Skills，一次設定，所有Agent通用。",
+    "skillsMarketDetails": "詳情 >>"
+  },
+  "history": {
+    "recents": "最近",
+    "today": "今天",
+    "yesterday": "昨天",
+    "recent7Days": "最近7天",
+    "earlier": "更早",
+    "noHistory": "暫無對話記錄",
+    "deleteTitle": "刪除",
+    "deleteConfirm": "確定要刪除此對話嗎？",
+    "confirmDelete": "刪除",
+    "cancelDelete": "取消",
+    "editName": "編輯名稱",
+    "saveName": "儲存",
+    "cancelEdit": "取消",
+    "rename": "重新命名",
+    "createCronTask": "建立排程任務",
+    "renameTitle": "重新命名對話",
+    "renamePlaceholder": "請輸入新名稱",
+    "renameSuccess": "重新命名成功",
+    "renameFailed": "重新命名失敗",
+    "batchManage": "Batch Manage",
+    "batchModeExit": "Exit Batch Mode",
+    "selectAll": "Select All",
+    "selectedCount": "{{count}} selected",
+    "batchExport": "Batch Export",
+    "batchExportConfirm": "Export {{count}} selected topics?",
+    "batchDelete": "Batch Delete",
+    "batchDeleteConfirm": "Delete {{count}} selected topics?",
+    "batchDeleteConfirm_one": "Delete {{count}} selected topics?",
+    "batchDeleteConfirm_other": "Delete {{count}} selected topics?",
+    "batchDeleteSuccess": "{{count}} topics deleted",
+    "batchDeleteSuccess_one": "{{count}} topics deleted",
+    "batchDeleteSuccess_other": "{{count}} topics deleted",
+    "batchNoSelection": "Please select topics first",
+    "export": "Export",
+    "exportDialogTitle": "Export Topics",
+    "exportDialogSingleDescription": "Export current topic conversation records (JSON + Markdown) and project files into a ZIP package.",
+    "exportDialogBatchDescription": "Export {{count}} selected topics' conversation records (JSON + Markdown) and project files into one ZIP package.",
+    "exportTargetFolder": "Export To Folder",
+    "exportSelectFolder": "Please select an export folder",
+    "exportDialogHint": "Folder selection follows the same interaction as changing the project.",
+    "exporting": "Exporting...",
+    "exportSuccess": "Export succeeded",
+    "exportCanceled": "Export canceled",
+    "exportFailed": "Export failed",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "markAsUnread": "標為未讀",
+    "markAsRead": "標為已讀",
+    "pinned": "Pinned",
+    "pinFailed": "Pin operation failed",
+    "pinnedSection": "Pinned",
+    "deleteSuccess": "刪除成功",
+    "deleteFailed": "刪除失敗",
+    "projectsSection": "專案",
+    "conversationsSection": "對話",
+    "newConversationInProject": "在此專案中新建對話",
+    "deleting": "刪除中...",
+    "reorderPinned": "拖動以調整置頂會話順序",
+    "forkedFrom": "分叉自「{{name}}」",
+    "forkedConversation": "分叉對話",
+    "archive": "封存",
+    "archiveSuccess": "已封存",
+    "archiveFailed": "封存失敗",
+    "batchArchive": "批次歸檔",
+    "batchArchiveConfirm": "確定歸檔已選的 {{count}} 個話題嗎？歸檔後可在設定的歸檔頁恢復或刪除。",
+    "batchArchiveSuccess": "已歸檔 {{count}} 個話題",
+    "archiveProject": "歸檔專案",
+    "archiveProjectTitle": "歸檔專案",
+    "archiveProjectConfirm": "確定歸檔專案「{{name}}」嗎？專案下的 {{count}} 個對話也會一起歸檔。歸檔後可在設定的歸檔頁恢復或刪除。",
+    "archiving": "歸檔中..."
+  },
+  "historySearch": {
+    "tooltip": "搜尋訊息",
+    "title": "搜尋對話內容",
+    "shortTitle": "搜尋",
+    "description": "透過關鍵字搜尋歷史訊息，滾動載入更多，點擊跳轉到匹配的訊息。",
+    "placeholder": "搜尋訊息內容...",
+    "idle": "輸入關鍵字搜尋訊息",
+    "empty": "沒有找到匹配的訊息",
+    "loadingMore": "載入更多...",
+    "untitled": "未命名對話"
+  },
+  "dropdown": {
+    "cliAgents": "CLI Agents",
+    "presetAssistants": "預設助手"
+  },
+  "noAgentsAvailable": "沒有可用的 Agent",
+  "noModelConfigured": "未設定模型，請前往設定頁面設定。",
+  "createFailed": "建立對話失敗",
+  "createError": {
+    "pathVariants": {
+      "WORKSPACE_PATH_UNAVAILABLE": "所選工作區路徑不可用。請確認工作區路徑「{{workspacePath}}」確實存在且可存取。"
+    },
+    "codes": {
+      "TEAM_ASSISTANT_ID_REQUIRED": "建立團隊前請先選擇助手。",
+      "TEAM_ASSISTANT_NOT_FOUND": "助手 {{assistantId}} 已不可用。請重新整理助手列表後再選擇。",
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": "請使用 assistant_id，不要再傳 {{field}}。"
+    }
+  },
+  "agentError": {
+    "fallbackTitle": "Agent 未能回覆",
+    "errorCode": "錯誤碼",
+    "retryable": "可重試",
+    "notRetryable": "需先處理設定",
+    "resolutionPrefix": "建議：",
+    "resolution": {
+      "retry": "Retry later, or send this message again.",
+      "wait_for_current_response": "Wait for the current response to finish before sending another message.",
+      "start_new_session": "Start a new conversation before continuing.",
+      "reconnect_agent": "Restart or reconnect the selected agent, then retry.",
+      "check_agent_login": "Log in to the selected agent, or refresh its credentials.",
+      "check_agent_installation": "Check the agent installation and local command configuration.",
+      "check_agent_version": "請檢查 Agent 協議和版本相容性。",
+      "check_local_command": "Install the missing command, or confirm it has been added to PATH.",
+      "check_provider_credentials": "Check the model provider API key or account credentials in settings.",
+      "check_provider_billing": "Check the model provider balance, credits, or quota.",
+      "check_provider_base_url": "Check the model provider Base URL, API path, proxy, and API compatibility.",
+      "change_model": "Choose a model that is available for the current account and supports this request.",
+      "reduce_context": "Reduce the message content, referenced files, or context size, then retry.",
+      "send_feedback": "Send feedback with logs so the team can investigate."
+    },
+    "ownership": {
+      "aionui": "應用",
+      "user_agent": "Agent",
+      "user_llm_provider": "模型服務商",
+      "unknown_upstream": "上游"
+    },
+    "codes": {
+      "AIONUI_STREAM_BROKEN": {
+        "title": "回應流異常中斷",
+        "body": "訊息已送出，但回應流異常結束。請先重試；如果反覆出現，可以提交回饋。"
+      },
+      "AIONUI_STATE_INCONSISTENT": {
+        "title": "會話狀態不一致",
+        "body": "目前對話狀態和後台記錄不同步。請重新開啟應用程式或建立新對話後再試。"
+      },
+      "AIONUI_PERMISSION_ERROR": {
+        "title": "無法存取所需資源",
+        "body": "本機權限或檔案存取檢查失敗。請確認專案路徑和應用程式權限後重試。"
+      },
+      "AIONUI_INTERNAL_ERROR": {
+        "title": "應用處理失敗",
+        "body": "本次請求在應用程式處理過程中失敗。請先重試一次；如果仍然出現，可以提交回饋。"
+      },
+      "AIONUI_CONVERSATION_BUSY": {
+        "title": "會話正在處理上一則訊息",
+        "body": "目前會話還有回覆尚未結束。請等待本次回覆完成後再傳送新的訊息。"
+      },
+      "USER_AGENT_NOT_INSTALLED": {
+        "title": "所選 Agent 未安裝",
+        "body": "請先安裝該 Agent 依賴的 CLI 或應用程式，然後在設定中重新連線。"
+      },
+      "USER_AGENT_STARTUP_FAILED": {
+        "title": "所選 Agent 啟動失敗",
+        "body": "Agent 程序在準備完成前退出了。請檢查安裝、登入狀態和本機命令設定。"
+      },
+      "USER_AGENT_OPENCLAW_GATEWAY_UNREACHABLE": {
+        "title": "OpenClaw Gateway 未執行",
+        "body": "OpenClaw Gateway 未執行，或無法連線到 127.0.0.1:18789。\n\n請啟動 OpenClaw Gateway 後重試。你可以在終端機執行：\nopenclaw gateway status\nopenclaw gateway start"
+      },
+      "USER_AGENT_DISCONNECTED": {
+        "title": "所選 Agent 已中斷連線",
+        "body": "Agent 在處理本次訊息時中斷了連線。請重新啟動或重新連線 Agent 後重試。"
+      },
+      "USER_AGENT_AUTH_REQUIRED": {
+        "title": "所選 Agent 需要登入",
+        "body": "請先登入該 Agent 或更新憑證，然後重新傳送訊息。"
+      },
+      "USER_AGENT_SESSION_NOT_FOUND": {
+        "title": "Agent 會話已遺失",
+        "body": "Agent 回報找不到目前會話，或已不再識別該會話。"
+      },
+      "USER_AGENT_UNSUPPORTED_METHOD": {
+        "title": "所選 Agent 不支援該操作",
+        "body": "Agent 回報請求的 ACP 方法不受支援，或目前不可用。"
+      },
+      "USER_AGENT_INVALID_PARAMS": {
+        "title": "所選 Agent 拒絕了請求",
+        "body": "Agent 回報請求參數無效。"
+      },
+      "USER_AGENT_HANDSHAKE_FAILED": {
+        "title": "Agent 握手失敗",
+        "body": "所選 Agent 未能完成啟動握手。請重新啟動或重新連線該 Agent 後重試。"
+      },
+      "USER_AGENT_HANDSHAKE_TIMEOUT": {
+        "title": "Agent 握手逾時",
+        "body": "所選 Agent 未在預期時間內完成啟動握手。請確認它沒有卡在啟動或登入流程中，然後重試。"
+      },
+      "USER_AGENT_ACP_INIT_FAILED": {
+        "title": "Agent 協議初始化失敗",
+        "body": "應用程式無法和該 Agent 初始化 Agent Client Protocol 會話。"
+      },
+      "USER_AGENT_PROTOCOL_PARSE_ERROR": {
+        "title": "Agent 回報了協議解析錯誤",
+        "body": "所選 Agent 回報某則 ACP/JSON-RPC 訊息無法解析。"
+      },
+      "USER_AGENT_INVALID_REQUEST": {
+        "title": "Agent 回報協議請求無效",
+        "body": "所選 Agent 回報 ACP/JSON-RPC 請求物件無效。"
+      },
+      "USER_AGENT_RESOURCE_NOT_FOUND": {
+        "title": "Agent 找不到所需資源",
+        "body": "所選 Agent 回報找不到所需資源，例如某個檔案。"
+      },
+      "USER_AGENT_PROTOCOL_ERROR": {
+        "title": "Agent 回傳了協議錯誤",
+        "body": "所選 Agent 回傳了非標準 ACP 錯誤碼。"
+      },
+      "USER_AGENT_PROTOCOL_MISMATCH": {
+        "title": "Agent 協議版本不相容",
+        "body": "應用程式和所選 Agent 無法使用相容的 ACP 協議版本。"
+      },
+      "USER_AGENT_NO_PREVIOUS_SESSION": {
+        "title": "無法恢復上一次 Agent 會話",
+        "body": "Agent 無法恢復之前的會話狀態。請建立新對話後繼續。"
+      },
+      "USER_AGENT_COMMAND_NOT_FOUND": {
+        "title": "找不到 Agent 命令",
+        "body": "未找到已設定的 Agent 命令。請先安裝該命令，或在設定中更新命令路徑。"
+      },
+      "USER_AGENT_MISSING_ENV": {
+        "title": "Agent 缺少必要環境變數",
+        "body": "該 Agent 需要的環境變數尚未設定。請在設定或 shell 環境中補齊後重新連線。"
+      },
+      "USER_LLM_PROVIDER_AUTH_FAILED": {
+        "title": "模型服務商驗證失敗",
+        "body": "所選服務商拒絕了 API Key 或帳號憑證。請檢查模型設定後重試。"
+      },
+      "USER_LLM_PROVIDER_AWS_SSO_EXPIRED": {
+        "title": "AWS SSO 工作階段已過期",
+        "body": "AWS SSO 工作階段已過期。請在終端機為對應的 profile 執行 'aws sso login'，然後重新傳送訊息。"
+      },
+      "USER_LLM_PROVIDER_CONFIG_ERROR": {
+        "title": "模型服務商設定無效",
+        "body": "目前設定無法建構服務商請求。請檢查憑證、區域、Base URL 和服務商專屬設定後再重試。"
+      },
+      "USER_LLM_PROVIDER_MODEL_NOT_FOUND": {
+        "title": "找不到所選模型",
+        "body": "服務商不識別目前模型名稱。請在設定中選擇可用模型後重試。"
+      },
+      "USER_LLM_PROVIDER_RATE_LIMITED": {
+        "title": "模型服務商觸發限流",
+        "body": "服務商暫時限制了請求。請稍後重試、降低請求頻率，或切換模型。"
+      },
+      "USER_LLM_PROVIDER_TIMEOUT": {
+        "title": "模型服務商回應逾時",
+        "body": "服務商沒有及時返回結果。請稍後重試，或切換到更穩定的服務商。"
+      },
+      "USER_LLM_PROVIDER_NETWORK_ERROR": {
+        "title": "無法連線模型服務商",
+        "body": "網路或 DNS 錯誤導致無法存取服務商。請檢查網路、代理和 Base URL。"
+      },
+      "USER_LLM_PROVIDER_GATEWAY_ERROR": {
+        "title": "模型服務商暫不可用",
+        "body": "服務商返回了閘道或服務異常。請稍後重試，或切換到其他服務商。"
+      },
+      "USER_LLM_PROVIDER_PERMISSION_DENIED": {
+        "title": "模型服務商無權處理請求",
+        "body": "目前服務商帳號沒有使用該模型或執行該操作的權限。請檢查帳號權限，或切換其他模型。"
+      },
+      "USER_LLM_PROVIDER_BILLING_REQUIRED": {
+        "title": "模型服務商需要啟用計費",
+        "body": "所選服務商需要有效的計費、餘額或額度後才能完成請求。請處理後重試。"
+      },
+      "USER_LLM_PROVIDER_UNSUPPORTED_MODEL": {
+        "title": "模型不支援本次請求",
+        "body": "所選模型不可用，或不支援本次請求所需能力。請切換到受支援的模型後重試。"
+      },
+      "USER_LLM_PROVIDER_ENDPOINT_NOT_FOUND": {
+        "title": "找不到模型服務商介面",
+        "body": "服務商介面或 API 路徑不存在。請檢查 Base URL、部署名稱和 API 相容性。"
+      },
+      "USER_LLM_PROVIDER_INVALID_REQUEST": {
+        "title": "模型服務商拒絕了請求",
+        "body": "服務商認為本次請求無效。請簡化訊息內容，或檢查模型和服務商設定。"
+      },
+      "USER_LLM_PROVIDER_INVALID_TOOL_SCHEMA": {
+        "title": "模型服務商拒絕了工具定義",
+        "body": "服務商拒絕了本次請求中的工具定義。請更新 Agent，或停用不相容的工具後重試。"
+      },
+      "USER_LLM_PROVIDER_CONTEXT_TOO_LARGE": {
+        "title": "上下文超出模型限制",
+        "body": "本次請求超出了模型上下文限制。請減少訊息內容、引用檔案或對話歷史後重試。"
+      },
+      "USER_LLM_PROVIDER_EMPTY_RESPONSE": {
+        "title": "模型服務商返回了空回應",
+        "body": "服務商完成了請求，但沒有返回可用內容。請先重試一次；如果反覆出現，可切換服務商。"
+      },
+      "WORKSPACE_PATH_RUNTIME_UNAVAILABLE": {
+        "title": "目前 Agent 在該工作區路徑下執行失敗",
+        "body": "請確認目前工作區路徑確實存在。",
+        "bodyWithPath": "目前 Agent 在該工作區路徑下執行失敗。請確認工作區路徑「{{workspacePath}}」確實存在。"
+      },
+      "UNKNOWN_UPSTREAM_ERROR": {
+        "title": "上游 Agent 或模型服務商出錯",
+        "body": "收到上游錯誤，但暫時無法判斷它來自 Agent、模型服務商、網路還是本機環境。"
+      },
+      "MCP_HTTP_RESPONSE_READ_FAILED": {
+        "title": "讀取團隊輔助程序回應失敗",
+        "body": "AIPM工作台 無法讀取本地團隊輔助程序的回應。請先重試一次，若持續發生再重新啟動應用。"
+      },
+      "MCP_TOOL_REMOTE_ERROR": {
+        "title": "本地團隊輔助程序拒絕了這次請求",
+        "body": "本地團隊輔助程序在處理這次請求時回傳了錯誤。請查看下方詳情，調整團隊操作後再重試。"
+      },
+      "MCP_TOOL_RESPONSE_UNEXPECTED": {
+        "title": "團隊輔助程序回傳了異常回應",
+        "body": "AIPM工作台 收到了本地團隊輔助程序的異常回應。請先重試一次，若持續發生再回報問題。"
+      },
+      "MCP_TCP_READ_FAILED": {
+        "title": "讀取本地團隊輔助程序失敗",
+        "body": "AIPM工作台 無法讀取本地團隊輔助程序的 TCP 回應。請先重試一次，如仍失敗可重新啟動應用。"
+      },
+      "TEAM_SERVICE_UNAVAILABLE": {
+        "title": "團隊服務尚未就緒",
+        "body": "本地團隊對話仍在啟動中，或剛剛被中斷。請稍候再試。"
+      },
+      "TEAM_ASSISTANT_ID_REQUIRED": {
+        "title": "必須先選擇隊友助手",
+        "body": "建立或拉起隊友前，請先從可用助手目錄選擇一個真實 assistant。"
+      },
+      "TEAM_ASSISTANT_NOT_FOUND": {
+        "title": "所選助手已不可用",
+        "body": "請重新整理助手目錄，然後為這位隊友重新選擇一個助手。"
+      },
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": {
+        "title": "請求仍在使用舊的團隊身份欄位",
+        "body": "這個團隊操作必須使用 assistant_id，不能再使用舊的 backend 或 agent 欄位。"
+      }
+    }
+  },
+  "workspace": {
+    "title": "專案",
+    "pasteConfirm_title": "貼上檔案",
+    "pasteConfirm_message": "確定要將 '{{name}}' 貼上到選中的資料夾 ({{target}}) 嗎？",
+    "pasteConfirm_paste": "貼上",
+    "pasteConfirm_cancel": "取消",
+    "pasteConfirm_noAsk": "不再提示",
+    "pasteConfirm_fileName": "檔案名稱",
+    "pasteConfirm_targetFolder": "目標資料夾",
+    "pasteConfirm_multipleFiles": "{{count}} 個檔案",
+    "empty": "空的",
+    "emptyDescription": "上傳檔案或開啟資料夾後，檔案將顯示在這裡",
+    "searchPlaceholder": "搜尋檔案...",
+    "createNewConversation": "當前空間創建新會話",
+    "search.empty": "搜索結果為空",
+    "addFile": "新增檔案",
+    "refresh": "重新整理",
+    "temporarySpace": "臨時空間",
+    "dragOverlayTitle": "拖曳匯入",
+    "dragOverlayDesc": "將檔案或資料夾拖曳到此處即可複製到目前專案。",
+    "dragOverlayHint": "提示：若已選取資料夾，會直接匯入該資料夾。",
+    "dragNoFiles": "未偵測到有效的檔案或資料夾，請從檔案總管或 Finder 拖曳。",
+    "dragFailed": "拖曳匯入失敗，請重試。",
+    "contextMenu": {
+      "open": "開啟",
+      "openLocation": "開啟檔案所在資料夾",
+      "preview": "預覽",
+      "previewFailed": "預覽失敗",
+      "deleteTitle": "刪除檔案",
+      "deleteConfirm": "此操作會刪除系統所在檔案，確認刪除嗎？",
+      "deleteSuccess": "刪除成功",
+      "deleteFailed": "刪除失敗",
+      "rename": "重新命名",
+      "renameTitle": "重新命名",
+      "renamePlaceholder": "輸入新的名稱",
+      "renameSuccess": "重新命名成功",
+      "renameFailed": "重新命名失敗",
+      "renameEmpty": "名稱不能為空",
+      "renameTimeout": "重新命名請求逾時，請重試",
+      "addToChat": "加入聊天",
+      "addedToChat": "已加入聊天",
+      "openFailed": "開啟失敗",
+      "revealFailed": "無法開啟所在資料夾",
+      "download": "下載",
+      "downloadSuccess": "下載成功",
+      "downloadFailed": "下載失敗"
+    },
+    "preview": {
+      "errors": {
+        "outsideSandbox": "檔案不在專案範圍內，無法預覽。",
+        "notFound": "檔案不存在或已被刪除。",
+        "timeout": "讀取檔案逾時，請稍後重試。"
+      }
+    },
+    "changes": {
+      "tab": "變更",
+      "filesTab": "檔案",
+      "currentBranchLabel": "目前分支",
+      "summary": "{{count}} 個檔案已變更",
+      "insertions": "+{{count}} 行新增",
+      "deletions": "-{{count}} 行刪除",
+      "empty": "暫無變更",
+      "emptyDescription": "AI 修改檔案後，變更記錄將顯示在此處",
+      "refresh": "重新整理",
+      "staged": "已暫存的變更",
+      "unstaged": "變更",
+      "changedFiles": "已變更的檔案",
+      "stage": "暫存",
+      "stageAll": "暫存所有變更",
+      "unstage": "取消暫存",
+      "unstageAll": "取消暫存所有變更",
+      "discard": "捨棄變更",
+      "reset": "還原變更",
+      "noUnstaged": "沒有未暫存的變更",
+      "noStaged": "沒有已暫存的變更"
+    },
+    "openWorkspace": "開啟專案資料夾",
+    "openWith": {
+      "vscode": "VS Code",
+      "terminal": "終端機",
+      "explorer": "檔案總管",
+      "browser": "瀏覽器"
+    }
+  },
+  "minimap": {
+    "searchAria": "搜尋對話",
+    "searchHint": "點擊這裡搜尋關鍵詞",
+    "empty": "暫無問答內容",
+    "noMatch": "未找到相符內容",
+    "count": "{{count}} 條",
+    "count_one": "{{count}} 條",
+    "count_other": "{{count}} 條"
+  },
+  "chat": {
+    "noModelSelected": "當前會話未選擇模型，無法發送訊息",
+    "sendMessageTo": "發送訊息到 {{model}}",
+    "processing": "正在處理中……",
+    "quotaExceededTitle": "模型額度已用盡",
+    "quotaExceededBody": "當前模型額度已用盡，是否切換到 {{model}}？",
+    "quotaExceededNoFallback": "當前模型額度已用盡，請切換到其他可用模型。",
+    "quotaSwitched": "已切換到 {{model}}。",
+    "apiErrorNoCli": "API 錯誤，沒有可用的 CLI 代理進行回退。",
+    "apiErrorSwitchFailed": "建立回退會話失敗。",
+    "apiErrorSwitched": "API 錯誤，已自動切換到 {{cli}} CLI",
+    "confirmationLoadError": "確認對話框載入失敗",
+    "tryAnotherAgent": "嘗試其他 Agent：",
+    "switchAgentFailed": "切換 Agent 失敗",
+    "speech": {
+      "recordTooltip": "開始語音輸入",
+      "recordTooltipWithShortcut": "語音輸入 cmd+M",
+      "pickFileTooltip": "選擇音訊檔案",
+      "stopTooltip": "停止錄音",
+      "processing": "正在轉寫音訊...",
+      "unsupported": "目前環境不支援語音輸入",
+      "startShort": "語音",
+      "stopShort": "停止",
+      "transcribingShort": "...",
+      "audioCaptureError": "未偵測到可用麥克風",
+      "emptyTranscript": "未識別到語音內容",
+      "fileTooLarge": "音訊檔案過大",
+      "networkError": "音訊轉寫時發生網路錯誤",
+      "notConfigured": "語音轉文字尚未設定",
+      "permissionDenied": "麥克風權限被拒絕",
+      "recordingUnsupported": "目前環境不支援直接錄音，請改為上傳音訊檔案",
+      "transcriptionFailed": "音訊轉寫失敗",
+      "genericError": "語音輸入失敗，請再試一次"
+    }
+  },
+  "sideQuestion": {
+    "title": "順便問一下",
+    "description": "針對目前對話快速提出一個小問題",
+    "started": "正在發起順便提問...",
+    "answered": "順便提問已返回結果。",
+    "noAnswer": "目前的會話內容裡沒有明確答案。",
+    "loading": "思考中...",
+    "parentTaskRunning": "主任務仍在背景持續執行。",
+    "dismissHint": "按 Escape、Enter 或 Space 關閉",
+    "unsupported": "目前會話暫不支援順便提問。",
+    "alreadyRunning": "已有一個順便提問正在進行中。",
+    "attachmentsNotAllowed": "順便提問不能附帶檔案或 DOM 片段。",
+    "emptyQuestion": "請在 /btw 後輸入問題。",
+    "toolsRequired": "/btw 只能根據目前對話中已有的內容作答，無法搜尋、瀏覽或取得新資訊。",
+    "error": "順便提問失敗。"
+  },
+  "commandQueue": {
+    "title": "草稿箱",
+    "clear": "清空草稿箱",
+    "edit": "編輯",
+    "editing": "編輯中",
+    "editPlaceholder": "可以在執行前先調整這筆排隊指令。",
+    "cancelEdit": "取消",
+    "saveEdit": "儲存",
+    "moreActions": "更多操作",
+    "reorder": "拖動以調整排隊指令順序",
+    "remove": "移除",
+    "files": "{{count}} 個檔案",
+    "files_one": "{{count}} 個檔案",
+    "files_other": "{{count}} 個檔案",
+    "pausedAfterFailure": "下一條排隊指令啟動失敗。請編輯、調整順序或移除後再繼續。",
+    "emptyInput": "排隊指令不能為空。",
+    "queueFull": "佇列已滿，請先移除部分指令再繼續新增。",
+    "inputTooLong": "排隊指令內容過長，請縮短後再發送。",
+    "tooManyFiles": "這條排隊指令附加的檔案過多。",
+    "queueTooLarge": "佇列資料過大，無法安全快取，請先移除部分排隊指令。",
+    "sendNow": "立即發送",
+    "modeToggle": "切換發送模式",
+    "help": "使用說明",
+    "helpIntro": "AI 回覆期間你發送的訊息會先存到這裡。",
+    "helpAuto": "：AI 每輪回覆結束後自動依序發送。",
+    "helpManual": "：只暫存不自動發送，逐筆點「立即發送」。",
+    "clearConfirmTitle": "確定清空發送草稿箱？",
+    "clearConfirmContent": "所有待發送的訊息都會被移除，且無法復原。",
+    "mode": {
+      "auto": "自動發送",
+      "manual": "手動發送"
+    },
+    "addToQueue": "存到草稿箱",
+    "addToQueueShortcut": "⌘ + Enter / Ctrl + Enter",
+    "midturnBlocked": "目前 Agent 正在處理，暫時不能直接傳送。可以先存到草稿箱，稍後傳送。",
+    "enterShortcut": "Enter",
+    "actionMode": "Choose send action",
+    "midturnBlockedSendHint": "目前 Agent 正在處理，暫時不能直接傳送。可以先存到草稿箱，稍後傳送。",
+    "addToQueueBusyHint": "先存到草稿箱，稍後傳送。"
+  },
+  "contextUsage": {
+    "contextUsed": "上下文已使用",
+    "tokensUsed": "已使用 {{tokens}} tokens",
+    "windowUnknown": "上下文視窗大小未知",
+    "sessionCost": "對話成本",
+    "input": "輸入",
+    "output": "輸出",
+    "thought": "思考",
+    "cachedRead": "快取讀取",
+    "cachedWrite": "快取寫入"
+  },
+  "skill_generator": {
+    "title": "Generate Skill/Rule",
+    "generate": "Generate",
+    "description": "Analyze conversation history to generate:",
+    "type_skill": "Skill (Python)",
+    "type_rule": "Rule (JSON/MD)",
+    "name_label": "Agent Name:",
+    "name_placeholder": "e.g. Excel Translator",
+    "menu_generate": "Generate from History",
+    "menu_load": "Load Rule/Skill",
+    "load_title": "Load Rule/Skill",
+    "load_error": "Failed to load files",
+    "no_files": "專案中沒有符合的檔案",
+    "read_error": "Failed to read file",
+    "rule_loaded": "Rule loaded successfully",
+    "no_workspace": "未設定專案，無法生成",
+    "name_required": "Please enter a name for the preset",
+    "no_history": "No conversation history found",
+    "request_sent": "Request sent to agent",
+    "failed": "Failed to generate",
+    "preset_registered": "Agent preset registered successfully!"
+  },
+  "thinking": {
+    "complete": "思考完成",
+    "label": "思考中..."
+  },
+  "skills": {
+    "loaded": "已載入技能",
+    "slashHint": "技能"
+  },
+  "mcp": {
+    "loaded": "已載入 MCP",
+    "managementHint": "如果某個 MCP 載入異常，通常是 MCP JSON 設定有問題。請到工具設定頁檢查並手動檢測。",
+    "openSettings": "前往工具設定",
+    "status": {
+      "loaded": "已載入",
+      "failed": "失敗",
+      "unsupported": "不支援"
+    },
+    "selected": "已選 MCP"
+  },
+  "runtimePreparing": {
+    "sendboxHint": "正在準備執行環境。首次啟動可能會稍慢一些。"
+  },
+  "sendbox": {
+    "hint": "輸入 / 喚起命令，@ 引用檔案，↑/↓ 切換歷史訊息",
+    "mediaPathFallback": "該 Agent 不原生支援此檔案類型，將以檔案路徑形式傳送。",
+    "hintWithSessions": "輸入 / 喚起命令，@ 引用檔案，@@ 引用對話，↑/↓ 切換歷史訊息"
+  },
+  "agentTip": {
+    "codes": {
+      "ACP_EMPTY_TURN": {
+        "body": "這次請求沒有產生任何可見回覆。"
+      },
+      "ACP_EMPTY_TURN_NEEDS_AUTH": {
+        "body": "這次請求沒有產生任何可見回覆。若你已登入，可能是後端瞬時或連線問題，請重試或新建對話；若尚未登入，可嘗試登入：{{hint}}。"
+      },
+      "ACP_EMPTY_TURN_TOKEN_LIMIT": {
+        "body": "這次請求沒有產生任何可見回覆。目前的對話可能已接近上下文長度上限，建議重試，或新建對話後再試。"
+      },
+      "ACP_EMPTY_TURN_MAX_TOKENS": {
+        "body": "這次請求在產生任何可見回覆前已達到模型輸出 token 上限。"
+      },
+      "ACP_EMPTY_TURN_MAX_TURN_REQUESTS": {
+        "body": "這次請求在產生任何可見回覆前已達到模型單輪請求上限。"
+      },
+      "ACP_EMPTY_TURN_REFUSAL": {
+        "body": "模型在產生任何可見回覆前拒絕了這次請求。"
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "本輪有 {{count}} 個步驟失敗且未生效。agy 仍會將這類輪次標記為成功，請核對實際結果而非回覆內容。"
+      },
+      "CLI_VERSION_OLDER": {
+        "body": "已安裝的 {{cli}} 低於 AIPM工作台 驗證過的版本，部分功能可能缺失。建議升級 {{cli}}。 （本機 {{reported}} / AIPM工作台 驗證過 {{verified}}）"
+      },
+      "CLI_VERSION_NEWER": {
+        "body": "已安裝的 {{cli}} 高於 AIPM工作台 驗證過的版本。通常仍可正常使用；如遇異常行為請回報。 （本機 {{reported}} / AIPM工作台 驗證過 {{verified}}）"
+      },
+      "CODEX_RETRYING": {
+        "body": "{{detail}}（累計第 {{attempts}} 次重試，已等待 {{elapsed}}——Agent 的服務方反覆中斷連線，AIPM工作台 正在等待重連。）"
+      }
+    }
+  },
+  "notFound": "會話不存在或已被刪除",
+  "explorer": {
+    "addFolder": "新增資料夾到專案",
+    "refreshFiles": "重新整理檔案",
+    "refreshChanges": "重新整理變更",
+    "collapseAll": "全部摺疊",
+    "removeFolder": "從專案移除",
+    "attachDuplicate": "該資料夾已在專案中",
+    "attachOverlap": "該資料夾與專案中既有資料夾重疊",
+    "attachFailed": "新增資料夾失敗",
+    "removeFailed": "移除資料夾失敗",
+    "contextMenu": {
+      "rename": "重新命名",
+      "addToChat": "加入對話",
+      "copyRelativePath": "複製相對路徑",
+      "copyAbsolutePath": "複製絕對路徑",
+      "newFile": "新增檔案",
+      "newDir": "新增資料夾"
+    },
+    "namePlaceholder": "名稱",
+    "deleteConfirm": "刪除「{{name}}」？此操作無法復原。",
+    "renameFailed": "重新命名失敗",
+    "newFileFailed": "建立檔案失敗",
+    "newDirFailed": "建立資料夾失敗",
+    "tabs": {
+      "files": "檔案",
+      "changes": "變更"
+    },
+    "addedToChat": "已將 {{name}} 加入對話",
+    "imported": "已匯入 {{count}} 個檔案",
+    "importPartialFailed": "已複製 {{copied}} 個，{{failed}} 個失敗（重名或不支援）",
+    "importFailed": "匯入檔案失敗",
+    "copyNodeFailed": "複製失敗",
+    "moveNodeFailed": "移動失敗",
+    "search": {
+      "placeholder": "依檔名搜尋",
+      "searching": "搜尋中…",
+      "empty": "沒有符合的檔案",
+      "limitReached": "僅顯示前 {{count}} 項 — 請縮小範圍"
+    },
+    "scm": {
+      "notARepository": "該資料夾未納入版本控制",
+      "noChanges": "沒有變更",
+      "loading": "正在載入變更…",
+      "loadFailed": "無法載入變更",
+      "groups": {
+        "staged": "已暫存的變更",
+        "unstaged": "變更",
+        "changes": "變更",
+        "blocked": "需先解決"
+      },
+      "sections": {
+        "repositories": "儲存庫",
+        "changes": "變更"
+      },
+      "viewAsTree": "以樹狀檢視顯示",
+      "viewAsList": "以清單檢視顯示",
+      "worktree": "工作樹",
+      "expandWorktrees": "顯示工作樹",
+      "collapseWorktrees": "隱藏工作樹",
+      "state": {
+        "created": "新增",
+        "modified": "已修改",
+        "deleted": "已刪除",
+        "renamed": "已重新命名",
+        "conflicted": "衝突",
+        "unknown": "未識別的狀態"
+      },
+      "badge": {
+        "created": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "conflicted": "!",
+        "unknown": "?"
+      },
+      "conflictedHint": "請先在 AIPM工作台 之外解決此衝突",
+      "opaqueHint": "該狀態來自更新版本的後端 — 僅供檢視",
+      "degraded": "由於無法更新 git 索引，重新整理正以較慢的模式執行",
+      "truncated": "變更過多，僅顯示前一部分",
+      "renamedFrom": "{{from}} → {{to}}",
+      "diff": {
+        "loading": "正在載入差異…",
+        "failed": "無法載入差異",
+        "binary": "二進位檔案 — 無文字差異",
+        "truncated": "差異已截斷（檔案過大）",
+        "empty": "沒有文字變更",
+        "close": "關閉差異"
+      },
+      "actions": {
+        "stage": "暫存變更",
+        "unstage": "取消暫存",
+        "discard": "捨棄變更",
+        "stageAll": "全部暫存",
+        "unstageAll": "全部取消暫存",
+        "blockedHint": "請先在 AIPM工作台 之外解決衝突，然後再暫存或捨棄",
+        "confirmDiscardTitle": "要捨棄變更嗎？",
+        "confirmDiscardTracked": "{{count}} 個檔案的修改將遺失，且無法復原。",
+        "confirmDiscardUntracked": "{{count}} 個新檔案將被移到垃圾桶。",
+        "confirmDiscardMixed": "{{tracked}} 個檔案的修改將遺失且無法復原；{{untracked}} 個新檔案將被移到垃圾桶。",
+        "discardConfirmButton": "捨棄",
+        "okStage": "已暫存 {{count}} 個檔案",
+        "okStage_one": "已暫存 {{count}} 個檔案",
+        "okStage_other": "已暫存 {{count}} 個檔案",
+        "okUnstage": "已取消暫存 {{count}} 個檔案",
+        "okUnstage_one": "已取消暫存 {{count}} 個檔案",
+        "okUnstage_other": "已取消暫存 {{count}} 個檔案",
+        "okDiscard": "已捨棄 {{count}} 個檔案",
+        "okDiscard_one": "已捨棄 {{count}} 個檔案",
+        "okDiscard_other": "已捨棄 {{count}} 個檔案",
+        "partial": "已完成 {{succeeded}}/{{total}} —— {{failed}} 個未能完成",
+        "partialDetail": "未完成：{{files}}",
+        "rejectedBlocked": "未變動任何內容 —— 請先解決衝突",
+        "rejectedUnsupported": "該儲存庫不支援此操作",
+        "rejectedFailed": "操作未能完成",
+        "retry": "重試",
+        "notSent": "請求沒有送達後端，未變動任何內容。可以重試。",
+        "outcomeUnknown": "連線在收到回覆前已重設——此操作可能已完成，也可能未完成。請重新整理並核對檔案清單，確認後再決定是否重試。",
+        "allFailed": "{{count}} 個檔案都未能處理",
+        "allFailed_one": "{{count}} 個檔案都未能處理",
+        "allFailed_other": "{{count}} 個檔案都未能處理"
+      }
+    },
+    "pathCopied": "已複製路徑",
+    "copyFailed": "複製路徑失敗"
+  },
+  "terminal": {
+    "running": "執行中",
+    "stopped": "已停止",
+    "exited": "結束碼 {{code}}",
+    "stop": "停止",
+    "truncated": "(較早輸出已截斷)"
+  },
+  "emptyState": {
+    "greeting": "你好！說說你的需求，我這就開始。"
+  },
+  "crossSession": {
+    "mentionAgain": "在輸入框中提及對話 {{name}}",
+    "mentionAgainHint": "點擊以在輸入框中提及此對話",
+    "mentionUnavailable": "該對話已無法提及",
+    "mentionFailed": "無法提及該對話",
+    "fromBadge": "來自對話「{{name}}」",
+    "otherWorkspace": "不同工作目錄",
+    "rateLimitedTitle": "跨對話訊息可能在空轉",
+    "rateLimited": "對話「{{from}}」與「{{to}}」之間的自動訊息過於頻繁，可能在空轉。",
+    "stopBoth": "停止這兩個對話",
+    "disableFeature": "關閉跨對話訊息"
+  },
+  "planBar": {
+    "title": "計劃",
+    "progress": "{{completed}}/{{total}}",
+    "expand": "展開計劃",
+    "collapse": "收合計劃"
+  }
+}

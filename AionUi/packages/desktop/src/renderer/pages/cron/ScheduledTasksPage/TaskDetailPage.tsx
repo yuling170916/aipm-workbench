@@ -1,0 +1,607 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Button, Message, Switch, Popconfirm, Spin, Empty, Tooltip, Checkbox, Modal } from '@arco-design/web-react';
+import { Left, Delete, Write, Attention, Robot } from '@icon-park/react';
+import { ipcBridge } from '@/common';
+import type { ICronJob } from '@/common/adapter/ipcBridge';
+import type { TChatConversation } from '@/common/config/storage';
+import { useConversationAssistants } from '@renderer/pages/conversation/hooks/useConversationAssistants';
+import CronStatusTag from './CronStatusTag';
+import CreateTaskDialog from './CreateTaskDialog';
+import { getJobAgentMeta } from './jobAgentMeta';
+import ThemedLogo from '@/renderer/components/agent/ThemedLogo';
+import { useAgentLogos } from '@renderer/utils/model/agentLogo';
+import { formatCronRunConversationTitle, formatSchedule, formatNextRun } from '@renderer/pages/cron/cronUtils';
+import { useCronJobConversations } from '@renderer/pages/cron/useCronJobs';
+import { repairCronJobTimeZone } from '@renderer/pages/cron/repairCronJobTimeZone';
+import { getActivityTime } from '@/renderer/utils/chat/timeline';
+import { mutate } from 'swr';
+import { getConversationRuntimeWorkspaceErrorMessage } from '@renderer/pages/conversation/utils/conversationCreateError';
+import { emitter } from '@/renderer/utils/emitter';
+
+const resolveTeamId = (conversation: TChatConversation): string | undefined => {
+  const extra = conversation.extra as { team_id?: unknown; teamId?: unknown } | undefined;
+  const snakeCase = extra?.team_id;
+  if (typeof snakeCase === 'string' && snakeCase.trim()) return snakeCase;
+  const camelCase = extra?.teamId;
+  if (typeof camelCase === 'string' && camelCase.trim()) return camelCase;
+  return undefined;
+};
+
+const TaskDetailPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { job_id } = useParams<{ job_id: string }>();
+  const [job, setJob] = useState<ICronJob | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editDialogVisible, setEditDialogVisible] = useState(false);
+  const [runningNow, setRunningNow] = useState(false);
+  const [historyBatchMode, setHistoryBatchMode] = useState(false);
+  const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(() => new Set());
+  // Synchronous re-entry guard: `setRunningNow` is async, so two rapid clicks
+  // can both pass a state-based check before the first re-render disables the
+  // button. The ref blocks the second invocation immediately.
+  const runningNowRef = useRef(false);
+
+  const isNewConversationMode = job?.target.execution_mode === 'new_conversation';
+  const isManualOnly = job?.schedule.kind === 'cron' && !job.schedule.expr;
+  const { conversations, refetch: refetchConversations } = useCronJobConversations(job_id);
+  const { presetAssistants } = useConversationAssistants();
+  const logos = useAgentLogos();
+  const assistantIdentity = job ? getJobAgentMeta(job, presetAssistants, logos) : null;
+
+  useEffect(() => {
+    setSelectedConversationIds((prev) => {
+      const currentIds = new Set(conversations.map((conversation) => conversation.id));
+      const next = new Set([...prev].filter((id) => currentIds.has(id)));
+      const changed = next.size !== prev.size || [...next].some((id) => !prev.has(id));
+      return changed ? next : prev;
+    });
+    if (conversations.length === 0) {
+      setHistoryBatchMode(false);
+    }
+  }, [conversations]);
+
+  const fetchJob = useCallback(async () => {
+    if (!job_id) return;
+    setLoading(true);
+    try {
+      const found = await ipcBridge.cron.getJob.invoke({ job_id });
+      setJob(found ? await repairCronJobTimeZone(found) : null);
+    } catch (err) {
+      console.error('[TaskDetailPage] Failed to fetch job:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [job_id]);
+
+  useEffect(() => {
+    void fetchJob();
+  }, [fetchJob]);
+
+  // Auto-refresh when the job is updated or executed
+  useEffect(() => {
+    if (!job_id) return;
+    const unsubUpdated = ipcBridge.cron.onJobUpdated.on((updated) => {
+      if (updated.id === job_id) {
+        setJob(updated);
+      }
+    });
+    const unsubExecuted = ipcBridge.cron.onJobExecuted.on((data) => {
+      if (data.job_id === job_id) {
+        void fetchJob();
+      }
+    });
+    return () => {
+      unsubUpdated();
+      unsubExecuted();
+    };
+  }, [job_id, fetchJob]);
+
+  const handleToggleEnabled = useCallback(async () => {
+    if (!job) return;
+    try {
+      await ipcBridge.cron.updateJob.invoke({ job_id: job.id, updates: { enabled: !job.enabled } });
+      Message.success(job.enabled ? t('cron.pauseSuccess') : t('cron.resumeSuccess'));
+      await fetchJob();
+    } catch (err) {
+      Message.error(String(err));
+    }
+  }, [job, fetchJob, t]);
+
+  const handleRunNow = useCallback(async () => {
+    if (!job) return;
+    if (runningNowRef.current) return;
+    runningNowRef.current = true;
+    setRunningNow(true);
+    try {
+      const result = await ipcBridge.cron.runNow.invoke({ job_id: job.id });
+      Message.success(t('cron.runNowSuccess'));
+      if (result?.conversation_id) {
+        const conversationKey = `conversation/${result.conversation_id}`;
+        const deadline = Date.now() + 15_000;
+        let latestConversation: TChatConversation | null = null;
+
+        while (Date.now() < deadline) {
+          const conversation = await ipcBridge.conversation.get
+            .invoke({ id: result.conversation_id })
+            .catch((): TChatConversation | null => null);
+
+          if (conversation) {
+            latestConversation = conversation;
+            const workspace =
+              typeof conversation.extra?.workspace === 'string' ? conversation.extra.workspace.trim() : '';
+            if (!isNewConversationMode || workspace) {
+              break;
+            }
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+
+        if (latestConversation) {
+          if (job.target.execution_mode === 'new_conversation') {
+            const nextName = formatCronRunConversationTitle(
+              job.name,
+              latestConversation.created_at || Date.now(),
+              i18n.language
+            );
+            if (latestConversation.name !== nextName) {
+              await ipcBridge.conversation.update.invoke({
+                id: result.conversation_id,
+                updates: { name: nextName },
+              });
+              latestConversation = {
+                ...latestConversation,
+                name: nextName,
+              };
+            }
+          }
+
+          const latestExtra = (latestConversation.extra ?? {}) as Record<string, unknown> & {
+            cron_job_id?: string;
+            cronJobId?: string;
+          };
+          const normalizedCronJobId =
+            typeof latestExtra.cron_job_id === 'string' && latestExtra.cron_job_id.trim()
+              ? latestExtra.cron_job_id
+              : job.id;
+          latestConversation = {
+            ...latestConversation,
+            extra: {
+              ...latestExtra,
+              cron_job_id: normalizedCronJobId,
+              cronJobId:
+                typeof latestExtra.cronJobId === 'string' && latestExtra.cronJobId.trim()
+                  ? latestExtra.cronJobId
+                  : normalizedCronJobId,
+            } as TChatConversation['extra'],
+          } as TChatConversation;
+          await mutate<TChatConversation>(conversationKey, latestConversation, false);
+        }
+
+        navigate(`/conversation/${result.conversation_id}`);
+      }
+    } catch (err) {
+      Message.error(getConversationRuntimeWorkspaceErrorMessage(err, t));
+    } finally {
+      runningNowRef.current = false;
+      setRunningNow(false);
+    }
+  }, [job, t, navigate]);
+
+  const allHistorySelected =
+    conversations.length > 0 && conversations.every((conversation) => selectedConversationIds.has(conversation.id));
+
+  const toggleConversationSelected = useCallback((conversationId: string) => {
+    setSelectedConversationIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(conversationId)) {
+        next.delete(conversationId);
+      } else {
+        next.add(conversationId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllHistory = useCallback(() => {
+    setSelectedConversationIds((prev) => {
+      if (conversations.length > 0 && conversations.every((conversation) => prev.has(conversation.id))) {
+        return new Set();
+      }
+      return new Set(conversations.map((conversation) => conversation.id));
+    });
+  }, [conversations]);
+
+  const handleCancelHistoryBatchMode = useCallback(() => {
+    setHistoryBatchMode(false);
+    setSelectedConversationIds(new Set());
+  }, []);
+
+  const removeHistoryConversation = useCallback(async (conversationId: string): Promise<boolean> => {
+    const success = await ipcBridge.conversation.remove.invoke({ id: conversationId });
+    if (success) {
+      emitter.emit('conversation.deleted', conversationId);
+    }
+    return success;
+  }, []);
+
+  const handleBatchDeleteHistory = useCallback(() => {
+    if (selectedConversationIds.size === 0) {
+      Message.warning(t('conversation.history.batchNoSelection'));
+      return;
+    }
+
+    Modal.confirm({
+      title: t('conversation.history.batchDelete'),
+      content: t('conversation.history.batchDeleteConfirm', { count: selectedConversationIds.size }),
+      okText: t('conversation.history.confirmDelete'),
+      cancelText: t('conversation.history.cancelDelete'),
+      okButtonProps: { status: 'warning' },
+      onOk: async () => {
+        const selectedIds = Array.from(selectedConversationIds);
+        try {
+          const results = await Promise.all(selectedIds.map(removeHistoryConversation));
+          const successCount = results.filter(Boolean).length;
+          emitter.emit('chat.history.refresh');
+          await refetchConversations();
+          if (successCount > 0) {
+            Message.success(t('conversation.history.batchDeleteSuccess', { count: successCount }));
+          } else {
+            Message.error(t('conversation.history.deleteFailed'));
+          }
+        } catch (error) {
+          console.error('[TaskDetailPage] Failed to batch delete conversations:', error);
+          Message.error(t('conversation.history.deleteFailed'));
+        } finally {
+          setSelectedConversationIds(new Set());
+          setHistoryBatchMode(false);
+          await fetchJob();
+        }
+      },
+      style: { borderRadius: '12px' },
+      alignCenter: true,
+      getPopupContainer: () => document.body,
+    });
+  }, [fetchJob, refetchConversations, removeHistoryConversation, selectedConversationIds, t]);
+
+  const handleDelete = useCallback(async () => {
+    if (!job) return;
+    try {
+      await ipcBridge.cron.removeJob.invoke({ job_id: job.id });
+      Message.success(t('cron.deleteSuccess'));
+      navigate('/scheduled');
+    } catch (err) {
+      Message.error(String(err));
+    }
+  }, [job, navigate, t]);
+
+  if (loading) {
+    return (
+      <div className='size-full flex-center'>
+        <Spin />
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className='w-full min-h-full box-border overflow-y-auto px-14px pt-28px pb-24px md:px-40px md:pt-52px md:pb-42px'>
+        <div className='mx-auto flex w-full max-w-800px flex-col gap-28px box-border'>
+          <Button
+            type='text'
+            size='small'
+            className='w-fit !px-0 !text-14px md:!text-15px !text-t-secondary hover:!text-t-primary'
+            icon={<Left theme='outline' size={16} className='line-height-0 shrink-0' />}
+            onClick={() => navigate('/scheduled')}
+          >
+            {t('cron.detail.backToAll')}
+          </Button>
+          <div className='flex min-h-320px items-center justify-center'>
+            <Empty description={t('cron.detail.notFound')} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const descriptionPreview = job.description?.trim() || '';
+  const currentExecutionModeLabel = isNewConversationMode
+    ? t('cron.page.form.newConversation')
+    : t('cron.page.form.existingConversation');
+  const executionModeExplanation = isNewConversationMode
+    ? t('cron.detail.executionModeDescriptionNew')
+    : t('cron.detail.executionModeDescriptionExisting');
+  const latestExecutionError = job.state.last_status === 'error' ? job.state.last_error?.trim() || '' : '';
+  const statusTag = <CronStatusTag job={job} />;
+
+  return (
+    <div className='w-full min-h-full box-border overflow-y-auto px-14px pt-28px pb-24px md:px-40px md:pt-52px md:pb-42px'>
+      <div className='mx-auto flex w-full max-w-800px flex-col gap-28px box-border'>
+        <Button
+          type='text'
+          size='small'
+          className='w-fit !px-0 !text-14px md:!text-15px !text-t-secondary hover:!text-t-primary'
+          icon={<Left theme='outline' size={16} className='line-height-0 shrink-0' />}
+          onClick={() => navigate('/scheduled')}
+        >
+          {t('cron.detail.backToAll')}
+        </Button>
+
+        <div className='flex flex-col gap-20px pb-8px'>
+          <div className='flex flex-col gap-12px'>
+            <div className='flex flex-wrap items-start justify-between gap-14px'>
+              <h1 className='m-0 min-w-0 flex-1 break-words text-30px font-bold leading-38px text-t-primary md:text-34px md:leading-42px'>
+                {job.name}
+              </h1>
+              <div className='flex shrink-0 items-center gap-8px'>
+                <Button
+                  size='mini'
+                  type='text'
+                  className='!h-20px !min-w-20px !w-20px !rounded-0 !border-none !bg-transparent !p-0 !text-t-secondary hover:!bg-transparent hover:!text-t-primary translate-y-1px'
+                  icon={<Write theme='outline' size={16} fill='currentColor' />}
+                  onClick={() => setEditDialogVisible(true)}
+                />
+                <Popconfirm title={t('cron.confirmDeleteWithConversations')} onOk={handleDelete}>
+                  <Button
+                    size='mini'
+                    type='text'
+                    className='!h-20px !min-w-20px !w-20px !rounded-0 !border-none !bg-transparent !p-0 !text-t-secondary hover:!bg-transparent hover:!text-t-primary translate-y-1px'
+                    icon={<Delete theme='outline' size={16} fill='currentColor' />}
+                  />
+                </Popconfirm>
+                <Button
+                  type='primary'
+                  size='small'
+                  className='!h-32px !rounded-8px !px-14px'
+                  loading={runningNow}
+                  disabled={runningNow}
+                  onClick={handleRunNow}
+                >
+                  {t('cron.detail.runNow')}
+                </Button>
+              </div>
+            </div>
+            {descriptionPreview && (
+              <p data-testid='task-detail-summary' className='m-0 w-full text-15px leading-24px text-t-secondary'>
+                {descriptionPreview}
+              </p>
+            )}
+          </div>
+          <div className='flex flex-wrap items-center gap-10px md:gap-12px'>
+            {latestExecutionError ? (
+              <Tooltip
+                position='top'
+                content={
+                  <div className='max-w-360px whitespace-pre-wrap break-words'>
+                    <div className='mb-4px text-12px font-medium'>{t('cron.lastError')}</div>
+                    <div className='text-12px leading-18px'>{latestExecutionError}</div>
+                  </div>
+                }
+              >
+                <span className='inline-flex cursor-help'>{statusTag}</span>
+              </Tooltip>
+            ) : (
+              statusTag
+            )}
+            {job.state.next_run_at_ms && (
+              <span className='text-14px text-t-secondary'>
+                {t('cron.nextRun')} {formatNextRun(job.state.next_run_at_ms, i18n.language)}
+              </span>
+            )}
+          </div>
+          <div className='h-1px w-full bg-[var(--color-border-2)]' />
+        </div>
+
+        <div className='grid w-full min-w-0 grid-cols-1 gap-28px md:grid-cols-[minmax(0,1fr)_280px] md:items-start md:gap-32px'>
+          <div data-testid='task-detail-history-column' className='flex min-w-0 flex-col gap-28px'>
+            <section className='flex flex-col gap-12px'>
+              <div className='flex min-w-0 items-center justify-between gap-12px'>
+                <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('cron.detail.history')}</h2>
+                {conversations.length > 0 && (
+                  <div className='flex shrink-0 items-center gap-8px'>
+                    {historyBatchMode ? (
+                      <>
+                        <Button
+                          size='mini'
+                          type='text'
+                          className='!h-24px !px-8px !text-12px'
+                          onClick={handleCancelHistoryBatchMode}
+                        >
+                          {t('conversation.history.cancelDelete')}
+                        </Button>
+                        <Button
+                          size='mini'
+                          status='warning'
+                          className='!h-24px !px-8px !text-12px'
+                          disabled={selectedConversationIds.size === 0}
+                          onClick={handleBatchDeleteHistory}
+                        >
+                          {t('conversation.history.batchDelete')}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size='mini'
+                        type='text'
+                        className='!h-24px !px-8px !text-12px'
+                        onClick={() => setHistoryBatchMode(true)}
+                      >
+                        {t('conversation.history.batchManage')}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {conversations.length > 0 ? (
+                <div className='flex flex-col'>
+                  {historyBatchMode && (
+                    <div className='flex items-center justify-between gap-12px py-8px text-12px text-t-secondary'>
+                      <Checkbox checked={allHistorySelected} onChange={handleSelectAllHistory}>
+                        {t('conversation.history.selectAll')}
+                      </Checkbox>
+                      <span>{t('conversation.history.selectedCount', { count: selectedConversationIds.size })}</span>
+                    </div>
+                  )}
+                  <div className='h-1px w-full bg-[var(--color-border-2)]' />
+                  {conversations.map((conv, index) => (
+                    <React.Fragment key={conv.id}>
+                      <div
+                        className='flex cursor-pointer items-center justify-between gap-14px py-15px transition-colors hover:text-t-primary'
+                        onClick={() => {
+                          if (historyBatchMode) {
+                            toggleConversationSelected(conv.id);
+                            return;
+                          }
+                          const teamId = resolveTeamId(conv);
+                          navigate(teamId ? `/team/${teamId}` : `/conversation/${conv.id}`);
+                        }}
+                      >
+                        {historyBatchMode && (
+                          <Checkbox
+                            checked={selectedConversationIds.has(conv.id)}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={() => toggleConversationSelected(conv.id)}
+                          />
+                        )}
+                        <span className='min-w-0 flex-1 truncate text-14px text-t-primary'>{conv.name || conv.id}</span>
+                        <span className='shrink-0 text-13px text-t-secondary'>
+                          {formatNextRun(getActivityTime(conv), i18n.language)}
+                        </span>
+                      </div>
+                      {index < conversations.length - 1 && <div className='h-1px w-full bg-[var(--color-border-2)]' />}
+                    </React.Fragment>
+                  ))}
+                </div>
+              ) : (
+                <div className='text-14px text-t-secondary'>
+                  <span>{t('cron.detail.noHistory')}</span>
+                  {job.enabled && job.state.next_run_at_ms && (
+                    <span className='ms-4px'>
+                      · {t('cron.nextRun')} {formatNextRun(job.state.next_run_at_ms, i18n.language)}
+                    </span>
+                  )}
+                </div>
+              )}
+            </section>
+          </div>
+
+          <aside data-testid='task-detail-sidebar-column' className='flex min-w-0 flex-col gap-24px'>
+            <section className='flex flex-col gap-12px'>
+              <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('cron.detail.instructions')}</h2>
+              <div className='box-border rounded-18px border border-solid border-[var(--color-border-2)] bg-base shadow-[var(--shadow-card)] px-16px py-14px'>
+                <div className='whitespace-pre-wrap break-words text-14px leading-22px text-t-primary'>
+                  {job.target.payload.text || '-'}
+                </div>
+              </div>
+            </section>
+
+            {assistantIdentity?.name && (
+              <section className='flex flex-col gap-10px'>
+                <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('cron.detail.assistant')}</h2>
+                <div className='flex items-center gap-10px'>
+                  {assistantIdentity.logo ? (
+                    <ThemedLogo
+                      src={assistantIdentity.logo}
+                      alt={assistantIdentity.name}
+                      className='h-28px w-28px rounded-50%'
+                    />
+                  ) : assistantIdentity.emoji ? (
+                    <span className='inline-flex h-28px w-28px items-center justify-center text-20px'>
+                      {assistantIdentity.emoji}
+                    </span>
+                  ) : (
+                    <Robot size='28' className='shrink-0 text-t-secondary' />
+                  )}
+                  <span className='min-w-0 text-14px font-medium text-t-primary'>{assistantIdentity.name}</span>
+                </div>
+              </section>
+            )}
+
+            <section className='flex flex-col gap-10px'>
+              <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('cron.detail.repeats')}</h2>
+              <div className='flex flex-wrap items-center gap-10px'>
+                {!isManualOnly && <Switch size='small' checked={job.enabled} onChange={handleToggleEnabled} />}
+                <span className='min-w-0 flex-1 text-14px leading-20px text-t-primary'>{formatSchedule(job, t)}</span>
+              </div>
+            </section>
+
+            <section className='flex flex-col gap-10px'>
+              <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('cron.page.form.executionMode')}</h2>
+              <div className='inline-flex items-center gap-4px'>
+                <span className='text-14px leading-22px text-t-primary'>{currentExecutionModeLabel}</span>
+                <Attention theme='outline' size={12} className='line-height-0 shrink-0 text-t-secondary' />
+              </div>
+              <div className='box-border rounded-18px border border-solid border-[var(--color-border-2)] bg-base shadow-[var(--shadow-card)] px-16px py-14px'>
+                <div className='flex flex-col gap-10px'>
+                  <p className='m-0 text-13px leading-20px text-t-primary'>{executionModeExplanation}</p>
+                  <div className='h-1px w-full bg-[var(--color-border-2)]' />
+                  <p className='m-0 text-12px leading-18px text-t-secondary'>
+                    {t('cron.page.form.executionModeEditHint')}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className='flex flex-col gap-10px'>
+              <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('cron.page.form.queue')}</h2>
+              <div className='flex items-center gap-10px'>
+                <Switch size='small' checked={job.state.queue_enabled} disabled />
+                <span className='min-w-0 flex-1 text-13px leading-18px text-t-secondary'>
+                  {t('cron.page.form.queueHint')}
+                </span>
+              </div>
+            </section>
+
+            {job.metadata.agent_config?.model_id && (
+              <section className='flex flex-col gap-10px'>
+                <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('cron.page.form.model')}</h2>
+                <span className='break-words text-14px leading-22px text-t-primary'>
+                  {job.metadata.agent_config.model_id}
+                </span>
+              </section>
+            )}
+
+            {job.metadata.agent_config?.workspace && (
+              <section className='flex flex-col gap-10px'>
+                <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('cron.page.form.workspace')}</h2>
+                <span className='min-w-0 break-all text-14px leading-22px text-t-primary'>
+                  {job.metadata.agent_config.workspace}
+                </span>
+              </section>
+            )}
+
+            {job.metadata.agent_config?.config_options &&
+              Object.keys(job.metadata.agent_config.config_options).length > 0 && (
+                <section className='flex flex-col gap-10px'>
+                  <h2 className='m-0 text-13px font-medium text-t-secondary'>{t('acp.config.reasoning_effort')}</h2>
+                  <span className='break-words text-14px leading-22px text-t-primary'>
+                    {Object.values(job.metadata.agent_config.config_options).join(', ')}
+                  </span>
+                </section>
+              )}
+          </aside>
+        </div>
+      </div>
+
+      <CreateTaskDialog
+        visible={editDialogVisible}
+        onClose={() => {
+          setEditDialogVisible(false);
+        }}
+        editJob={job ?? undefined}
+      />
+    </div>
+  );
+};
+
+export default TaskDetailPage;

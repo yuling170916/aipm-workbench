@@ -1,0 +1,180 @@
+{
+  "loading": "Carregando...",
+  "downloadFile": "Baixar arquivo",
+  "closePreview": "Fechar visualização",
+  "collapsePanel": "Recolher painel",
+  "maximizePanel": "Maximizar",
+  "restorePanel": "Restaurar",
+  "source": "Fonte",
+  "code": "Código",
+  "preview": "Pré-visualização",
+  "editor": "Editor",
+  "previewEffect": "Visualização",
+  "downloadMarkdown": "Baixar arquivo Markdown",
+  "downloadCode": "Baixar arquivo {{language}}",
+  "downloadDiff": "Baixar arquivo Diff",
+  "addToChat": "Adicionar ao chat",
+  "openSplitScreen": "Abrir tela dividida",
+  "closeSplitScreen": "Fechar tela dividida",
+  "edit": "Editar",
+  "exitEdit": "Sair da Edição",
+  "unsavedChangesTitle": "Alterações Não Salvas",
+  "unsavedChangesMessage": "Você tem alterações não salvas. Tem certeza de que deseja sair da edição?",
+  "confirmExit": "Confirmar Saída",
+  "continueEdit": "Continuar Editando",
+  "closeTabTitle": "Fechar Guia",
+  "closeTabMessage": "O conteúdo atual não foi salvo. Deseja salvar antes de fechar?",
+  "closeTabsTitle": "Fechar abas",
+  "closeTabsMessage": "{{count}} abas têm alterações não salvas. Salvar antes de fechar?",
+  "closeTabsMessage_one": "{{count}} aba tem alterações não salvas. Salvar antes de fechar?",
+  "closeTabsMessage_other": "{{count}} abas têm alterações não salvas. Salvar antes de fechar?",
+  "saveAndClose": "Salvar e Fechar",
+  "closeWithoutSave": "Não Salvar",
+  "pptTitle": "Apresentação do PowerPoint",
+  "pptOpenHint": "Clique no botão abaixo para abrir no aplicativo do sistema e visualizar o conteúdo completo",
+  "pptOpenFile": "Abrir Arquivo",
+  "pptShowLocation": "Mostrar Localização",
+  "pptSystemAppHint": "Será aberto com o aplicativo padrão do sistema (PowerPoint, Keynote ou WPS)",
+  "openWithApp": "Abrir no {{app}}",
+  "openInSystemApp": "Abrir no aplicativo do sistema",
+  "openInSystemSuccess": "Aberto no aplicativo padrão do sistema",
+  "openInSystemFailed": "Falha ao abrir com o aplicativo do sistema",
+  "close": "Fechar",
+  "closeLeft": "Fechar à Esquerda",
+  "closeRight": "Fechar à Direita",
+  "closeOthers": "Fechar Outras",
+  "closeAll": "Fechar Todas",
+  "closeUnmodified": "Fechar Não Modificadas",
+  "copyPath": "Copiar Caminho",
+  "copyRelativePath": "Copiar Caminho Relativo",
+  "openLocation": "Mostrar na pasta",
+  "openLocationFailed": "Falha ao abrir a pasta que contém o arquivo",
+  "readOnlyLabel": "Pré-visualização somente leitura",
+  "pathLabel": "Caminho",
+  "missingFile": {
+    "title": "Arquivo não encontrado",
+    "openInNewTab": "Tentar abrir em uma nova aba"
+  },
+  "noTabs": "Nenhuma guia aberta",
+  "openInPanelTooltip": "Ver no painel de visualização",
+  "mermaidTitle": "Diagrama Mermaid",
+  "wavedromTitle": "Diagrama WaveDrom",
+  "oversized": {
+    "title": "Arquivo muito grande para pré-visualizar",
+    "detail": "O tamanho do arquivo {{size}} excede o limite de {{threshold}}. Abra-o em um editor do sistema.",
+    "downloadUnavailable": "Este arquivo é muito grande para baixar aqui. Use “Abrir no sistema”."
+  },
+  "unsupported": {
+    "title": "Pré-visualização não suportada para este formato",
+    "detail": "Arquivos {{format}} não podem ser pré-visualizados aqui. Abra em um aplicativo do sistema.",
+    "downloadUnavailable": "Este arquivo não pode ser baixado aqui. Use “Abrir no sistema”."
+  },
+  "aiWriting": "A IA está escrevendo…",
+  "errors": {
+    "missingFilePath": "O caminho do arquivo está ausente",
+    "openWithoutPath": "Não é possível abrir: o caminho do arquivo não foi fornecido",
+    "conversionFailed": "A conversão falhou"
+  },
+  "office": {
+    "installLinkText": "Abrir guia de instalação do officecli",
+    "errors": {
+      "officecliNotFound": "officecli não está instalado.",
+      "installFailed": "Falha ao instalar o officecli automaticamente. Verifique os logs do backend e tente novamente.",
+      "portTimeout": "O serviço de visualização iniciou, mas não ficou pronto a tempo. Tente novamente.",
+      "startFailed": "Falha ao iniciar o serviço de visualização do Office.",
+      "outsideSandbox": "Este arquivo está fora da sandbox atual do projeto."
+    },
+    "serverInstall": {
+      "hint": "O AIPM工作台 está sendo executado em um servidor. O componente de pré-visualização precisa ser instalado nesse servidor. Execute o comando abaixo no servidor e tente novamente:",
+      "icuNote": "Se ainda não iniciar, instale a biblioteca ICU no servidor (Debian/Ubuntu: apt-get install -y libicu-dev)."
+    }
+  },
+  "word": {
+    "title": "Documento Word",
+    "loading": "Carregando documento Word...",
+    "invalid": "Por favor, confirme se o arquivo é um documento Word válido",
+    "loadFailed": "Falha ao carregar o documento Word",
+    "watch": {
+      "loading": "Carregando documento Word...",
+      "installing": "Instalando officecli...",
+      "startFailed": "Falha ao iniciar a visualização do Word",
+      "installHint": "Requer officecli. Será instalado automaticamente."
+    }
+  },
+  "excel": {
+    "title": "Planilha Excel",
+    "loading": "Carregando pasta de trabalho do Excel...",
+    "invalid": "Por favor, confirme se o arquivo é um documento Excel válido",
+    "noSheets": "Nenhuma planilha encontrada neste arquivo Excel",
+    "sheetCount": "{{count}} planilha(s)",
+    "convertFailed": "A conversão do Excel falhou",
+    "loadFailed": "Falha ao carregar a pasta de trabalho do Excel",
+    "emptySheet": "Esta planilha não possui dados",
+    "emptySheetHint": "Verifique se a planilha contém dados ou imagens",
+    "watch": {
+      "loading": "Carregando arquivo Excel...",
+      "installing": "Instalando officecli...",
+      "startFailed": "Falha ao iniciar a visualização do Excel",
+      "installHint": "Requer officecli. Será instalado automaticamente."
+    }
+  },
+  "pdf": {
+    "title": "Documento PDF",
+    "pathMissing": "O caminho do arquivo PDF está ausente",
+    "loadFailed": "Falha ao carregar o documento PDF",
+    "unableDisplay": "Não é possível exibir o arquivo PDF"
+  },
+  "html": {
+    "elementSelected": "Elemento selecionado: {{path}}",
+    "copySuccess": "Trecho de HTML copiado",
+    "inspectorEnabled": "Inspecionador de elemento habilitado. Clique em itens na visualização para destacá-los.",
+    "inspectorButton": "Inspecionador de elemento",
+    "inspecting": "Inspecionando...",
+    "selectedLabel": "Selecionado:",
+    "inspectorTooltip": "Clique em elementos na visualização para inspecionar seu HTML",
+    "downloadHtml": "Baixar arquivo HTML",
+    "copyElementHtml": "Copiar HTML do elemento",
+    "viewElementInfo": "Ver informações do elemento",
+    "printedToConsole": "Informações do elemento enviadas ao console",
+    "inspectElement": "Inspecionar elemento",
+    "inspectElementEnable": "Habilitar inspecionador de elemento",
+    "inspectElementDisable": "Desabilitar inspecionador de elemento"
+  },
+  "ppt": {
+    "loading": "Iniciando visualização do PPT...",
+    "installing": "Instalando componente de visualização...",
+    "startFailed": "Falha ao iniciar a visualização do PPT",
+    "installHint": "Instale o OfficeCLI pela página oficial de releases iOfficeAI/OfficeCLI"
+  },
+  "browser": {
+    "newTab": "Nova aba",
+    "addressPlaceholder": "Digite uma URL ou pesquise",
+    "agentActiveTooltip": "O agente está operando esta aba",
+    "tabLimitReached": "Limite de abas atingido ({{count}}). A aba mais antiga foi reutilizada.",
+    "agentFirstUseTitle": "O agente está usando o navegador interno",
+    "agentFirstUseContent": "Ele pode abrir páginas, clicar e ler conteúdo neste painel. Seu login é preservado.",
+    "agentFirstUseAction": "Abrir configurações"
+  },
+  "saveConflict": "Não foi possível salvar: este arquivo mudou no disco depois que você o abriu. Recarregue para ver as outras alterações — suas edições continuam aqui, não salvas.",
+  "persistQuotaExceeded": "O armazenamento local está cheio, então as abas abertas deste projeto não podem mais ser lembradas. Feche algumas abas ou limpe os dados do site.",
+  "save": {
+    "tooltip": "Salvar alterações (Ctrl/Cmd+S)",
+    "clean": "Nenhuma alteração não salva"
+  },
+  "refresh": {
+    "label": "Atualizar",
+    "tooltip": "Recarregar do disco",
+    "hasUpdate": "Este arquivo mudou no disco — clique para recarregar",
+    "noSignalSource": "Este arquivo não está no projeto, então mudanças não serão anunciadas",
+    "unavailable": "Não foi possível localizar este arquivo",
+    "failed": "Não foi possível recarregar este arquivo",
+    "confirmTitle": "Recarregar e perder alterações não salvas?",
+    "confirmMessage": "Esta aba tem alterações não salvas. Recarregar as substitui pelo conteúdo do disco.",
+    "discardAndRefresh": "Descartar alterações e recarregar",
+    "officeNotWired": "A atualização de documentos do Office ainda não está disponível — feche e reabra o arquivo para ver as alterações."
+  },
+  "zoomIn": "Ampliar",
+  "zoomOut": "Reduzir",
+  "zoomReset": "Redefinir visualização",
+  "diagramZoomHint": "Role para ampliar • Arraste para mover • ESC para fechar"
+}

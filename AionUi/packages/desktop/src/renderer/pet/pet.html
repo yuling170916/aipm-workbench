@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      body {
+        position: relative;
+      }
+      #pet {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        pointer-events: none;
+        user-select: none;
+        transform-origin: 50% 65%;
+        transition:
+          transform 150ms ease-out,
+          scale 150ms ease-out;
+      }
+      #pet[data-state='dragging'] {
+        scale: 1.03;
+      }
+      #pet[data-state='happy'],
+      #pet[data-state='attention'],
+      #pet[data-state='poke-left'],
+      #pet[data-state='poke-right'] {
+        animation: pet-feedback 600ms ease-out;
+      }
+      @keyframes pet-feedback {
+        0%,
+        100% {
+          scale: 1;
+        }
+        50% {
+          scale: 1.045;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #pet {
+          animation: none;
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <img id="pet" alt="" aria-hidden="true" draggable="false" decoding="async" />
+    <script type="module" src="./petRenderer.ts"></script>
+  </body>
+</html>

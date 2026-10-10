@@ -1,0 +1,395 @@
+/**
+ * @license
+ * Copyright 2025 AionUi (aionui.com)
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { joinPath } from '@/common/chat/chatLib';
+import { ipcBridge } from '@/common';
+import type { ChatFileRef } from '@/common/types/chatFile';
+import CodeBlock from '@/renderer/components/Markdown/CodeBlock';
+import LocalFileLink from '@/renderer/components/Markdown/LocalFileLink';
+import {
+  MARKDOWN_REMARK_PLUGINS,
+  MarkdownTable,
+  MarkdownTd,
+  SANITIZED_HTML_REHYPE_PLUGINS,
+} from '@/renderer/components/Markdown/markdownComponents';
+import { resolveLocalFileLinkReference } from '@/renderer/components/Markdown/markdownUtils';
+import { useTextSelection } from '@/renderer/hooks/ui/useTextSelection';
+import 'katex/dist/katex.min.css';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import MarkdownEditor from '../editors/MarkdownEditor';
+import SelectionToolbar from '../renderers/SelectionToolbar';
+import { useContainerScroll, useContainerScrollTarget } from '../../hooks/useScrollSyncHelpers';
+import { useLocalFilePreview } from '../../hooks';
+import { convertLatexDelimiters } from '@/renderer/utils/chat/latexDelimiters';
+
+interface MarkdownPreviewProps {
+  content: string; // Markdown 内容 / Markdown content
+  viewMode?: 'source' | 'preview'; // 外部控制的视图模式 / External view mode
+  onViewModeChange?: (mode: 'source' | 'preview') => void; // 视图模式改变回调（保留以兼容调用方，暂未使用）/ View mode change callback (kept for call-site compatibility, currently unused)
+  onContentChange?: (content: string) => void; // 内容改变回调 / Content change callback
+  containerRef?: React.RefObject<HTMLDivElement>; // 容器引用，用于滚动同步 / Container ref for scroll sync
+  onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number) => void; // 滚动回调 / Scroll callback
+  file_path?: string; // 当前 Markdown 文件的绝对路径 / Absolute file path of current markdown
+  workspace?: string;
+  fileRef?: ChatFileRef; // 当前 Markdown 文件的 ChatFileRef（project 文档据此解析相对图片，无需绝对路径）/ The doc's ChatFileRef; project docs resolve relative images through it (no absolute path)
+}
+
+const isDataOrRemoteUrl = (value?: string): boolean => {
+  if (!value) return false;
+  return /^(https?:|data:|blob:|file:)/i.test(value);
+};
+
+const isAbsoluteLocalPath = (value?: string): boolean => {
+  if (!value) return false;
+  return /^([a-zA-Z]:\\|\\\\|\/)/.test(value);
+};
+
+// Join a project-relative directory with a relative image src, resolving `.`/`..`
+// segments. Project `relative_path` is always POSIX ('/'-separated) regardless of
+// host OS, so this stays cross-platform (no node `path`, which would use '\' on win).
+const joinRelativePosix = (dir: string, rel: string): string => {
+  const out: string[] = [];
+  for (const seg of `${dir}/${rel}`.split('/')) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..') {
+      out.pop();
+      continue;
+    }
+    out.push(seg);
+  }
+  return out.join('/');
+};
+
+interface MarkdownImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  baseDir?: string;
+  workspace?: string;
+  // The markdown document's own ChatFileRef. For project docs the renderer never
+  // has an absolute path, so a relative image is resolved as a sibling project
+  // ref (same pe_id, joined relative_path) and read via /api/fs/content — the
+  // backend does the pe_id → absolute resolution. No absolute path in the renderer.
+  docFileRef?: ChatFileRef;
+}
+
+const useImageResolverCache = () => {
+  const cacheRef = useRef(new Map<string, string>());
+  const inflightRef = useRef(new Map<string, Promise<string>>());
+
+  const resolve = useCallback((key: string, loader: () => Promise<string>): Promise<string> => {
+    const cache = cacheRef.current;
+    if (cache.has(key)) {
+      return Promise.resolve(cache.get(key)!);
+    }
+
+    const inflight = inflightRef.current;
+    if (inflight.has(key)) {
+      return inflight.get(key)!;
+    }
+
+    const promise = loader()
+      .then((result) => {
+        cache.set(key, result);
+        return result;
+      })
+      .finally(() => {
+        inflight.delete(key);
+      });
+
+    inflight.set(key, promise);
+    return promise;
+  }, []);
+
+  return resolve;
+};
+
+const MarkdownImage: React.FC<MarkdownImageProps> = ({ src, alt, baseDir, workspace, docFileRef, ...props }) => {
+  const [resolvedSrc, setResolvedSrc] = useState<string | undefined>(undefined);
+  const resolveImage = useImageResolverCache();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadImage = () => {
+      if (!src) {
+        setResolvedSrc(undefined);
+        return;
+      }
+
+      if (isDataOrRemoteUrl(src)) {
+        if (/^https?:/i.test(src)) {
+          resolveImage(src, () => ipcBridge.fs.fetchRemoteImage.invoke({ url: src }))
+            .then((dataUrl) => {
+              if (!cancelled) {
+                setResolvedSrc(dataUrl);
+              }
+            })
+            .catch((error) => {
+              console.error('[MarkdownPreview] Failed to fetch remote image:', src, error);
+              if (!cancelled) {
+                setResolvedSrc(src);
+              }
+            });
+          return;
+        }
+        setResolvedSrc(src);
+        return;
+      }
+
+      const cleanedSrc = src.replace(/\\/g, '/');
+
+      // Project doc: resolve the image as a sibling project ref and read it via
+      // /api/fs/content (backend does pe_id → absolute). The renderer never builds
+      // an absolute path here, matching the Explorer "no absolute path" contract.
+      if (docFileRef?.kind === 'project' && !isAbsoluteLocalPath(cleanedSrc)) {
+        const mdRel = docFileRef.relative_path.replace(/\\/g, '/');
+        const slash = mdRel.lastIndexOf('/');
+        const dir = slash === -1 ? '' : mdRel.slice(0, slash);
+        const imgRel = joinRelativePosix(dir, cleanedSrc);
+        const imgRef: ChatFileRef = { kind: 'project', pe_id: docFileRef.pe_id, relative_path: imgRel };
+        resolveImage(`project:${docFileRef.pe_id}:${imgRel}`, async () => {
+          const dataUrl = await ipcBridge.fs.readContent.invoke({ file: imgRef, encoding: 'dataurl' });
+          return dataUrl || src;
+        })
+          .then((dataUrl) => {
+            if (!cancelled) setResolvedSrc(dataUrl);
+          })
+          .catch((error) => {
+            console.error('[MarkdownPreview] Failed to load project image:', { src, imgRel, error });
+            if (!cancelled) setResolvedSrc(src);
+          });
+        return;
+      }
+
+      const normalizedBase = baseDir ? baseDir.replace(/\\/g, '/') : undefined;
+      const absolutePath = isAbsoluteLocalPath(cleanedSrc)
+        ? cleanedSrc
+        : normalizedBase
+          ? joinPath(normalizedBase, cleanedSrc)
+          : cleanedSrc;
+
+      if (!absolutePath) {
+        setResolvedSrc(src);
+        return;
+      }
+
+      resolveImage(absolutePath, async () => {
+        const dataUrl = await ipcBridge.fs.getImageBase64.invoke({ path: absolutePath, workspace });
+        return dataUrl ?? src;
+      })
+        .then((dataUrl) => {
+          if (!cancelled) {
+            setResolvedSrc(dataUrl);
+          }
+        })
+        .catch((error) => {
+          console.error('[MarkdownPreview] Failed to load local image:', { src, absolutePath, error });
+          if (!cancelled) {
+            setResolvedSrc(src);
+          }
+        });
+    };
+
+    loadImage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src, baseDir, resolveImage, workspace, docFileRef]);
+
+  if (!resolvedSrc) {
+    return alt ? <span>{alt}</span> : null;
+  }
+
+  return (
+    <img
+      src={resolvedSrc}
+      alt={alt}
+      referrerPolicy='no-referrer'
+      crossOrigin='anonymous'
+      style={{ maxWidth: '100%', width: 'auto', height: 'auto', display: 'block', objectFit: 'contain' }}
+      {...props}
+    />
+  );
+};
+
+const encodeHtmlAttribute = (value: string) => value.replace(/&(?!#?[a-z0-9]+;)/gi, '&amp;');
+
+const rewriteExternalMediaUrls = (markdown: string): string => {
+  const githubWikiRegex = /https:\/\/github\.com\/([^/]+)\/([^/]+)\/wiki\/([^\s)"'>]+)/gi;
+  const rewriteWiki = markdown.replace(githubWikiRegex, (_match, owner, repo, rest) => {
+    return `https://raw.githubusercontent.com/wiki/${owner}/${repo}/${rest}`;
+  });
+  return rewriteWiki.replace(/<(img|a)\b[^>]*>/gi, (tag) => {
+    return tag.replace(/(src|href)\s*=\s*(["'])([^"']*)(\2)/gi, (match, attr, quote, value, closingQuote) => {
+      return `${attr}=${quote}${encodeHtmlAttribute(value)}${closingQuote}`;
+    });
+  });
+};
+
+const normalizeLocalFileSchemeLinks = (markdown: string): string => {
+  return markdown.replace(/file:\/\//gi, '');
+};
+
+// Plain heading overrides that apply consistent spacing/size classes and always
+// render the current text. Defining them once (memoized at module scope) keeps a
+// stable component identity across re-renders so React does not remount headings.
+const HEADING_COMPONENTS = Object.fromEntries(
+  (
+    [
+      ['h1', 'text-3xl'],
+      ['h2', 'text-2xl'],
+      ['h3', 'text-xl'],
+      ['h4', 'text-lg'],
+      ['h5', 'text-base'],
+      ['h6', 'text-sm'],
+    ] as const
+  ).map(([tag, size], index) => [
+    tag,
+    ({ children, className, node: _node, ...props }: React.HTMLAttributes<HTMLHeadingElement> & { node?: unknown }) =>
+      React.createElement(
+        tag,
+        {
+          className: ['mt-6 mb-2 font-semibold', size, className].filter(Boolean).join(' '),
+          'data-heading-level': index + 1,
+          ...props,
+        },
+        children
+      ),
+  ])
+);
+
+/**
+ * Markdown 预览组件
+ * Markdown preview component
+ *
+ * 使用 react-markdown + KaTeX 渲染 Markdown，代码块/Mermaid 复用共享 CodeBlock，
+ * 原始 HTML 经 rehype-sanitize 脱敏后渲染，支持原文/预览切换。
+ * Renders markdown with react-markdown + KaTeX; code/Mermaid reuse the shared
+ * CodeBlock, raw HTML is sanitized via rehype-sanitize, source/preview toggle.
+ */
+const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
+  content,
+  viewMode: externalViewMode,
+  onContentChange,
+  containerRef: externalContainerRef,
+  onScroll: externalOnScroll,
+  file_path,
+  workspace,
+  fileRef,
+}) => {
+  const internalContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = externalContainerRef || internalContainerRef; // 使用外部 ref 或内部 ref / Use external ref or internal ref
+  const handleLocalFileLink = useLocalFilePreview(workspace);
+
+  // 使用滚动同步 Hooks / Use scroll sync hooks
+  useContainerScroll(containerRef, externalOnScroll);
+  useContainerScrollTarget(containerRef);
+
+  // 使用外部传入的 viewMode，默认预览模式 / Use external viewMode if provided, default to preview
+  const viewMode = externalViewMode ?? 'preview';
+
+  // 预览源：转换 LaTeX 分隔符并重写外部媒体 URL / Preview source: convert LaTeX delimiters and rewrite external media URLs
+  const previewSource = useMemo(
+    () => convertLatexDelimiters(normalizeLocalFileSchemeLinks(rewriteExternalMediaUrls(content))),
+    [content]
+  );
+
+  // 监听文本选择 / Monitor text selection
+  const { selectedText, selectedUrl, selectionPosition, clearSelection } = useTextSelection(containerRef);
+
+  const baseDir = useMemo(() => {
+    if (!file_path) return undefined;
+    const normalized = file_path.replace(/\\/g, '/');
+    const lastSlash = normalized.lastIndexOf('/');
+    if (lastSlash === -1) return undefined;
+    return normalized.slice(0, lastSlash);
+  }, [file_path]);
+
+  // Memoize component overrides so React keeps a stable identity across re-renders.
+  // Code fences and Mermaid diagrams reuse the shared CodeBlock (chat/preview parity);
+  // tables reuse the shared table/cell overrides.
+  const components = useMemo(
+    () => ({
+      ...HEADING_COMPONENTS,
+      // Enable diagram drag-to-pan + zoom in the preview panel (matches chat diagrams).
+      code: (props: Record<string, unknown>) => (
+        <CodeBlock {...(props as Parameters<typeof CodeBlock>[0])} diagramPanZoom />
+      ),
+      a({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+        const localFileReference = resolveLocalFileLinkReference(typeof href === 'string' ? href : '');
+        if (localFileReference) {
+          return (
+            <LocalFileLink reference={localFileReference} onOpen={handleLocalFileLink}>
+              {children}
+            </LocalFileLink>
+          );
+        }
+        return (
+          <a href={href} target='_blank' rel='noreferrer' {...props}>
+            {children}
+          </a>
+        );
+      },
+      img({ src, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) {
+        return (
+          <MarkdownImage src={src} alt={alt} baseDir={baseDir} workspace={workspace} docFileRef={fileRef} {...props} />
+        );
+      },
+      table: MarkdownTable,
+      td: MarkdownTd,
+    }),
+    [handleLocalFileLink, baseDir, workspace, fileRef]
+  );
+
+  return (
+    <div className='flex flex-col w-full h-full overflow-hidden'>
+      {/* 内容区域 / Content area */}
+      <div
+        ref={containerRef}
+        className={`flex-1 ${viewMode === 'source' ? 'overflow-hidden' : 'overflow-auto p-32px text-t-primary'}`}
+        style={{ minWidth: 0 }}
+      >
+        {viewMode === 'source' ? (
+          // 原文模式：使用编辑器 / Source mode: Use editor
+          <MarkdownEditor value={content} onChange={(value) => onContentChange?.(value)} />
+        ) : (
+          // 预览模式：react-markdown + KaTeX / Preview mode: react-markdown + KaTeX
+          <div
+            className='aionui-markdown'
+            style={{
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              width: '100%',
+              maxWidth: '100%',
+              minWidth: 0,
+              boxSizing: 'border-box',
+            }}
+          >
+            <ReactMarkdown
+              remarkPlugins={MARKDOWN_REMARK_PLUGINS}
+              rehypePlugins={SANITIZED_HTML_REHYPE_PLUGINS}
+              components={components}
+            >
+              {previewSource}
+            </ReactMarkdown>
+          </div>
+        )}
+      </div>
+
+      {/* 文本选择浮动工具栏 / Text selection floating toolbar */}
+      {selectedText && (
+        <SelectionToolbar
+          selectedText={selectedText}
+          selectedUrl={selectedUrl}
+          position={selectionPosition}
+          onClear={clearSelection}
+        />
+      )}
+    </div>
+  );
+};
+
+export default MarkdownPreview;

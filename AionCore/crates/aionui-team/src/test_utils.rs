@@ -1,0 +1,1798 @@
+use aionui_common::now_ms;
+use aionui_db::models::{MailboxMessageRow, TeamRow, TeamTaskRow};
+use aionui_db::{ActivityCursor, DbError, ITeamRepository, PageDirection, UpdateTaskParams, UpdateTeamParams};
+use std::sync::Mutex;
+
+#[derive(Default)]
+pub struct MockState {
+    pub messages: Vec<MailboxMessageRow>,
+    pub tasks: Vec<TeamTaskRow>,
+    pub fail_message_writes: bool,
+    pub fail_task_lists: bool,
+}
+
+pub struct MockTeamRepo {
+    pub state: Mutex<MockState>,
+    peek_snapshot_tx: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
+    peek_release_rx: Mutex<Option<tokio::sync::oneshot::Receiver<()>>>,
+}
+
+impl MockTeamRepo {
+    pub fn new() -> Self {
+        Self {
+            state: Mutex::new(MockState::default()),
+            peek_snapshot_tx: Mutex::new(None),
+            peek_release_rx: Mutex::new(None),
+        }
+    }
+
+    pub fn arm_peek_barrier(
+        &self,
+        snapshot_tx: tokio::sync::oneshot::Sender<()>,
+        release_rx: tokio::sync::oneshot::Receiver<()>,
+    ) {
+        *self.peek_snapshot_tx.lock().unwrap() = Some(snapshot_tx);
+        *self.peek_release_rx.lock().unwrap() = Some(release_rx);
+    }
+}
+
+#[async_trait::async_trait]
+impl ITeamRepository for MockTeamRepo {
+    // ── Team CRUD (stubs) ───────────────────────────────────────────
+
+    async fn create_team(&self, _row: &TeamRow) -> Result<(), DbError> {
+        Ok(())
+    }
+    async fn list_teams_for_restore(&self) -> Result<Vec<TeamRow>, DbError> {
+        Ok(vec![])
+    }
+    async fn list_teams_by_user(&self, _user_id: &str) -> Result<Vec<TeamRow>, DbError> {
+        Ok(vec![])
+    }
+    async fn get_team(&self, _user_id: &str, _id: &str) -> Result<Option<TeamRow>, DbError> {
+        Ok(None)
+    }
+    async fn get_team_for_restore(&self, _id: &str) -> Result<Option<TeamRow>, DbError> {
+        Ok(Some(TeamRow {
+            id: _id.to_owned(),
+            user_id: "system_default_user".to_owned(),
+            name: "mock".to_owned(),
+            workspace: String::new(),
+            workspace_mode: "shared".to_owned(),
+            agents: "[]".to_owned(),
+            lead_agent_id: None,
+            session_mode: None,
+            agents_version: "1.0.1".to_owned(),
+            created_at: now_ms(),
+            updated_at: now_ms(),
+            project_id: None,
+            folder_id: None,
+        }))
+    }
+    async fn update_team(&self, _user_id: &str, _id: &str, _p: &UpdateTeamParams) -> Result<(), DbError> {
+        Ok(())
+    }
+    async fn delete_team(&self, _user_id: &str, _id: &str) -> Result<(), DbError> {
+        Ok(())
+    }
+
+    // ── Mailbox ─────────────────────────────────────────────────────
+
+    async fn write_message(&self, _user_id: &str, row: &MailboxMessageRow) -> Result<(), DbError> {
+        let mut state = self.state.lock().unwrap();
+        if state.fail_message_writes {
+            return Err(DbError::Init("forced mailbox write failure".into()));
+        }
+        state.messages.push(row.clone());
+        Ok(())
+    }
+
+    async fn read_unread_and_mark(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        to_agent_id: &str,
+    ) -> Result<Vec<MailboxMessageRow>, DbError> {
+        let mut state = self.state.lock().unwrap();
+        let mut result = vec![];
+        for msg in &mut state.messages {
+            if msg.team_id == team_id && msg.to_agent_id == to_agent_id && !msg.read {
+                msg.read = true;
+                result.push(msg.clone());
+            }
+        }
+        Ok(result)
+    }
+
+    async fn peek_unread(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        to_agent_id: &str,
+    ) -> Result<Vec<MailboxMessageRow>, DbError> {
+        let result = {
+            let state = self.state.lock().unwrap();
+            state
+                .messages
+                .iter()
+                .filter(|m| m.team_id == team_id && m.to_agent_id == to_agent_id && !m.read)
+                .cloned()
+                .collect()
+        };
+        if let Some(snapshot_tx) = self.peek_snapshot_tx.lock().unwrap().take() {
+            let _ = snapshot_tx.send(());
+        }
+        let release_rx = self.peek_release_rx.lock().unwrap().take();
+        if let Some(release_rx) = release_rx {
+            let _ = release_rx.await;
+        }
+        Ok(result)
+    }
+
+    /// Filters directly instead of delegating to `peek_unread` so the
+    /// snapshot/release race hooks above stay bound to `peek_unread` alone.
+    async fn peek_unread_by_ids(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        to_agent_id: &str,
+        ids: &[String],
+    ) -> Result<Vec<MailboxMessageRow>, DbError> {
+        let state = self.state.lock().unwrap();
+        Ok(state
+            .messages
+            .iter()
+            .filter(|m| m.team_id == team_id && m.to_agent_id == to_agent_id && !m.read && ids.contains(&m.id))
+            .cloned()
+            .collect())
+    }
+
+    async fn mark_read_batch(&self, _user_id: &str, team_id: &str, ids: &[String]) -> Result<(), DbError> {
+        let mut state = self.state.lock().unwrap();
+        for msg in &mut state.messages {
+            if msg.team_id == team_id && ids.contains(&msg.id) {
+                msg.read = true;
+            }
+        }
+        Ok(())
+    }
+
+    async fn get_history(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        to_agent_id: &str,
+        limit: Option<i64>,
+    ) -> Result<Vec<MailboxMessageRow>, DbError> {
+        let state = self.state.lock().unwrap();
+        let iter = state
+            .messages
+            .iter()
+            .filter(|m| m.team_id == team_id && m.to_agent_id == to_agent_id);
+        let msgs: Vec<_> = match limit {
+            Some(n) => iter.take(n as usize).cloned().collect(),
+            None => iter.cloned().collect(),
+        };
+        Ok(msgs)
+    }
+
+    async fn list_messages_by_team(&self, team_id: &str, limit: i64) -> Result<Vec<MailboxMessageRow>, DbError> {
+        let state = self.state.lock().unwrap();
+        let mut msgs: Vec<MailboxMessageRow> = state
+            .messages
+            .iter()
+            .filter(|m| m.team_id == team_id)
+            .cloned()
+            .collect();
+        // DESC by created_at, id as a stable secondary key.
+        msgs.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| b.id.cmp(&a.id)));
+        msgs.truncate(limit.max(0) as usize);
+        Ok(msgs)
+    }
+
+    async fn list_messages_by_team_paged(
+        &self,
+        team_id: &str,
+        cursor: Option<ActivityCursor>,
+        direction: PageDirection,
+        limit: i64,
+    ) -> Result<Vec<MailboxMessageRow>, DbError> {
+        let state = self.state.lock().unwrap();
+        let mut msgs: Vec<MailboxMessageRow> = state
+            .messages
+            .iter()
+            .filter(|m| m.team_id == team_id)
+            .cloned()
+            .collect();
+        match direction {
+            PageDirection::Desc => msgs.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| b.id.cmp(&a.id))),
+            PageDirection::Asc => msgs.sort_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| a.id.cmp(&b.id))),
+        }
+        if let Some(c) = cursor {
+            msgs.retain(|m| match direction {
+                PageDirection::Desc => (m.created_at, m.id.as_str()) < (c.created_at, c.id.as_str()),
+                PageDirection::Asc => (m.created_at, m.id.as_str()) > (c.created_at, c.id.as_str()),
+            });
+        }
+        msgs.truncate(limit.max(0) as usize);
+        Ok(msgs)
+    }
+
+    async fn list_messages_by_ids(&self, ids: &[String]) -> Result<Vec<MailboxMessageRow>, DbError> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let state = self.state.lock().unwrap();
+        let mut msgs: Vec<MailboxMessageRow> = state.messages.iter().filter(|m| ids.contains(&m.id)).cloned().collect();
+        msgs.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| b.id.cmp(&a.id)));
+        Ok(msgs)
+    }
+
+    async fn delete_mailbox_by_team(&self, _user_id: &str, team_id: &str) -> Result<(), DbError> {
+        self.state.lock().unwrap().messages.retain(|m| m.team_id != team_id);
+        Ok(())
+    }
+
+    // ── TaskBoard ───────────────────────────────────────────────────
+
+    async fn create_task(&self, _user_id: &str, row: &TeamTaskRow) -> Result<(), DbError> {
+        self.state.lock().unwrap().tasks.push(row.clone());
+        Ok(())
+    }
+
+    async fn find_task_by_id(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        task_id: &str,
+    ) -> Result<Option<TeamTaskRow>, DbError> {
+        let state = self.state.lock().unwrap();
+        let found = state
+            .tasks
+            .iter()
+            .find(|t| t.team_id == team_id && t.id == task_id)
+            .cloned();
+        Ok(found)
+    }
+
+    async fn update_task(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        task_id: &str,
+        params: &UpdateTaskParams,
+    ) -> Result<(), DbError> {
+        let mut state = self.state.lock().unwrap();
+        let task = state
+            .tasks
+            .iter_mut()
+            .find(|t| t.team_id == team_id && t.id == task_id)
+            .ok_or_else(|| DbError::NotFound(task_id.to_owned()))?;
+        if let Some(ref s) = params.status {
+            task.status = s.clone();
+        }
+        if let Some(ref d) = params.description {
+            task.description = Some(d.clone());
+        }
+        if let Some(ref o) = params.owner {
+            task.owner = Some(o.clone());
+        }
+        if let Some(ref b) = params.blocked_by {
+            task.blocked_by = b.clone();
+        }
+        if let Some(ref m) = params.metadata {
+            task.metadata = Some(m.clone());
+        }
+        task.updated_at = now_ms();
+        Ok(())
+    }
+
+    async fn list_tasks(&self, _user_id: &str, team_id: &str) -> Result<Vec<TeamTaskRow>, DbError> {
+        let state = self.state.lock().unwrap();
+        if state.fail_task_lists {
+            return Err(DbError::Init("forced task list failure".into()));
+        }
+        let tasks = state.tasks.iter().filter(|t| t.team_id == team_id).cloned().collect();
+        Ok(tasks)
+    }
+
+    async fn list_tasks_by_ids(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        ids: &[String],
+    ) -> Result<Vec<TeamTaskRow>, DbError> {
+        let state = self.state.lock().unwrap();
+        if state.fail_task_lists {
+            return Err(DbError::Init("forced task list failure".into()));
+        }
+        let tasks = state
+            .tasks
+            .iter()
+            .filter(|t| t.team_id == team_id && ids.contains(&t.id))
+            .cloned()
+            .collect();
+        Ok(tasks)
+    }
+
+    async fn list_tasks_paged(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        cursor: Option<ActivityCursor>,
+        direction: PageDirection,
+        limit: i64,
+    ) -> Result<Vec<TeamTaskRow>, DbError> {
+        let state = self.state.lock().unwrap();
+        if state.fail_task_lists {
+            return Err(DbError::Init("forced task list failure".into()));
+        }
+        let mut tasks: Vec<TeamTaskRow> = state.tasks.iter().filter(|t| t.team_id == team_id).cloned().collect();
+        match direction {
+            PageDirection::Desc => tasks.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| b.id.cmp(&a.id))),
+            PageDirection::Asc => tasks.sort_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| a.id.cmp(&b.id))),
+        }
+        if let Some(c) = cursor {
+            tasks.retain(|t| match direction {
+                PageDirection::Desc => (t.created_at, t.id.as_str()) < (c.created_at, c.id.as_str()),
+                PageDirection::Asc => (t.created_at, t.id.as_str()) > (c.created_at, c.id.as_str()),
+            });
+        }
+        tasks.truncate(limit.max(0) as usize);
+        Ok(tasks)
+    }
+
+    async fn append_to_blocks(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        task_id: &str,
+        blocked_task_id: &str,
+    ) -> Result<(), DbError> {
+        let mut state = self.state.lock().unwrap();
+        let task = state
+            .tasks
+            .iter_mut()
+            .find(|t| t.team_id == team_id && t.id == task_id)
+            .ok_or_else(|| DbError::NotFound(task_id.to_owned()))?;
+        let mut blocks: Vec<String> = serde_json::from_str(&task.blocks).unwrap_or_default();
+        blocks.push(blocked_task_id.to_owned());
+        task.blocks = serde_json::to_string(&blocks).unwrap();
+        Ok(())
+    }
+
+    async fn remove_from_blocked_by(
+        &self,
+        _user_id: &str,
+        team_id: &str,
+        task_id: &str,
+        unblocked_task_id: &str,
+    ) -> Result<(), DbError> {
+        let mut state = self.state.lock().unwrap();
+        let task = state
+            .tasks
+            .iter_mut()
+            .find(|t| t.team_id == team_id && t.id == task_id)
+            .ok_or_else(|| DbError::NotFound(task_id.to_owned()))?;
+        let mut blocked_by: Vec<String> = serde_json::from_str(&task.blocked_by).unwrap_or_default();
+        blocked_by.retain(|id| id != unblocked_task_id);
+        task.blocked_by = serde_json::to_string(&blocked_by).unwrap();
+        Ok(())
+    }
+
+    async fn delete_tasks_by_team(&self, _user_id: &str, team_id: &str) -> Result<(), DbError> {
+        self.state.lock().unwrap().tasks.retain(|t| t.team_id != team_id);
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod workspace_harness {
+    use std::sync::{Arc, Mutex};
+
+    use aionui_ai_agent::{AgentError, IWorkerTaskManager};
+    use aionui_api_types::{
+        AcpConfigOptionDto, AcpConfigSelectOptionDto, ConfigOptionConfirmation, CreateTeamRequest,
+        GetConfigOptionsResponse, SessionMcpServer, SetConfigOptionRequest, SetConfigOptionResponse, TeamMcpSelection,
+        WebSocketMessage,
+    };
+    use aionui_common::{AgentKillReason, AgentType, PaginatedResult, now_ms};
+    use aionui_db::models::{
+        AgentMetadataRow, AssistantDefinitionRow, AssistantOverlayRow, ConversationRow, MessageRow, TeamRow,
+        TeamTaskRow, UpdateAgentHandshakeParams, UpsertAgentMetadataParams, UpsertAssistantDefinitionParams,
+        UpsertAssistantOverlayParams,
+    };
+    use aionui_db::{
+        ActivityCursor, ConversationFilters, ConversationRowUpdate, DbError, IAgentMetadataRepository,
+        IAssistantDefinitionRepository, IAssistantOverlayRepository, IConversationRepository, IProviderRepository,
+        ITeamRepository, MessagePageParams, MessagePageResult, MessageRowUpdate, MessageSearchRow, PageDirection,
+        UpdateTeamParams,
+    };
+    use aionui_realtime::EventBroadcaster;
+    use async_trait::async_trait;
+
+    use crate::ports::{
+        AgentTurnCancellationPort, AgentTurnExecutionError, AgentTurnExecutionPort, AgentTurnOutcome, AgentTurnRequest,
+        AgentTurnStarted, AgentTurnStatus, TeamAssistantCatalogEntry, TeamAssistantCatalogPort,
+        TeamConversationBindingLookup, TeamConversationLookupPort,
+    };
+    use crate::provisioning::{
+        TeamConversationCreateRequest, TeamConversationCreateResult, TeamConversationProvisioningPort,
+        TeamMcpSnapshotResolution,
+    };
+    use crate::{TeamError, TeamProjectionMessageStore, TeamSessionService};
+
+    pub(crate) struct MockConversationRepo {
+        conversations: Mutex<Vec<ConversationRow>>,
+    }
+
+    impl MockConversationRepo {
+        fn new() -> Self {
+            Self {
+                conversations: Mutex::new(Vec::new()),
+            }
+        }
+
+        pub(crate) fn get_extra(&self, id: &str) -> Option<serde_json::Value> {
+            self.conversations
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|c| c.id == id)
+                .and_then(|c| serde_json::from_str(&c.extra).ok())
+        }
+
+        pub(crate) fn mark_runtime_not_ready(&self, id: &str) {
+            self.set_extra_flag(id, "runtime_not_ready");
+        }
+
+        pub(crate) fn mark_runtime_attach_failed(&self, id: &str) {
+            self.set_extra_flag(id, "runtime_attach_failed");
+        }
+
+        fn set_extra_flag(&self, id: &str, key: &str) {
+            let mut conversations = self.conversations.lock().unwrap();
+            let conversation = conversations
+                .iter_mut()
+                .find(|c| c.id == id)
+                .expect("conversation exists");
+            let mut extra: serde_json::Value =
+                serde_json::from_str(&conversation.extra).unwrap_or_else(|_| serde_json::json!({}));
+            extra[key] = serde_json::Value::Bool(true);
+            conversation.extra = serde_json::to_string(&extra).unwrap();
+        }
+    }
+
+    #[async_trait]
+    impl IConversationRepository for MockConversationRepo {
+        async fn get(&self, user_id: &str, id: &str) -> Result<Option<ConversationRow>, DbError> {
+            Ok(self
+                .conversations
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|c| c.user_id == user_id && c.id == id)
+                .cloned())
+        }
+
+        async fn owner_user_id(&self, id: &str) -> Result<Option<String>, DbError> {
+            Ok(self
+                .conversations
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| c.user_id.clone()))
+        }
+
+        async fn create(&self, row: &ConversationRow) -> Result<(), DbError> {
+            self.conversations.lock().unwrap().push(row.clone());
+            Ok(())
+        }
+
+        async fn update(&self, user_id: &str, id: &str, updates: &ConversationRowUpdate) -> Result<(), DbError> {
+            let mut conversations = self.conversations.lock().unwrap();
+            let conversation = conversations
+                .iter_mut()
+                .find(|c| c.user_id == user_id && c.id == id)
+                .ok_or_else(|| DbError::NotFound(id.to_owned()))?;
+            if let Some(ref extra) = updates.extra {
+                conversation.extra = extra.clone();
+            }
+            if let Some(ref name) = updates.name {
+                conversation.name = name.clone();
+            }
+            if let Some(ref model) = updates.model {
+                conversation.model = model.clone();
+            }
+            if let Some(pinned) = updates.pinned {
+                conversation.pinned = pinned;
+            }
+            if let Some(updated_at) = updates.updated_at {
+                conversation.updated_at = updated_at;
+            }
+            Ok(())
+        }
+
+        async fn delete(&self, user_id: &str, id: &str) -> Result<(), DbError> {
+            self.conversations
+                .lock()
+                .unwrap()
+                .retain(|c| c.user_id != user_id || c.id != id);
+            Ok(())
+        }
+
+        async fn list_paginated(
+            &self,
+            _user_id: &str,
+            _filters: &ConversationFilters,
+        ) -> Result<PaginatedResult<ConversationRow>, DbError> {
+            Ok(PaginatedResult {
+                items: vec![],
+                total: 0,
+                has_more: false,
+            })
+        }
+
+        async fn find_by_source_and_chat(
+            &self,
+            _user_id: &str,
+            _source: &str,
+            _chat_id: &str,
+            _agent_type: &str,
+        ) -> Result<Option<ConversationRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn list_by_cron_job(&self, _user_id: &str, _cron_job_id: &str) -> Result<Vec<ConversationRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn list_associated(
+            &self,
+            _user_id: &str,
+            _conversation_id: &str,
+        ) -> Result<Vec<ConversationRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn list_messages_page(
+            &self,
+            _user_id: &str,
+            _conv_id: &str,
+            _params: &MessagePageParams,
+        ) -> Result<MessagePageResult, DbError> {
+            Ok(MessagePageResult {
+                items: vec![],
+                has_more_before: false,
+                has_more_after: false,
+            })
+        }
+
+        async fn insert_message(&self, _user_id: &str, _message: &MessageRow) -> Result<(), DbError> {
+            Ok(())
+        }
+
+        async fn update_message(
+            &self,
+            _user_id: &str,
+            _conversation_id: &str,
+            _id: &str,
+            _updates: &MessageRowUpdate,
+        ) -> Result<(), DbError> {
+            Ok(())
+        }
+
+        async fn delete_messages_by_conversation(&self, _user_id: &str, _conv_id: &str) -> Result<(), DbError> {
+            Ok(())
+        }
+
+        async fn get_message_by_msg_id(
+            &self,
+            _user_id: &str,
+            _conv_id: &str,
+            _msg_id: &str,
+            _msg_type: &str,
+        ) -> Result<Option<MessageRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn search_messages(
+            &self,
+            _user_id: &str,
+            _keyword: &str,
+            _page: u32,
+            _page_size: u32,
+        ) -> Result<PaginatedResult<MessageSearchRow>, DbError> {
+            Ok(PaginatedResult {
+                items: vec![],
+                total: 0,
+                has_more: false,
+            })
+        }
+    }
+
+    pub(crate) struct FullMockTeamRepo {
+        teams: Mutex<Vec<TeamRow>>,
+        messages: Mutex<Vec<aionui_db::models::MailboxMessageRow>>,
+    }
+
+    impl FullMockTeamRepo {
+        fn new() -> Self {
+            Self {
+                teams: Mutex::new(Vec::new()),
+                messages: Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl ITeamRepository for FullMockTeamRepo {
+        async fn create_team(&self, row: &TeamRow) -> Result<(), DbError> {
+            self.teams.lock().unwrap().push(row.clone());
+            Ok(())
+        }
+
+        async fn list_teams_for_restore(&self) -> Result<Vec<TeamRow>, DbError> {
+            Ok(self.teams.lock().unwrap().clone())
+        }
+
+        async fn list_teams_by_user(&self, user_id: &str) -> Result<Vec<TeamRow>, DbError> {
+            Ok(self
+                .teams
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|team| team.user_id == user_id)
+                .cloned()
+                .collect())
+        }
+
+        async fn get_team(&self, user_id: &str, id: &str) -> Result<Option<TeamRow>, DbError> {
+            Ok(self
+                .teams
+                .lock()
+                .unwrap()
+                .iter()
+                .find(|t| t.user_id == user_id && t.id == id)
+                .cloned())
+        }
+
+        async fn get_team_for_restore(&self, id: &str) -> Result<Option<TeamRow>, DbError> {
+            Ok(self.teams.lock().unwrap().iter().find(|t| t.id == id).cloned())
+        }
+
+        async fn update_team(&self, user_id: &str, id: &str, params: &UpdateTeamParams) -> Result<(), DbError> {
+            let mut teams = self.teams.lock().unwrap();
+            let team = teams
+                .iter_mut()
+                .find(|t| t.user_id == user_id && t.id == id)
+                .ok_or_else(|| DbError::NotFound(id.to_owned()))?;
+            if let Some(ref name) = params.name {
+                team.name = name.clone();
+            }
+            if let Some(ref workspace) = params.workspace {
+                team.workspace = workspace.clone();
+            }
+            if let Some(ref agents) = params.agents {
+                team.agents = agents.clone();
+            }
+            if let Some(ref lead_id) = params.lead_agent_id {
+                team.lead_agent_id = Some(lead_id.clone());
+            }
+            if let Some(ref session_mode) = params.session_mode {
+                team.session_mode = Some(session_mode.clone());
+            }
+            team.updated_at = now_ms();
+            Ok(())
+        }
+
+        async fn delete_team(&self, user_id: &str, id: &str) -> Result<(), DbError> {
+            self.teams
+                .lock()
+                .unwrap()
+                .retain(|t| t.user_id != user_id || t.id != id);
+            Ok(())
+        }
+
+        async fn write_message(
+            &self,
+            _user_id: &str,
+            row: &aionui_db::models::MailboxMessageRow,
+        ) -> Result<(), DbError> {
+            self.messages.lock().unwrap().push(row.clone());
+            Ok(())
+        }
+
+        async fn read_unread_and_mark(
+            &self,
+            _user_id: &str,
+            team_id: &str,
+            to_agent_id: &str,
+        ) -> Result<Vec<aionui_db::models::MailboxMessageRow>, DbError> {
+            let mut messages = self.messages.lock().unwrap();
+            let mut unread = Vec::new();
+            for message in messages.iter_mut() {
+                if message.team_id == team_id && message.to_agent_id == to_agent_id && !message.read {
+                    unread.push(message.clone());
+                    message.read = true;
+                }
+            }
+            Ok(unread)
+        }
+
+        async fn peek_unread(
+            &self,
+            _user_id: &str,
+            team_id: &str,
+            to_agent_id: &str,
+        ) -> Result<Vec<aionui_db::models::MailboxMessageRow>, DbError> {
+            Ok(self
+                .messages
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|message| message.team_id == team_id && message.to_agent_id == to_agent_id && !message.read)
+                .cloned()
+                .collect())
+        }
+
+        async fn peek_unread_by_ids(
+            &self,
+            _user_id: &str,
+            team_id: &str,
+            to_agent_id: &str,
+            ids: &[String],
+        ) -> Result<Vec<aionui_db::models::MailboxMessageRow>, DbError> {
+            Ok(self
+                .messages
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|message| {
+                    message.team_id == team_id
+                        && message.to_agent_id == to_agent_id
+                        && !message.read
+                        && ids.contains(&message.id)
+                })
+                .cloned()
+                .collect())
+        }
+
+        async fn mark_read_batch(&self, _user_id: &str, team_id: &str, ids: &[String]) -> Result<(), DbError> {
+            for message in self.messages.lock().unwrap().iter_mut() {
+                if message.team_id == team_id && ids.contains(&message.id) {
+                    message.read = true;
+                }
+            }
+            Ok(())
+        }
+
+        async fn get_history(
+            &self,
+            _user_id: &str,
+            team_id: &str,
+            to_agent_id: &str,
+            limit: Option<i64>,
+        ) -> Result<Vec<aionui_db::models::MailboxMessageRow>, DbError> {
+            let mut messages: Vec<_> = self
+                .messages
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|message| message.team_id == team_id && message.to_agent_id == to_agent_id)
+                .cloned()
+                .collect();
+            messages.sort_by_key(|message| std::cmp::Reverse(message.created_at));
+            messages.truncate(limit.unwrap_or(i64::MAX).max(0) as usize);
+            Ok(messages)
+        }
+
+        async fn list_messages_by_team(
+            &self,
+            team_id: &str,
+            limit: i64,
+        ) -> Result<Vec<aionui_db::models::MailboxMessageRow>, DbError> {
+            let mut messages: Vec<_> = self
+                .messages
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|message| message.team_id == team_id)
+                .cloned()
+                .collect();
+            messages.sort_by_key(|message| std::cmp::Reverse(message.created_at));
+            messages.truncate(limit.max(0) as usize);
+            Ok(messages)
+        }
+
+        async fn list_messages_by_team_paged(
+            &self,
+            _team_id: &str,
+            _cursor: Option<ActivityCursor>,
+            _direction: PageDirection,
+            _limit: i64,
+        ) -> Result<Vec<aionui_db::models::MailboxMessageRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn list_messages_by_ids(
+            &self,
+            ids: &[String],
+        ) -> Result<Vec<aionui_db::models::MailboxMessageRow>, DbError> {
+            Ok(self
+                .messages
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|message| ids.contains(&message.id))
+                .cloned()
+                .collect())
+        }
+
+        async fn delete_mailbox_by_team(&self, _user_id: &str, team_id: &str) -> Result<(), DbError> {
+            self.messages
+                .lock()
+                .unwrap()
+                .retain(|message| message.team_id != team_id);
+            Ok(())
+        }
+
+        async fn create_task(&self, _user_id: &str, _row: &TeamTaskRow) -> Result<(), DbError> {
+            Ok(())
+        }
+
+        async fn find_task_by_id(
+            &self,
+            _user_id: &str,
+            _team_id: &str,
+            _task_id: &str,
+        ) -> Result<Option<TeamTaskRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn update_task(
+            &self,
+            _user_id: &str,
+            _team_id: &str,
+            _task_id: &str,
+            _params: &aionui_db::UpdateTaskParams,
+        ) -> Result<(), DbError> {
+            Ok(())
+        }
+
+        async fn list_tasks(&self, _user_id: &str, _team_id: &str) -> Result<Vec<TeamTaskRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn list_tasks_by_ids(
+            &self,
+            _user_id: &str,
+            _team_id: &str,
+            _ids: &[String],
+        ) -> Result<Vec<TeamTaskRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn list_tasks_paged(
+            &self,
+            _user_id: &str,
+            _team_id: &str,
+            _cursor: Option<ActivityCursor>,
+            _direction: PageDirection,
+            _limit: i64,
+        ) -> Result<Vec<TeamTaskRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn append_to_blocks(
+            &self,
+            _user_id: &str,
+            _team_id: &str,
+            _task_id: &str,
+            _blocked_task_id: &str,
+        ) -> Result<(), DbError> {
+            Ok(())
+        }
+
+        async fn remove_from_blocked_by(
+            &self,
+            _user_id: &str,
+            _team_id: &str,
+            _task_id: &str,
+            _unblocked_task_id: &str,
+        ) -> Result<(), DbError> {
+            Ok(())
+        }
+
+        async fn delete_tasks_by_team(&self, _user_id: &str, _team_id: &str) -> Result<(), DbError> {
+            Ok(())
+        }
+    }
+
+    struct FakeConversationPorts {
+        repo: Arc<MockConversationRepo>,
+        workspace_root: std::path::PathBuf,
+    }
+
+    impl FakeConversationPorts {
+        fn new(repo: Arc<MockConversationRepo>) -> Self {
+            Self {
+                repo,
+                workspace_root: std::env::temp_dir().join(format!(
+                    "aionui-team-workspace-harness-{}",
+                    aionui_common::generate_id()
+                )),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl TeamConversationProvisioningPort for FakeConversationPorts {
+        async fn create_team_conversation(
+            &self,
+            request: TeamConversationCreateRequest,
+        ) -> Result<TeamConversationCreateResult, TeamError> {
+            let id = aionui_common::generate_id();
+            let workspace = request
+                .extra
+                .get("workspace")
+                .and_then(serde_json::Value::as_str)
+                .filter(|value| !value.trim().is_empty())
+                .map(str::to_owned)
+                .unwrap_or_else(|| {
+                    let path = self.workspace_root.join("conversations").join(format!("acp-temp-{id}"));
+                    std::fs::create_dir_all(&path).unwrap();
+                    path.to_string_lossy().into_owned()
+                });
+            let mut extra = request.extra;
+            extra["workspace"] = serde_json::Value::String(workspace.clone());
+            // Mirror the real create(): final team snapshot inputs are
+            // normalized here into all four persisted fields (empty
+            // arrays are explicit — "no user MCP" wins over preset defaults).
+            if extra.get("mcp_server_ids").is_some() || extra.get("session_mcp_servers").is_some() {
+                let ids = serde_json::from_value::<Vec<String>>(extra["mcp_server_ids"].clone()).unwrap_or_default();
+                let session_servers =
+                    serde_json::from_value::<Vec<SessionMcpServer>>(extra["session_mcp_servers"].clone())
+                        .unwrap_or_default();
+                // Names: repo rows are approximated by their ids in this fake;
+                // inline (builtin) servers carry their real names.
+                let mut names: Vec<String> = ids.clone();
+                for server in &session_servers {
+                    if !names.contains(&server.name) {
+                        names.push(server.name.clone());
+                    }
+                }
+                for status in extra["mcp_statuses"].as_array().into_iter().flatten() {
+                    if let Some(name) = status.get("name").and_then(serde_json::Value::as_str)
+                        && !names.iter().any(|value| value == name)
+                    {
+                        names.push(name.to_owned());
+                    }
+                }
+                extra["mcp_servers"] = serde_json::json!(names);
+                if extra.get("mcp_statuses").is_none() {
+                    extra["mcp_statuses"] = serde_json::json!([]);
+                }
+            }
+            let agent_type = request.agent_type.unwrap_or(AgentType::Acp);
+            if agent_type == AgentType::Acp {
+                extra["mock_has_acp_session"] = serde_json::Value::Bool(true);
+                extra["mock_acp_session_id"] = serde_json::Value::String("anchor".to_owned());
+            }
+            self.repo
+                .create(&ConversationRow {
+                    id: id.clone(),
+                    user_id: request.user_id,
+                    name: request.name,
+                    r#type: agent_type.serde_name().to_owned(),
+                    pinned: false,
+                    pinned_at: None,
+                    source: None,
+                    channel_chat_id: None,
+                    extra: serde_json::to_string(&extra).unwrap(),
+                    model: request
+                        .top_level_model
+                        .map(|model| serde_json::to_string(&model).expect("serialize provider model")),
+                    status: Some("pending".into()),
+                    created_at: now_ms(),
+                    updated_at: now_ms(),
+                    project_id: None,
+                    folder_id: None,
+                    name_source: None,
+                })
+                .await?;
+            Ok(TeamConversationCreateResult {
+                conversation_id: id,
+                workspace,
+            })
+        }
+
+        // This harness deliberately models NO assistant MCP bindings: the tests
+        // built on it cover scheduling, mailbox and runtime lifecycle, not MCP
+        // injection (see `tests/session_service_integration.rs` for that). Stated
+        // explicitly rather than inherited from a trait default so that "no MCP
+        // here" is a choice this double makes, not an accident.
+        async fn resolve_assistant_mcp_selection(
+            &self,
+            _user_id: &str,
+            _assistant_id: &str,
+        ) -> Result<Option<TeamMcpSelection>, TeamError> {
+            Ok(Some(TeamMcpSelection::default()))
+        }
+
+        async fn resolve_conversation_mcp_snapshot(
+            &self,
+            _user_id: &str,
+            _conversation_id: &str,
+            _assistant_id: Option<&str>,
+        ) -> Result<TeamMcpSnapshotResolution, TeamError> {
+            Ok(TeamMcpSnapshotResolution::default())
+        }
+
+        async fn conversation_workspace(&self, conversation_id: &str) -> Result<Option<String>, TeamError> {
+            Ok(self.repo.get_extra(conversation_id).and_then(|extra| {
+                extra
+                    .get("workspace")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned)
+            }))
+        }
+
+        async fn conversation_assistant_id(&self, conversation_id: &str) -> Result<Option<String>, TeamError> {
+            Ok(self.repo.get_extra(conversation_id).and_then(|extra| {
+                extra
+                    .get("assistant_id")
+                    .or_else(|| extra.get("preset_assistant_id"))
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_owned)
+            }))
+        }
+
+        async fn create_team_temp_workspace(&self, _user_id: &str, team_id: &str) -> Result<String, TeamError> {
+            let path = self
+                .workspace_root
+                .join("conversations")
+                .join(format!("team-temp-{team_id}"));
+            std::fs::create_dir_all(&path).unwrap();
+            Ok(path.to_string_lossy().into_owned())
+        }
+
+        async fn patch_runtime_config(&self, conversation_id: &str, patch: serde_json::Value) -> Result<(), TeamError> {
+            let mut extra = self
+                .repo
+                .get_extra(conversation_id)
+                .unwrap_or_else(|| serde_json::json!({}));
+            if let (Some(target), Some(source)) = (extra.as_object_mut(), patch.as_object()) {
+                for (key, value) in source {
+                    target.insert(key.clone(), value.clone());
+                }
+            }
+            let user_id = self
+                .repo
+                .owner_user_id(conversation_id)
+                .await?
+                .ok_or_else(|| TeamError::AgentNotFound(conversation_id.to_owned()))?;
+            self.repo
+                .update(
+                    &user_id,
+                    conversation_id,
+                    &ConversationRowUpdate {
+                        name: None,
+                        model: None,
+                        pinned: None,
+                        pinned_at: None,
+                        extra: Some(serde_json::to_string(&extra).unwrap()),
+                        status: None,
+                        updated_at: Some(now_ms()),
+                        project_id: None,
+                        folder_id: None,
+                        name_source: None,
+                    },
+                )
+                .await?;
+            Ok(())
+        }
+
+        async fn conversation_model_facts(
+            &self,
+            conversation_id: &str,
+        ) -> Result<crate::TeamConversationModelFacts, TeamError> {
+            let extra = self
+                .repo
+                .get_extra(conversation_id)
+                .ok_or_else(|| TeamError::AgentNotFound(conversation_id.to_owned()))?;
+            let value = |key: &str| {
+                extra
+                    .get(key)
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_owned)
+            };
+            Ok(crate::TeamConversationModelFacts {
+                confirmed_model_id: value("confirmed_model_id").or_else(|| value("current_model_id")),
+                runtime_seed_model_id: value("current_model_id"),
+            })
+        }
+
+        async fn save_acp_runtime_mode(&self, conversation_id: &str, mode: &str) -> Result<(), TeamError> {
+            self.patch_runtime_config(conversation_id, serde_json::json!({ "session_mode": mode }))
+                .await
+        }
+
+        async fn get_config_options(&self, conversation_id: &str) -> Result<GetConfigOptionsResponse, TeamError> {
+            let extra = self
+                .repo
+                .get_extra(conversation_id)
+                .ok_or_else(|| TeamError::AgentNotFound(conversation_id.to_owned()))?;
+            if extra
+                .get("runtime_not_ready")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false)
+            {
+                return Err(TeamError::RuntimeNotReady {
+                    conversation_id: conversation_id.to_owned(),
+                });
+            }
+            let model = extra
+                .get("current_model_id")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("mock-model")
+                .to_owned();
+            Ok(GetConfigOptionsResponse {
+                config_options: vec![
+                    AcpConfigOptionDto {
+                        id: "model".to_owned(),
+                        name: None,
+                        label: Some("Model".to_owned()),
+                        description: None,
+                        category: Some("model".to_owned()),
+                        option_type: "select".to_owned(),
+                        current_value: Some(model.clone()),
+                        options: vec![AcpConfigSelectOptionDto {
+                            value: model.clone(),
+                            name: None,
+                            label: Some(model),
+                            description: None,
+                        }],
+                    },
+                    AcpConfigOptionDto {
+                        id: "mode".to_owned(),
+                        name: None,
+                        label: Some("Mode".to_owned()),
+                        description: None,
+                        category: Some("mode".to_owned()),
+                        option_type: "select".to_owned(),
+                        current_value: Some("default".to_owned()),
+                        options: vec![AcpConfigSelectOptionDto {
+                            value: "default".to_owned(),
+                            name: None,
+                            label: Some("Default".to_owned()),
+                            description: None,
+                        }],
+                    },
+                ],
+            })
+        }
+
+        async fn set_config_option(
+            &self,
+            conversation_id: &str,
+            option_id: &str,
+            request: SetConfigOptionRequest,
+        ) -> Result<SetConfigOptionResponse, TeamError> {
+            let key = match option_id {
+                "model" => "current_model_id",
+                "mode" => "current_mode_id",
+                other => other,
+            };
+            self.patch_runtime_config(conversation_id, serde_json::json!({ key: request.value }))
+                .await?;
+            let config_options = self.get_config_options(conversation_id).await?.config_options;
+            Ok(SetConfigOptionResponse {
+                confirmation: ConfigOptionConfirmation::Observed,
+                config_options: Some(config_options),
+            })
+        }
+
+        async fn supports_context_reset(&self, user_id: &str, conversation_id: &str) -> Result<bool, TeamError> {
+            let conversation = self.repo.get(user_id, conversation_id).await?;
+            Ok(conversation.is_some_and(|row| {
+                row.r#type == AgentType::Acp.serde_name()
+                    && serde_json::from_str::<serde_json::Value>(&row.extra)
+                        .ok()
+                        .and_then(|extra| extra.get("mock_has_acp_session").and_then(serde_json::Value::as_bool))
+                        .unwrap_or(false)
+            }))
+        }
+
+        async fn clear_context_anchor(&self, user_id: &str, conversation_id: &str) -> Result<bool, TeamError> {
+            if !self.supports_context_reset(user_id, conversation_id).await? {
+                return Ok(false);
+            }
+            self.patch_runtime_config(conversation_id, serde_json::json!({ "mock_acp_session_id": null }))
+                .await?;
+            Ok(true)
+        }
+
+        async fn warmup_agent_process(
+            &self,
+            _user_id: &str,
+            conversation_id: &str,
+            _task_manager: &Arc<dyn IWorkerTaskManager>,
+        ) -> Result<(), TeamError> {
+            if self
+                .repo
+                .get_extra(conversation_id)
+                .and_then(|extra| extra.get("runtime_attach_failed").and_then(serde_json::Value::as_bool))
+                .unwrap_or(false)
+            {
+                return Err(TeamError::InvalidRequest("forced runtime attach failure".to_owned()));
+            }
+            Ok(())
+        }
+
+        async fn delete_team_conversation(&self, user_id: &str, conversation_id: &str) -> Result<(), TeamError> {
+            self.repo.delete(user_id, conversation_id).await?;
+            Ok(())
+        }
+    }
+
+    #[async_trait]
+    impl TeamProjectionMessageStore for FakeConversationPorts {
+        fn mint_message_id(&self) -> String {
+            aionui_common::generate_id()
+        }
+
+        async fn find_projected_message(
+            &self,
+            _conversation_id: &str,
+            _msg_id: &str,
+            _msg_type: &str,
+        ) -> Result<Option<MessageRow>, TeamError> {
+            Ok(None)
+        }
+
+        async fn insert_projected_message(&self, _row: &MessageRow) -> Result<(), TeamError> {
+            Ok(())
+        }
+    }
+
+    #[async_trait]
+    impl TeamConversationLookupPort for FakeConversationPorts {
+        async fn lookup_team_binding_by_conversation(
+            &self,
+            _conversation_id: &str,
+        ) -> Result<Option<TeamConversationBindingLookup>, TeamError> {
+            Ok(None)
+        }
+    }
+
+    type BroadcastObserver = Arc<dyn Fn(&WebSocketMessage<serde_json::Value>) + Send + Sync>;
+
+    pub(crate) struct RecordingBroadcaster {
+        events: std::sync::Mutex<Vec<WebSocketMessage<serde_json::Value>>>,
+        observer: std::sync::Mutex<Option<BroadcastObserver>>,
+    }
+
+    impl RecordingBroadcaster {
+        pub(crate) fn new() -> Self {
+            Self {
+                events: std::sync::Mutex::new(Vec::new()),
+                observer: std::sync::Mutex::new(None),
+            }
+        }
+
+        pub(crate) fn events_by_name(&self, name: &str) -> Vec<WebSocketMessage<serde_json::Value>> {
+            self.events
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|event| event.name == name)
+                .cloned()
+                .collect()
+        }
+
+        pub(crate) fn set_observer(&self, observer: BroadcastObserver) {
+            *self.observer.lock().unwrap() = Some(observer);
+        }
+    }
+
+    impl EventBroadcaster for RecordingBroadcaster {
+        fn broadcast(&self, event: WebSocketMessage<serde_json::Value>) {
+            self.events.lock().unwrap().push(event.clone());
+            let observer = self.observer.lock().unwrap().clone();
+            if let Some(observer) = observer {
+                observer(&event);
+            }
+        }
+    }
+
+    struct NoopTaskManager;
+
+    #[async_trait]
+    impl IWorkerTaskManager for NoopTaskManager {
+        fn get_task(&self, _conversation_id: &str) -> Option<aionui_ai_agent::AgentInstance> {
+            None
+        }
+
+        async fn get_or_build_task(
+            &self,
+            _conversation_id: &str,
+            _options: aionui_ai_agent::types::BuildTaskOptions,
+        ) -> Result<aionui_ai_agent::AgentInstance, AgentError> {
+            Err(AgentError::Internal("workspace harness does not spawn agents".into()))
+        }
+
+        fn kill(&self, _conversation_id: &str, _reason: Option<AgentKillReason>) -> Result<(), AgentError> {
+            Ok(())
+        }
+
+        fn kill_and_wait(
+            &self,
+            _conversation_id: &str,
+            _reason: Option<AgentKillReason>,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+            Box::pin(std::future::ready(()))
+        }
+
+        async fn clear(&self) {}
+
+        fn active_count(&self) -> usize {
+            0
+        }
+
+        fn collect_idle(&self, _idle_threshold_ms: aionui_common::TimestampMs) -> Vec<String> {
+            vec![]
+        }
+    }
+
+    struct EmptyAgentMetadataRepo;
+
+    struct EmptyTeamAssistantCatalog;
+
+    #[async_trait]
+    impl TeamAssistantCatalogPort for EmptyTeamAssistantCatalog {
+        async fn list_team_selectable_assistants(
+            &self,
+            _user_id: &str,
+        ) -> Result<Vec<TeamAssistantCatalogEntry>, TeamError> {
+            Ok(Vec::new())
+        }
+    }
+
+    #[async_trait]
+    impl IAgentMetadataRepository for EmptyAgentMetadataRepo {
+        async fn list_all(&self) -> Result<Vec<AgentMetadataRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn list_all_for_user(&self, _user_id: &str) -> Result<Vec<AgentMetadataRow>, DbError> {
+            self.list_all().await
+        }
+
+        async fn get(&self, _id: &str) -> Result<Option<AgentMetadataRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn get_for_user(&self, _user_id: &str, id: &str) -> Result<Option<AgentMetadataRow>, DbError> {
+            self.get(id).await
+        }
+
+        async fn find_by_source_and_name(
+            &self,
+            _agent_source: &str,
+            _name: &str,
+        ) -> Result<Option<AgentMetadataRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn find_by_source_and_name_for_user(
+            &self,
+            _user_id: &str,
+            agent_source: &str,
+            name: &str,
+        ) -> Result<Option<AgentMetadataRow>, DbError> {
+            self.find_by_source_and_name(agent_source, name).await
+        }
+
+        async fn find_builtin_by_backend(&self, _backend: &str) -> Result<Option<AgentMetadataRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn find_builtin_by_backend_for_user(
+            &self,
+            _user_id: &str,
+            backend: &str,
+        ) -> Result<Option<AgentMetadataRow>, DbError> {
+            self.find_builtin_by_backend(backend).await
+        }
+
+        async fn upsert(&self, _params: &UpsertAgentMetadataParams<'_>) -> Result<AgentMetadataRow, DbError> {
+            Err(DbError::NotFound("not implemented".into()))
+        }
+
+        async fn upsert_for_user(
+            &self,
+            _user_id: &str,
+            params: &UpsertAgentMetadataParams<'_>,
+        ) -> Result<AgentMetadataRow, DbError> {
+            self.upsert(params).await
+        }
+
+        async fn apply_handshake(
+            &self,
+            _id: &str,
+            _params: &UpdateAgentHandshakeParams<'_>,
+        ) -> Result<Option<AgentMetadataRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn apply_handshake_for_user(
+            &self,
+            _user_id: &str,
+            id: &str,
+            params: &UpdateAgentHandshakeParams<'_>,
+        ) -> Result<Option<AgentMetadataRow>, DbError> {
+            self.apply_handshake(id, params).await
+        }
+
+        async fn update_availability_snapshot(
+            &self,
+            _id: &str,
+            _params: &aionui_db::models::UpdateAgentAvailabilitySnapshotParams<'_>,
+        ) -> Result<Option<AgentMetadataRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn update_availability_snapshot_for_user(
+            &self,
+            _user_id: &str,
+            id: &str,
+            params: &aionui_db::models::UpdateAgentAvailabilitySnapshotParams<'_>,
+        ) -> Result<Option<AgentMetadataRow>, DbError> {
+            self.update_availability_snapshot(id, params).await
+        }
+
+        async fn update_agent_overrides(
+            &self,
+            _id: &str,
+            _command_override: Option<&str>,
+            _env_override: Option<&str>,
+        ) -> Result<(), DbError> {
+            Ok(())
+        }
+
+        async fn update_agent_overrides_for_user(
+            &self,
+            _user_id: &str,
+            id: &str,
+            command_override: Option<&str>,
+            env_override: Option<&str>,
+        ) -> Result<(), DbError> {
+            self.update_agent_overrides(id, command_override, env_override).await
+        }
+
+        async fn set_enabled(&self, _id: &str, _enabled: bool) -> Result<bool, DbError> {
+            Ok(false)
+        }
+
+        async fn set_enabled_for_user(&self, _user_id: &str, id: &str, enabled: bool) -> Result<bool, DbError> {
+            self.set_enabled(id, enabled).await
+        }
+
+        async fn delete(&self, _id: &str) -> Result<bool, DbError> {
+            Ok(false)
+        }
+
+        async fn delete_for_user(&self, _user_id: &str, id: &str) -> Result<bool, DbError> {
+            self.delete(id).await
+        }
+    }
+
+    struct EmptyAssistantDefinitionRepo;
+
+    #[async_trait]
+    impl IAssistantDefinitionRepository for EmptyAssistantDefinitionRepo {
+        async fn list(&self) -> Result<Vec<AssistantDefinitionRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn list_for_user(&self, _user_id: &str) -> Result<Vec<AssistantDefinitionRow>, DbError> {
+            self.list().await
+        }
+
+        async fn list_including_deleted_for_user(
+            &self,
+            _user_id: &str,
+        ) -> Result<Vec<AssistantDefinitionRow>, DbError> {
+            self.list().await
+        }
+
+        async fn get_by_assistant_id(&self, _assistant_id: &str) -> Result<Option<AssistantDefinitionRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn get_by_assistant_id_for_user(
+            &self,
+            _user_id: &str,
+            assistant_id: &str,
+        ) -> Result<Option<AssistantDefinitionRow>, DbError> {
+            self.get_by_assistant_id(assistant_id).await
+        }
+
+        async fn get_by_assistant_id_including_deleted_for_user(
+            &self,
+            _user_id: &str,
+            assistant_id: &str,
+        ) -> Result<Option<AssistantDefinitionRow>, DbError> {
+            self.get_by_assistant_id(assistant_id).await
+        }
+
+        async fn get_by_id(&self, _definition_id: &str) -> Result<Option<AssistantDefinitionRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn get_by_id_for_user(
+            &self,
+            _user_id: &str,
+            definition_id: &str,
+        ) -> Result<Option<AssistantDefinitionRow>, DbError> {
+            self.get_by_id(definition_id).await
+        }
+
+        async fn get_by_source_ref(
+            &self,
+            _source: &str,
+            _source_ref: &str,
+        ) -> Result<Option<AssistantDefinitionRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn get_by_source_ref_for_user(
+            &self,
+            _user_id: &str,
+            source: &str,
+            source_ref: &str,
+        ) -> Result<Option<AssistantDefinitionRow>, DbError> {
+            self.get_by_source_ref(source, source_ref).await
+        }
+
+        async fn get_by_source_ref_including_deleted_for_user(
+            &self,
+            _user_id: &str,
+            source: &str,
+            source_ref: &str,
+        ) -> Result<Option<AssistantDefinitionRow>, DbError> {
+            self.get_by_source_ref(source, source_ref).await
+        }
+
+        async fn upsert(
+            &self,
+            _params: &UpsertAssistantDefinitionParams<'_>,
+        ) -> Result<AssistantDefinitionRow, DbError> {
+            Err(DbError::Init("not implemented".into()))
+        }
+
+        async fn upsert_for_user(
+            &self,
+            _user_id: &str,
+            params: &UpsertAssistantDefinitionParams<'_>,
+        ) -> Result<AssistantDefinitionRow, DbError> {
+            self.upsert(params).await
+        }
+
+        async fn soft_delete(&self, _definition_id: &str, _deleted_at: i64) -> Result<bool, DbError> {
+            Ok(false)
+        }
+
+        async fn soft_delete_for_user(
+            &self,
+            _user_id: &str,
+            definition_id: &str,
+            deleted_at: i64,
+        ) -> Result<bool, DbError> {
+            self.soft_delete(definition_id, deleted_at).await
+        }
+    }
+
+    struct EmptyAssistantOverlayRepo;
+
+    #[async_trait]
+    impl IAssistantOverlayRepository for EmptyAssistantOverlayRepo {
+        async fn get(&self, _definition_id: &str) -> Result<Option<AssistantOverlayRow>, DbError> {
+            Ok(None)
+        }
+
+        async fn get_for_user(
+            &self,
+            _user_id: &str,
+            definition_id: &str,
+        ) -> Result<Option<AssistantOverlayRow>, DbError> {
+            self.get(definition_id).await
+        }
+
+        async fn list(&self) -> Result<Vec<AssistantOverlayRow>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn list_for_user(&self, _user_id: &str) -> Result<Vec<AssistantOverlayRow>, DbError> {
+            self.list().await
+        }
+
+        async fn upsert(&self, _params: &UpsertAssistantOverlayParams<'_>) -> Result<AssistantOverlayRow, DbError> {
+            Err(DbError::Init("not implemented".into()))
+        }
+
+        async fn upsert_for_user(
+            &self,
+            _user_id: &str,
+            params: &UpsertAssistantOverlayParams<'_>,
+        ) -> Result<AssistantOverlayRow, DbError> {
+            self.upsert(params).await
+        }
+
+        async fn delete(&self, _definition_id: &str) -> Result<bool, DbError> {
+            Ok(false)
+        }
+
+        async fn delete_for_user(&self, _user_id: &str, definition_id: &str) -> Result<bool, DbError> {
+            self.delete(definition_id).await
+        }
+    }
+
+    struct EmptyProviderRepo;
+
+    #[async_trait]
+    impl IProviderRepository for EmptyProviderRepo {
+        async fn list(&self, _user_id: &str) -> Result<Vec<aionui_db::models::Provider>, DbError> {
+            Ok(vec![])
+        }
+
+        async fn find_by_id(&self, _user_id: &str, _id: &str) -> Result<Option<aionui_db::models::Provider>, DbError> {
+            Ok(None)
+        }
+
+        async fn create(
+            &self,
+            _params: aionui_db::CreateProviderParams<'_>,
+        ) -> Result<aionui_db::models::Provider, DbError> {
+            Err(DbError::NotFound("not implemented".into()))
+        }
+
+        async fn update(
+            &self,
+            _user_id: &str,
+            _id: &str,
+            _params: aionui_db::UpdateProviderParams<'_>,
+        ) -> Result<aionui_db::models::Provider, DbError> {
+            Err(DbError::NotFound("not implemented".into()))
+        }
+
+        async fn delete(&self, _user_id: &str, _id: &str) -> Result<(), DbError> {
+            Ok(())
+        }
+    }
+
+    struct NoopTurnPort;
+
+    #[async_trait]
+    impl AgentTurnExecutionPort for NoopTurnPort {
+        async fn run_agent_turn(&self, request: AgentTurnRequest) -> Result<AgentTurnOutcome, AgentTurnExecutionError> {
+            if let Some(on_started) = request.on_started.as_ref() {
+                on_started(AgentTurnStarted {
+                    team_run_id: request.team_run_id.clone(),
+                    slot_id: request.slot_id.clone(),
+                    role: request.role.clone(),
+                    conversation_id: request.conversation_id.clone(),
+                    turn_id: "turn-test".into(),
+                })
+                .await;
+            }
+            Ok(AgentTurnOutcome {
+                conversation_id: request.conversation_id,
+                turn_id: "turn-test".into(),
+                status: AgentTurnStatus::Completed,
+                runtime: None,
+            })
+        }
+    }
+
+    struct NoopCancellationPort;
+
+    #[async_trait]
+    impl AgentTurnCancellationPort for NoopCancellationPort {
+        async fn cancel_agent_turn(
+            &self,
+            _user_id: &str,
+            _conversation_id: &str,
+            _turn_id: &str,
+        ) -> Result<(), AgentTurnExecutionError> {
+            Ok(())
+        }
+    }
+
+    pub(crate) fn setup_with_factory_metadata_team_repo_and_conversation_repo() -> (
+        Arc<TeamSessionService>,
+        Arc<FullMockTeamRepo>,
+        Arc<dyn IWorkerTaskManager>,
+        Arc<MockConversationRepo>,
+    ) {
+        let (svc, team_repo, task_manager, conv_repo, _broadcaster) =
+            setup_with_factory_metadata_team_repo_conversation_repo_and_broadcaster();
+        (svc, team_repo, task_manager, conv_repo)
+    }
+
+    type ServiceHarness = (
+        Arc<TeamSessionService>,
+        Arc<FullMockTeamRepo>,
+        Arc<dyn IWorkerTaskManager>,
+        Arc<MockConversationRepo>,
+        Arc<RecordingBroadcaster>,
+    );
+
+    pub(crate) fn setup_with_factory_metadata_team_repo_conversation_repo_and_broadcaster() -> ServiceHarness {
+        let task_manager: Arc<dyn IWorkerTaskManager> = Arc::new(NoopTaskManager);
+        setup_with_factory_metadata_team_repo_conversation_repo_broadcaster_and_task_manager(task_manager)
+    }
+
+    pub(crate) fn setup_with_factory_metadata_team_repo_conversation_repo_broadcaster_and_task_manager(
+        task_manager: Arc<dyn IWorkerTaskManager>,
+    ) -> ServiceHarness {
+        let team_repo = Arc::new(FullMockTeamRepo::new());
+        let team_repo_dyn: Arc<dyn ITeamRepository> = team_repo.clone();
+        let conv_repo = Arc::new(MockConversationRepo::new());
+        let broadcaster = Arc::new(RecordingBroadcaster::new());
+        let broadcaster_dyn: Arc<dyn EventBroadcaster> = broadcaster.clone();
+        let conversation_ports = Arc::new(FakeConversationPorts::new(conv_repo.clone()));
+        let conversation_port: Arc<dyn TeamConversationProvisioningPort> = conversation_ports.clone();
+        let projection_store: Arc<dyn TeamProjectionMessageStore> = conversation_ports.clone();
+        let svc = TeamSessionService::new(
+            team_repo_dyn,
+            Arc::new(EmptyAgentMetadataRepo),
+            Arc::new(EmptyTeamAssistantCatalog),
+            Arc::new(EmptyAssistantDefinitionRepo),
+            Arc::new(EmptyAssistantOverlayRepo),
+            Arc::new(EmptyProviderRepo),
+            conversation_port,
+            projection_store,
+            broadcaster_dyn,
+            task_manager.clone(),
+            Arc::new(NoopTurnPort),
+            Arc::new(NoopCancellationPort),
+            Arc::new(std::path::PathBuf::from("/tmp/aioncore-test")),
+        );
+        (svc, team_repo, task_manager, conv_repo, broadcaster)
+    }
+
+    pub(crate) async fn force_team_workspace(repo: &Arc<FullMockTeamRepo>, team_id: &str, workspace: &str) {
+        repo.update_team(
+            "user1",
+            team_id,
+            &UpdateTeamParams {
+                workspace: Some(workspace.to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("force workspace");
+    }
+
+    pub(crate) fn single_agent_team_request(name: &str) -> CreateTeamRequest {
+        CreateTeamRequest {
+            name: name.into(),
+            agents: vec![aionui_api_types::TeamAgentInput {
+                name: "Lead".into(),
+                role: "lead".into(),
+                backend: Some("acp".into()),
+                model: "claude".into(),
+                assistant_id: None,
+                conversation_id: None,
+            }],
+            workspace: None,
+        }
+    }
+}

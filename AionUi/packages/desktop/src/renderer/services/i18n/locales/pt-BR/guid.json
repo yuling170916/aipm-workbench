@@ -1,0 +1,47 @@
+{
+  "promptExamplesHint": "Experimente estas instruções",
+  "defaultPrompts": {
+    "understand": "Conheça este projeto e explique em palavras simples o que ele faz e por onde começar",
+    "cleanup": "Encontre arquivos duplicados e inúteis nesta pasta e liste-os para minha confirmação",
+    "create": "Crie uma página pessoal bonita para mim e abra-a quando estiver pronta"
+  },
+  "selectAssistantHint": "Selecione um assistente para iniciar uma tarefa",
+  "workspace": {
+    "workInProject": "Trabalhar em um projeto",
+    "optional": "Opcional",
+    "clearWorkspace": "Limpar",
+    "specifyWorkspace": "Selecionar pasta do projeto",
+    "searchPlaceholder": "Procurar projetos…",
+    "noProject": "Nenhum Projeto"
+  },
+  "home": {
+    "nav": "Início",
+    "workspace": "Espaço de trabalho",
+    "eyebrow": "Seu parceiro de produto com IA",
+    "title": "Transforme boas ideias em ótimos produtos.",
+    "description": "Dos requisitos ao PRD, tenha mais tempo para as decisões que importam.",
+    "placeholder": "Descreva sua ideia de produto ou anexe materiais de requisitos…",
+    "addMaterials": "Adicionar materiais",
+    "organizeTitle": "Organizar requisitos",
+    "organizeDescription": "Transforme informações dispersas em cartões de requisitos",
+    "prdTitle": "Escrever um PRD",
+    "prdDescription": "Crie um documento a partir dos cartões de requisitos",
+    "reviewTitle": "Encontrar lacunas",
+    "reviewDescription": "Verifique regras, casos-limite e critérios de aceitação",
+    "recentTitle": "Continuar um projeto recente",
+    "projectsLoading": "Carregando projetos…",
+    "projectsEmpty": "Ainda não há projetos. Crie um para começar.",
+    "projectsError": "Não foi possível carregar os projetos. Tente novamente.",
+    "retry": "Recarregar",
+    "refreshProjects": "Atualizar projetos",
+    "createProject": "Novo projeto",
+    "updatedAt": "Atualizado: {{time}}",
+    "projectWorkspace": "Espaço de trabalho: {{path}}",
+    "projectNoActivity": "Nenhuma atividade ainda",
+    "prompts": {
+      "organize": "Ajude-me a organizar a ideia de produto e os materiais abaixo em cartões de requisitos. Primeiro, pergunte sobre o contexto que estiver faltando. Inclua o problema do usuário, o público-alvo, os cenários de uso, o escopo, a prioridade e os critérios de aceitação. Separe claramente fatos de suposições.\n\nIdeia de produto e materiais: ",
+      "prd": "Ajude-me a escrever um PRD pronto para revisão a partir dos requisitos abaixo. Primeiro, esclareça as informações que estiverem faltando; depois, aborde objetivos, fluxos de usuário, funcionalidades, regras de interação, casos-limite, critérios de aceitação e questões em aberto. Não invente dados de negócio.\n\nRequisitos: ",
+      "review": "Revise os requisitos ou o PRD abaixo para identificar regras, permissões, casos-limite, fluxos de falha e critérios de aceitação ausentes. Liste cada problema com seu impacto, a solução sugerida e as perguntas que precisam ser esclarecidas.\n\nRequisitos ou PRD: "
+    }
+  }
+}

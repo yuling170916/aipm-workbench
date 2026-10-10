@@ -1,0 +1,792 @@
+{
+  "welcome": {
+    "title": "Olá, qual é o seu plano para hoje?",
+    "placeholder": "Envie uma mensagem, faça upload de arquivos, abra uma pasta, crie uma tarefa agendada ou digite / para comandos...",
+    "linkFolder": "Abrir Pasta",
+    "newConversation": "Nova conversa",
+    "selectModel": "Selecionar Modelo",
+    "useCliModel": "Selecionar Modelo",
+    "modelSwitchNotSupported": "A lista de modelos estará disponível após a primeira conexão. Envie uma mensagem para conectar e carregar os modelos disponíveis.",
+    "specifyWorkspace": "Conversar no Projeto",
+    "currentWorkspace": "Projeto Atual",
+    "clearWorkspace": "Remover projeto",
+    "openFolder": "Abrir Pasta",
+    "none": "Nenhum",
+    "quickActionsTitle": "O que o AIPM工作台 pode fazer?",
+    "quickActionFeedback": "Reportar Problema",
+    "quickActionStar": "Gostou? Nos dê uma estrela!",
+    "skillsMarket": "Mercado de Habilidades AIPM工作台",
+    "skillsMarketDesc": "Pesquise e ative as Habilidades da comunidade sob demanda. Configure uma vez, disponível para todos os agentes.",
+    "skillsMarketDetails": "Ver Mais >>"
+  },
+  "history": {
+    "recents": "Recentes",
+    "noHistory": "Nenhum histórico de chat",
+    "deleteTitle": "Excluir",
+    "deleteConfirm": "Tem certeza de que deseja excluir este chat?",
+    "confirmDelete": "Excluir",
+    "cancelDelete": "Cancelar",
+    "editName": "Editar Nome",
+    "saveName": "Salvar",
+    "cancelEdit": "Cancelar",
+    "rename": "Renomear",
+    "createCronTask": "Criar tarefa agendada",
+    "renameTitle": "Renomear Chat",
+    "renamePlaceholder": "Por favor, digite um novo nome",
+    "renameSuccess": "Renomeado com sucesso",
+    "renameFailed": "Falha ao renomear",
+    "batchManage": "Gerenciar em Lote",
+    "batchModeExit": "Sair do Modo em Lote",
+    "selectAll": "Selecionar Tudo",
+    "selectedCount": "{{count}} selecionados",
+    "batchExport": "Exportar em Lote",
+    "batchExportConfirm": "Exportar {{count}} tópicos selecionados?",
+    "batchDelete": "Excluir em Lote",
+    "batchDeleteConfirm": "Excluir {{count}} tópicos selecionados?",
+    "batchDeleteConfirm_one": "Excluir {{count}} tópico selecionado?",
+    "batchDeleteConfirm_other": "Excluir {{count}} tópicos selecionados?",
+    "batchDeleteSuccess": "{{count}} tópicos excluídos",
+    "batchDeleteSuccess_one": "{{count}} tópico excluído",
+    "batchDeleteSuccess_other": "{{count}} tópicos excluídos",
+    "batchNoSelection": "Por favor, selecione os tópicos primeiro",
+    "export": "Exportar",
+    "exportDialogTitle": "Exportar Tópicos",
+    "exportDialogSingleDescription": "Exporte os registros de conversas do tópico atual (JSON + Markdown) e arquivos do projeto em um pacote ZIP.",
+    "exportDialogBatchDescription": "Exporte os registros de conversas (JSON + Markdown) dos {{count}} tópicos selecionados e os arquivos do projeto para um pacote ZIP.",
+    "exportTargetFolder": "Exportar Para a Pasta",
+    "exportSelectFolder": "Por favor, selecione uma pasta de exportação",
+    "exportDialogHint": "A seleção de pasta segue a mesma interação da troca do projeto.",
+    "exporting": "Exportando...",
+    "exportSuccess": "Exportação bem-sucedida",
+    "exportCanceled": "Exportação cancelada",
+    "exportFailed": "A exportação falhou",
+    "pin": "Fixar",
+    "unpin": "Desafixar",
+    "markAsUnread": "Marcar como não lida",
+    "markAsRead": "Marcar como lida",
+    "pinned": "Fixado",
+    "pinFailed": "Falha na operação de fixar",
+    "pinnedSection": "Fixados",
+    "deleteSuccess": "Excluído com sucesso",
+    "deleteFailed": "Falha ao excluir",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "recent7Days": "Últimos 7 Dias",
+    "earlier": "Mais Antigos",
+    "projectsSection": "Projetos",
+    "conversationsSection": "Conversas",
+    "newConversationInProject": "Novo chat neste projeto",
+    "deleting": "Excluindo...",
+    "reorderPinned": "Arraste para reordenar a conversa fixada",
+    "forkedFrom": "Bifurcada de “{{name}}”",
+    "forkedConversation": "Conversa bifurcada",
+    "archive": "Arquivar",
+    "archiveSuccess": "Arquivado",
+    "archiveFailed": "Falha ao arquivar",
+    "batchArchive": "Batch archive",
+    "batchArchiveConfirm": "Archive {{count}} selected topics? You can restore or delete them from Archived in Settings.",
+    "batchArchiveSuccess": "Archived {{count}} topics",
+    "archiveProject": "Archive project",
+    "archiveProjectTitle": "Archive project",
+    "archiveProjectConfirm": "Archive project \"{{name}}\"? Its {{count}} conversation(s) will be archived too. You can restore or delete them from Archived in Settings.",
+    "archiving": "Archiving..."
+  },
+  "historySearch": {
+    "tooltip": "Pesquisar mensagens",
+    "title": "Pesquisar conteúdo da conversa",
+    "shortTitle": "Pesquisar",
+    "description": "Pesquise mensagens históricas por palavra-chave, carregue mais ao rolar, e pule para a mensagem correspondente.",
+    "placeholder": "Pesquisar conteúdo da mensagem...",
+    "idle": "Digite palavras-chave para pesquisar mensagens",
+    "empty": "Nenhuma mensagem correspondente encontrada",
+    "loadingMore": "Carregando mais...",
+    "untitled": "Conversa sem título"
+  },
+  "dropdown": {
+    "cliAgents": "Agentes CLI",
+    "presetAssistants": "Assistentes Predefinidos"
+  },
+  "noAgentsAvailable": "Nenhum agente disponível",
+  "noModelConfigured": "Nenhum modelo configurado. Por favor, configure nas configurações.",
+  "createFailed": "Falha ao criar a conversa",
+  "createError": {
+    "pathVariants": {
+      "WORKSPACE_PATH_UNAVAILABLE": "O caminho do projeto selecionado não está disponível. Verifique se o caminho do projeto \"{{workspacePath}}\" existe e está acessível.",
+      "WORKSPACE_PATH_CONTAINS_WHITESPACE_UNSUPPORTED": "O caminho do projeto selecionado \"{{workspacePath}}\" contém um nome de pasta com espaços ou outros caracteres de espaço em branco. Renomeie a pasta afetada ou escolha um caminho de projeto em que nenhum nome de diretório contenha espaços."
+    },
+    "codes": {
+      "TEAM_ASSISTANT_ID_REQUIRED": "Please select an assistant before creating the team.",
+      "TEAM_ASSISTANT_NOT_FOUND": "Assistant {{assistantId}} is no longer available. Refresh the assistant list and choose another one.",
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": "Use assistant_id instead of {{field}}."
+    }
+  },
+  "agentError": {
+    "fallbackTitle": "O agente não pôde responder",
+    "errorCode": "Código de erro",
+    "retryable": "Pode tentar novamente",
+    "notRetryable": "Requer configuração",
+    "resolutionPrefix": "Sugestão: ",
+    "resolution": {
+      "retry": "Tente novamente mais tarde ou envie esta mensagem de novo.",
+      "wait_for_current_response": "Espere a resposta atual terminar antes de enviar outra mensagem.",
+      "start_new_session": "Inicie uma nova conversa antes de continuar.",
+      "reconnect_agent": "Reinicie ou reconecte o agente selecionado e tente novamente.",
+      "check_agent_login": "Entre no agente selecionado ou atualize as credenciais.",
+      "check_agent_installation": "Verifique a instalação do agente e a configuração do comando local.",
+      "check_agent_version": "Verifique a compatibilidade de protocolo e versão do agente.",
+      "check_local_command": "Instale o comando ausente ou confirme que ele foi adicionado ao PATH.",
+      "check_provider_credentials": "Verifique a chave de API ou as credenciais da conta do provedor de modelos nas configurações.",
+      "check_provider_billing": "Verifique saldo, créditos ou cota do provedor de modelos.",
+      "check_provider_base_url": "Verifique a URL Base do provedor de modelos, o caminho da API, o proxy e a compatibilidade da API.",
+      "change_model": "Escolha um modelo disponível para a conta atual e que suporte esta solicitação.",
+      "reduce_context": "Reduza o conteúdo da mensagem, os arquivos referenciados ou o tamanho do contexto e tente novamente.",
+      "send_feedback": "Envie feedback com logs para que a equipe possa investigar."
+    },
+    "ownership": {
+      "aionui": "Aplicativo",
+      "user_agent": "Agente",
+      "user_llm_provider": "Provedor de modelo",
+      "unknown_upstream": "Upstream"
+    },
+    "codes": {
+      "AIONUI_STREAM_BROKEN": {
+        "title": "O fluxo de resposta foi interrompido",
+        "body": "O aplicativo aceitou sua mensagem, mas o fluxo de resposta terminou inesperadamente. Tente novamente; se acontecer de novo, envie feedback."
+      },
+      "AIONUI_STATE_INCONSISTENT": {
+        "title": "O estado da conversa está fora de sincronia",
+        "body": "O estado da conversa está fora de sincronia. Reinicie este chat ou recarregue o aplicativo antes de tentar novamente."
+      },
+      "AIONUI_PERMISSION_ERROR": {
+        "title": "Não foi possível acessar o recurso solicitado",
+        "body": "Falhou uma verificação local de permissões ou do sistema de arquivos. Verifique o caminho do projeto e as permissões do aplicativo e tente novamente."
+      },
+      "AIONUI_INTERNAL_ERROR": {
+        "title": "A solicitação falhou no aplicativo",
+        "body": "A solicitação falhou enquanto o aplicativo a estava processando. Tente novamente uma vez; se se repetir, envie feedback."
+      },
+      "AIONUI_CONVERSATION_BUSY": {
+        "title": "A conversa está ocupada",
+        "body": "Ainda há outra resposta em execução. Espere ela terminar antes de enviar uma nova mensagem."
+      },
+      "USER_AGENT_NOT_INSTALLED": {
+        "title": "O agente selecionado não está instalado",
+        "body": "Instale a CLI ou o aplicativo exigido por esse agente e, em seguida, reconecte-o nas configurações."
+      },
+      "USER_AGENT_STARTUP_FAILED": {
+        "title": "O agente selecionado falhou ao iniciar",
+        "body": "O processo do agente foi encerrado antes de ficar pronto. Verifique a instalação, o status de login e a configuração do comando local."
+      },
+      "USER_AGENT_OPENCLAW_GATEWAY_UNREACHABLE": {
+        "title": "OpenClaw Gateway não está acessível",
+        "body": "O OpenClaw Gateway não está em execução ou não pode ser acessado em 127.0.0.1:18789.\n\nInicie o OpenClaw Gateway e tente novamente. Você pode executar:\nopenclaw gateway status\nopenclaw gateway start"
+      },
+      "USER_AGENT_DISCONNECTED": {
+        "title": "O agente selecionado foi desconectado",
+        "body": "A conexão com o agente foi encerrada enquanto esta mensagem era processada. Reinicie ou reconecte o agente e tente novamente."
+      },
+      "USER_AGENT_AUTH_REQUIRED": {
+        "title": "O agente selecionado precisa de autenticação",
+        "body": "Entre no agente selecionado ou atualize as credenciais dele e envie a mensagem novamente."
+      },
+      "USER_AGENT_SESSION_NOT_FOUND": {
+        "title": "A sessão do agente foi perdida",
+        "body": "O agente informou que esta sessão não foi encontrada ou não é mais conhecida por ele."
+      },
+      "USER_AGENT_UNSUPPORTED_METHOD": {
+        "title": "O agente selecionado não oferece suporte a esta ação",
+        "body": "O agente informou que o método ACP solicitado não é suportado ou não está disponível."
+      },
+      "USER_AGENT_INVALID_PARAMS": {
+        "title": "O agente selecionado rejeitou a solicitação",
+        "body": "O agente informou que os parâmetros da solicitação são inválidos."
+      },
+      "USER_AGENT_HANDSHAKE_FAILED": {
+        "title": "Falha no handshake do agente",
+        "body": "O agente selecionado não conseguiu concluir o handshake de inicialização. Reinicie ou reconecte o agente e tente novamente."
+      },
+      "USER_AGENT_HANDSHAKE_TIMEOUT": {
+        "title": "O handshake do agente expirou",
+        "body": "O agente selecionado não terminou o handshake de inicialização a tempo. Verifique se ele ainda está iniciando ou bloqueado e tente novamente."
+      },
+      "USER_AGENT_ACP_INIT_FAILED": {
+        "title": "Falha ao inicializar o protocolo do agente",
+        "body": "O aplicativo não conseguiu inicializar uma sessão do Agent Client Protocol com este agente."
+      },
+      "USER_AGENT_PROTOCOL_PARSE_ERROR": {
+        "title": "Agent informou um erro de análise de protocolo",
+        "body": "O Agent selecionado informou que uma mensagem ACP/JSON-RPC não pôde ser analisada."
+      },
+      "USER_AGENT_INVALID_REQUEST": {
+        "title": "Agent informou uma solicitação de protocolo inválida",
+        "body": "O Agent selecionado informou que o objeto de solicitação ACP/JSON-RPC é inválido."
+      },
+      "USER_AGENT_RESOURCE_NOT_FOUND": {
+        "title": "Agent não encontrou um recurso necessário",
+        "body": "O Agent selecionado informou que um recurso necessário, como um arquivo, não foi encontrado."
+      },
+      "USER_AGENT_PROTOCOL_ERROR": {
+        "title": "Agent retornou um erro de protocolo",
+        "body": "O Agent selecionado retornou um código de erro ACP fora do padrão."
+      },
+      "USER_AGENT_PROTOCOL_MISMATCH": {
+        "title": "As versões do protocolo do agente são incompatíveis",
+        "body": "O aplicativo e o agente selecionado não puderam usar uma versão compatível do protocolo ACP."
+      },
+      "USER_AGENT_NO_PREVIOUS_SESSION": {
+        "title": "A sessão anterior do agente não está disponível",
+        "body": "O agente não consegue retomar a sessão anterior. Inicie uma nova conversa para continuar."
+      },
+      "USER_AGENT_COMMAND_NOT_FOUND": {
+        "title": "O comando do agente não foi encontrado",
+        "body": "O comando configurado do agente não foi encontrado. Instale-o ou atualize o caminho do comando nas configurações."
+      },
+      "USER_AGENT_MISSING_ENV": {
+        "title": "Faltam variáveis obrigatórias no ambiente do agente",
+        "body": "O agente precisa de variáveis de ambiente que não estão configuradas. Adicione-as nas configurações ou no ambiente do shell e reconecte."
+      },
+      "USER_LLM_PROVIDER_AUTH_FAILED": {
+        "title": "Falha de autenticação do provedor de modelo",
+        "body": "O provedor selecionado rejeitou a chave de API ou as credenciais da conta. Verifique as configurações do provedor e tente novamente."
+      },
+      "USER_LLM_PROVIDER_AWS_SSO_EXPIRED": {
+        "title": "Sessão do AWS SSO expirada",
+        "body": "Sua sessão do AWS SSO expirou. Execute 'aws sso login' para o profile correspondente e envie a mensagem novamente."
+      },
+      "USER_LLM_PROVIDER_CONFIG_ERROR": {
+        "title": "A configuração do provedor de modelo é inválida",
+        "body": "Não foi possível montar a solicitação para o provedor com as configurações atuais. Verifique credenciais, região, URL Base e a configuração específica do provedor antes de tentar novamente."
+      },
+      "USER_LLM_PROVIDER_MODEL_NOT_FOUND": {
+        "title": "O modelo selecionado não foi encontrado",
+        "body": "O provedor não reconhece este nome de modelo. Escolha um modelo disponível nas configurações e tente novamente."
+      },
+      "USER_LLM_PROVIDER_RATE_LIMITED": {
+        "title": "O limite de taxa do provedor de modelo foi atingido",
+        "body": "O provedor está limitando as solicitações temporariamente. Aguarde um momento, reduza a frequência das solicitações ou troque de modelo."
+      },
+      "USER_LLM_PROVIDER_TIMEOUT": {
+        "title": "A solicitação ao provedor de modelo expirou",
+        "body": "O provedor não respondeu a tempo. Tente novamente mais tarde ou troque para um provedor mais estável."
+      },
+      "USER_LLM_PROVIDER_NETWORK_ERROR": {
+        "title": "Não foi possível alcançar o provedor de modelo",
+        "body": "Um erro de rede ou DNS impediu o acesso ao provedor. Verifique a rede, o proxy e a URL Base."
+      },
+      "USER_LLM_PROVIDER_GATEWAY_ERROR": {
+        "title": "O serviço do provedor de modelo está indisponível",
+        "body": "O provedor retornou um erro de gateway ou de serviço. Tente novamente mais tarde ou use outro provedor."
+      },
+      "USER_LLM_PROVIDER_PERMISSION_DENIED": {
+        "title": "Permissão negada pelo provedor de modelo",
+        "body": "A conta do provedor não tem permissão para este modelo ou operação. Verifique as permissões da conta ou escolha outro modelo."
+      },
+      "USER_LLM_PROVIDER_BILLING_REQUIRED": {
+        "title": "É necessário faturamento no provedor de modelo",
+        "body": "O provedor selecionado precisa de faturamento, créditos ou cota ativos para concluir esta solicitação."
+      },
+      "USER_LLM_PROVIDER_UNSUPPORTED_MODEL": {
+        "title": "O modelo não oferece suporte a esta solicitação",
+        "body": "O modelo selecionado não está disponível ou não oferece suporte ao recurso solicitado. Escolha um modelo compatível e tente novamente."
+      },
+      "USER_LLM_PROVIDER_ENDPOINT_NOT_FOUND": {
+        "title": "O endpoint do provedor de modelo não foi encontrado",
+        "body": "O endpoint do provedor ou o caminho da API não foi encontrado. Verifique a URL Base, o nome da implantação e a compatibilidade da API."
+      },
+      "USER_LLM_PROVIDER_INVALID_REQUEST": {
+        "title": "O provedor de modelo rejeitou a solicitação",
+        "body": "O provedor informou que a solicitação é inválida. Simplifique a mensagem ou verifique as configurações do modelo/provedor."
+      },
+      "USER_LLM_PROVIDER_INVALID_TOOL_SCHEMA": {
+        "title": "O esquema da ferramenta foi rejeitado pelo provedor",
+        "body": "O provedor rejeitou a definição de uma ferramenta nesta solicitação. Atualize o agente ou desative a ferramenta incompatível e tente novamente."
+      },
+      "USER_LLM_PROVIDER_CONTEXT_TOO_LARGE": {
+        "title": "O contexto é grande demais para o modelo",
+        "body": "A solicitação excede o limite de contexto do modelo. Reduza o conteúdo da mensagem, os arquivos referenciados ou o histórico da conversa e tente novamente."
+      },
+      "USER_LLM_PROVIDER_EMPTY_RESPONSE": {
+        "title": "O provedor de modelo retornou uma resposta vazia",
+        "body": "O provedor concluiu a solicitação sem conteúdo utilizável. Tente novamente uma vez ou troque de provedor se isso se repetir."
+      },
+      "WORKSPACE_PATH_RUNTIME_UNAVAILABLE": {
+        "title": "O agente atual não conseguiu executar neste caminho de projeto",
+        "body": "Verifique se o caminho de projeto atual existe.",
+        "bodyWithPath": "O agente atual não conseguiu executar no caminho de projeto \"{{workspacePath}}\". Verifique se o caminho de projeto existe."
+      },
+      "WORKSPACE_PATH_CONTAINS_WHITESPACE_RUNTIME_UNSUPPORTED": {
+        "title": "Este caminho de projeto não é mais compatível com execução",
+        "body": "Esta conversa ou tarefa existente usa um caminho de projeto cujos nomes de diretório contêm espaços ou outros caracteres de espaço em branco. O AIPM工作台 não oferece mais suporte ao envio de mensagens em caminhos desse tipo. Crie uma nova conversa ou tarefa com um caminho de projeto sem espaços em branco.",
+        "bodyWithPath": "O caminho de projeto existente \"{{workspacePath}}\" contém espaços ou outros caracteres de espaço em branco. O AIPM工作台 não oferece mais suporte ao envio de mensagens em conversas ou tarefas que usam esse caminho. Crie uma nova conversa ou tarefa com um caminho de projeto sem espaços em branco."
+      },
+      "UNKNOWN_UPSTREAM_ERROR": {
+        "title": "O agente ou provedor upstream falhou",
+        "body": "O aplicativo recebeu um erro upstream, mas não conseguiu determinar se ele veio do agente, provedor, rede ou ambiente local."
+      },
+      "MCP_HTTP_RESPONSE_READ_FAILED": {
+        "title": "Failed to read the team helper response",
+        "body": "AIPM工作台 could not read the local team helper response. Retry once, and if it keeps happening, restart the app."
+      },
+      "MCP_TOOL_REMOTE_ERROR": {
+        "title": "The local team helper rejected the request",
+        "body": "The local team helper returned an error while processing this request. Review the details below and retry after adjusting the team action."
+      },
+      "MCP_TOOL_RESPONSE_UNEXPECTED": {
+        "title": "The team helper returned an unexpected response",
+        "body": "AIPM工作台 received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
+      },
+      "MCP_TCP_READ_FAILED": {
+        "title": "Failed to read from the local team helper",
+        "body": "AIPM工作台 could not read the local team helper TCP response. Retry once, and restart the app if it keeps failing."
+      },
+      "TEAM_SERVICE_UNAVAILABLE": {
+        "title": "Team service is not ready yet",
+        "body": "The local team session is still starting or has been interrupted. Wait a moment and retry."
+      },
+      "TEAM_ASSISTANT_ID_REQUIRED": {
+        "title": "A teammate assistant must be selected",
+        "body": "Choose a real assistant from the available assistant catalog before creating or spawning a teammate."
+      },
+      "TEAM_ASSISTANT_NOT_FOUND": {
+        "title": "The selected assistant is no longer available",
+        "body": "Refresh the assistant catalog, then choose another assistant for this teammate."
+      },
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": {
+        "title": "The request used a legacy team identity field",
+        "body": "This team action must use assistant_id instead of legacy backend or agent fields."
+      }
+    }
+  },
+  "workspace": {
+    "title": "Projeto",
+    "pasteConfirm_title": "Colar arquivos",
+    "pasteConfirm_message": "Tem certeza de que deseja colar '{{name}}' na pasta selecionada ({{target}})?",
+    "pasteConfirm_paste": "Colar",
+    "pasteConfirm_cancel": "Cancelar",
+    "pasteConfirm_noAsk": "Não perguntar novamente",
+    "pasteConfirm_fileName": "Nome do arquivo",
+    "pasteConfirm_targetFolder": "Pasta de destino",
+    "pasteConfirm_multipleFiles": "{{count}} arquivos",
+    "empty": "Está vazio",
+    "emptyDescription": "Os arquivos aparecerão aqui após enviar arquivos ou abrir uma pasta",
+    "searchPlaceholder": "Procurar arquivos...",
+    "createNewConversation": "Criar novo chat no projeto atual",
+    "search.empty": "O resultado da busca está vazio",
+    "addFile": "Adicionar Arquivo",
+    "refresh": "Atualizar",
+    "temporarySpace": "Espaço Temporário",
+    "dragOverlayTitle": "Solte para importar",
+    "dragOverlayDesc": "Arraste arquivos ou pastas para cá para copiá-los para este projeto.",
+    "dragOverlayHint": "Dica: solte em qualquer lugar para importar para a pasta selecionada.",
+    "dragNoFiles": "Nenhum arquivo válido detectado. Por favor arraste a partir do Finder/Explorer.",
+    "dragFailed": "Falha ao importar os arquivos soltos.",
+    "contextMenu": {
+      "open": "Abrir",
+      "openLocation": "Mostrar na pasta",
+      "preview": "Visualizar",
+      "previewFailed": "Falha ao visualizar",
+      "deleteTitle": "Excluir arquivo",
+      "deleteConfirm": "Isto excluirá o arquivo do seu sistema. Deseja continuar?",
+      "deleteSuccess": "Excluído com sucesso",
+      "deleteFailed": "A exclusão falhou",
+      "rename": "Renomear",
+      "renameTitle": "Renomear",
+      "renamePlaceholder": "Digite o novo nome",
+      "renameSuccess": "Renomeado com sucesso",
+      "renameFailed": "Falha ao renomear",
+      "renameEmpty": "O nome não pode estar vazio",
+      "renameTimeout": "A solicitação de renomear esgotou o tempo limite, tente novamente",
+      "addToChat": "Adicionar ao chat",
+      "addedToChat": "Adicionado ao chat",
+      "openFailed": "Falha ao abrir",
+      "revealFailed": "Falha ao abrir a pasta que contém o arquivo",
+      "download": "Baixar",
+      "downloadSuccess": "Download concluído com sucesso",
+      "downloadFailed": "O download falhou"
+    },
+    "preview": {
+      "errors": {
+        "outsideSandbox": "Arquivo fora da sandbox do projeto, impossível pré-visualizar.",
+        "notFound": "O arquivo não existe ou foi excluído.",
+        "timeout": "A leitura do arquivo esgotou o tempo limite. Por favor, tente novamente."
+      }
+    },
+    "changes": {
+      "tab": "Alterações",
+      "filesTab": "Arquivos",
+      "currentBranchLabel": "Branch atual",
+      "summary": "{{count}} arquivo(s) alterado(s)",
+      "insertions": "+{{count}} adições",
+      "deletions": "-{{count}} deleções",
+      "empty": "Nenhuma alteração ainda",
+      "emptyDescription": "Alterações em arquivos aparecerão aqui quando a IA modificar os arquivos",
+      "refresh": "Atualizar",
+      "staged": "Alterações em Stage",
+      "unstaged": "Alterações",
+      "changedFiles": "Arquivos Alterados",
+      "stage": "Stage",
+      "stageAll": "Fazer Stage de Todas as Alterações",
+      "unstage": "Unstage",
+      "unstageAll": "Fazer Unstage de Todas as Alterações",
+      "discard": "Descartar Alterações",
+      "reset": "Reverter Alterações",
+      "noUnstaged": "Nenhuma alteração fora do stage",
+      "noStaged": "Nenhuma alteração em stage"
+    },
+    "openWorkspace": "Abrir pasta do projeto",
+    "openWith": {
+      "vscode": "VS Code",
+      "terminal": "Terminal",
+      "explorer": "Explorador de Arquivos",
+      "browser": "Navegador"
+    }
+  },
+  "minimap": {
+    "searchAria": "Pesquisar na conversa",
+    "searchHint": "Clique aqui para pesquisar palavras-chave",
+    "empty": "Nenhum turno de perguntas e respostas ainda",
+    "noMatch": "Nenhum conteúdo correspondente encontrado",
+    "count": "{{count}} turnos",
+    "count_one": "{{count}} turno",
+    "count_other": "{{count}} turnos"
+  },
+  "chat": {
+    "noModelSelected": "Nenhum modelo selecionado para a sessão atual, impossível enviar mensagem",
+    "sendMessageTo": "Enviar mensagem para {{model}}",
+    "processing": "Processando...",
+    "quotaExceededTitle": "Cota do modelo alcançada",
+    "quotaExceededBody": "A cota do modelo atual esgotou. Deseja mudar para o {{model}} para continuar?",
+    "quotaExceededNoFallback": "Cota do modelo alcançada. Por favor, mude para outro modelo disponível.",
+    "quotaSwitched": "Mudou para {{model}}.",
+    "apiErrorNoCli": "Ocorreu um erro de API. Nenhum agente CLI disponível como fallback.",
+    "apiErrorSwitchFailed": "Falha ao criar conversa de fallback.",
+    "apiErrorSwitched": "Erro na API, mudou automaticamente para a CLI do {{cli}}",
+    "confirmationLoadError": "Falha ao carregar a caixa de diálogo de confirmação",
+    "tryAnotherAgent": "Tente outro agente:",
+    "switchAgentFailed": "Falha ao mudar o agente",
+    "speech": {
+      "recordTooltip": "Iniciar entrada de voz",
+      "recordTooltipWithShortcut": "Entrada de voz cmd+M",
+      "pickFileTooltip": "Selecione um arquivo de áudio",
+      "stopTooltip": "Parar gravação",
+      "processing": "Transcrevendo áudio...",
+      "unsupported": "A entrada de voz não está disponível neste ambiente",
+      "startShort": "Mic",
+      "stopShort": "Parar",
+      "transcribingShort": "...",
+      "audioCaptureError": "Nenhum microfone foi detectado",
+      "emptyTranscript": "Nenhuma fala foi detectada",
+      "fileTooLarge": "Arquivo de áudio muito grande",
+      "networkError": "Erro de rede ao transcrever o áudio",
+      "notConfigured": "O recurso Speech-to-text ainda não está configurado",
+      "permissionDenied": "Permissão para o microfone foi negada",
+      "recordingUnsupported": "Gravação ao vivo não é suportada aqui. Faça o upload de um arquivo de áudio no lugar.",
+      "transcriptionFailed": "A transcrição de áudio falhou",
+      "genericError": "Falha na entrada de voz. Por favor, tente novamente"
+    }
+  },
+  "sideQuestion": {
+    "title": "Pergunta Paralela",
+    "description": "Faça uma pergunta rápida sobre a conversa atual",
+    "started": "Iniciando a pergunta paralela...",
+    "answered": "Pergunta paralela respondida.",
+    "noAnswer": "A pergunta paralela não teve uma resposta clara na conversa atual.",
+    "loading": "Pensando...",
+    "parentTaskRunning": "A tarefa principal ainda está executando no plano de fundo.",
+    "dismissHint": "Pressione Esc, Enter, ou Espaço para dispensar",
+    "unsupported": "As perguntas paralelas não estão disponíveis para esta conversa.",
+    "alreadyRunning": "Uma pergunta paralela já está em execução.",
+    "attachmentsNotAllowed": "Perguntas paralelas não podem incluir arquivos ou trechos do DOM.",
+    "emptyQuestion": "Por favor, digite uma pergunta paralela depois de /btw.",
+    "toolsRequired": "O /btw apenas pode responder perguntas com base no que já está na conversa. Ele não tem acesso a busca, navegação ou extração de novas informações.",
+    "error": "Falha ao responder à pergunta paralela."
+  },
+  "commandQueue": {
+    "title": "Rascunhos",
+    "clear": "Limpar rascunhos",
+    "edit": "Editar",
+    "editing": "Editando",
+    "editPlaceholder": "Atualize o comando agendado antes que ele seja executado.",
+    "cancelEdit": "Cancelar",
+    "saveEdit": "Salvar",
+    "moreActions": "Mais ações",
+    "reorder": "Arraste para reordenar o comando agendado",
+    "remove": "Remover",
+    "files": "{{count}} arquivos",
+    "files_one": "{{count}} arquivo",
+    "files_other": "{{count}} arquivos",
+    "pausedAfterFailure": "O próximo comando na fila não pôde ser iniciado. Edite, reordene ou o remova para continuar.",
+    "emptyInput": "Comandos na fila não podem ficar vazios.",
+    "queueFull": "A fila está cheia. Remova um comando antes de adicionar mais.",
+    "inputTooLong": "Este comando na fila é muito longo. Encurte-o antes de enviar.",
+    "tooManyFiles": "Muitos arquivos anexados a este comando na fila.",
+    "queueTooLarge": "Os dados na fila são muito grandes para serem persistidos com segurança. Remova alguns comandos na fila primeiro.",
+    "sendNow": "Enviar agora",
+    "modeToggle": "Alternar modo de envio",
+    "help": "Ajuda",
+    "helpIntro": "As mensagens enviadas enquanto a IA responde ficam aqui.",
+    "helpAuto": ": enviadas automaticamente uma a uma após cada resposta terminar.",
+    "helpManual": ": mantidas aqui sem enviar; envie cada uma com Enviar agora.",
+    "clearConfirmTitle": "Limpar a caixa de rascunhos de envio?",
+    "clearConfirmContent": "Todas as mensagens pendentes serão removidas. Isso não pode ser desfeito.",
+    "mode": {
+      "auto": "Envio automático",
+      "manual": "Envio manual"
+    },
+    "addToQueue": "Adicionar à caixa de rascunhos",
+    "addToQueueShortcut": "⌘ + Enter / Ctrl + Enter",
+    "midturnBlocked": "Não é possível interromper enquanto este agente está respondendo. Use Adicionar à caixa de rascunhos.",
+    "enterShortcut": "Enter",
+    "actionMode": "Choose send action",
+    "midturnBlockedSendHint": "This agent is still working, so the message can’t be sent directly. Save it to Draft box and send it later.",
+    "addToQueueBusyHint": "Save to Draft box and send it later."
+  },
+  "contextUsage": {
+    "contextUsed": "contexto usado",
+    "tokensUsed": "{{tokens}} tokens usados",
+    "windowUnknown": "Tamanho da janela de contexto desconhecido",
+    "sessionCost": "Custo da sessão",
+    "input": "Entrada",
+    "output": "Saída",
+    "thought": "Raciocínio",
+    "cachedRead": "Leitura de cache",
+    "cachedWrite": "Escrita de cache"
+  },
+  "skill_generator": {
+    "title": "Gerar Habilidade/Regra",
+    "generate": "Gerar",
+    "description": "Analisar histórico da conversa para gerar:",
+    "type_skill": "Habilidade (Python)",
+    "type_rule": "Regra (JSON/MD)",
+    "name_label": "Nome do Agente:",
+    "name_placeholder": "ex: Tradutor de Excel",
+    "menu_generate": "Gerar a partir do Histórico",
+    "menu_load": "Carregar Regra/Habilidade",
+    "load_title": "Carregar Regra/Habilidade",
+    "load_error": "Falha ao carregar arquivos",
+    "no_files": "Nenhum arquivo relevante encontrado no projeto",
+    "read_error": "Falha ao ler o arquivo",
+    "rule_loaded": "Regra carregada com sucesso",
+    "no_workspace": "Nenhum projeto configurado",
+    "name_required": "Por favor, insira um nome para o predefinição",
+    "no_history": "Nenhum histórico de conversa encontrado",
+    "request_sent": "Solicitação enviada ao agente",
+    "failed": "Falha ao gerar",
+    "preset_registered": "Predefinição do agente registrada com sucesso!"
+  },
+  "thinking": {
+    "complete": "Pensamento completo",
+    "label": "Pensando..."
+  },
+  "skills": {
+    "loaded": "Habilidades Carregadas",
+    "slashHint": "Habilidade"
+  },
+  "mcp": {
+    "loaded": "MCP carregado",
+    "managementHint": "Se algum MCP parecer anormal, isso normalmente é causado pela configuração JSON do MCP. Vá para as configurações de Ferramentas e teste por lá.",
+    "openSettings": "Abrir configurações de Ferramentas",
+    "status": {
+      "loaded": "Carregado",
+      "failed": "Falhou",
+      "unsupported": "Não compatível"
+    },
+    "selected": "MCP selecionado"
+  },
+  "runtimePreparing": {
+    "sendboxHint": "Preparando o ambiente de execução. A primeira inicialização pode demorar um pouco mais."
+  },
+  "sendbox": {
+    "hint": "Digite / para comandos, @ para referenciar arquivos, ↑/↓ para o histórico de mensagens",
+    "mediaPathFallback": "Este agente não tem suporte nativo para este tipo de arquivo; ele será enviado como um caminho de arquivo.",
+    "hintWithSessions": "/ para comandos, @ para arquivos, @@ para conversas, ↑/↓ para o histórico"
+  },
+  "agentTip": {
+    "codes": {
+      "ACP_EMPTY_TURN": {
+        "body": "Esta solicitação não gerou nenhuma resposta visível."
+      },
+      "ACP_EMPTY_TURN_NEEDS_AUTH": {
+        "body": "Esta solicitação não produziu nenhuma resposta visível. Se você já fez login, pode ser um problema temporário de backend ou de conexão — tente novamente ou inicie uma nova conversa. Se ainda não fez login, você pode fazer login: {{hint}}."
+      },
+      "ACP_EMPTY_TURN_TOKEN_LIMIT": {
+        "body": "Esta solicitação não produziu nenhuma resposta visível. A conversa atual pode estar se aproximando do limite de comprimento de contexto — tente novamente ou inicie uma nova conversa e tente de novo."
+      },
+      "ACP_EMPTY_TURN_MAX_TOKENS": {
+        "body": "Esta solicitação atingiu o limite de tokens de saída do modelo antes de produzir qualquer resposta visível."
+      },
+      "ACP_EMPTY_TURN_MAX_TURN_REQUESTS": {
+        "body": "Esta solicitação atingiu o limite de requisições do modelo antes de produzir qualquer resposta visível."
+      },
+      "ACP_EMPTY_TURN_REFUSAL": {
+        "body": "O modelo recusou esta solicitação antes de produzir qualquer resposta visível."
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "{{count}} etapa(s) falharam e NÃO tiveram efeito. O agy encerra esses turnos como bem-sucedidos mesmo assim, então confira o resultado real em vez da resposta."
+      },
+      "CLI_VERSION_OLDER": {
+        "body": "O {{cli}} instalado é anterior à versão verificada pelo AIPM工作台; alguns recursos podem estar ausentes. Considere atualizar o {{cli}}. (instalado: {{reported}} / verificado pelo AIPM工作台: {{verified}})"
+      },
+      "CLI_VERSION_NEWER": {
+        "body": "O {{cli}} instalado é posterior à versão verificada pelo AIPM工作台. Deve continuar funcionando; relate qualquer comportamento estranho. (instalado: {{reported}} / verificado pelo AIPM工作台: {{verified}})"
+      },
+      "CODEX_RETRYING": {
+        "body": "{{detail}} (tentativa {{attempts}}, {{elapsed}} decorridos — o provedor do agente derruba a conexão repetidamente; o AIPM工作台 está aguardando.)"
+      }
+    }
+  },
+  "notFound": "Conversa não encontrada ou foi deletada",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "refreshFiles": "Atualizar arquivos",
+    "refreshChanges": "Atualizar alterações",
+    "collapseAll": "Recolher tudo",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "Renomear",
+      "newFile": "Novo arquivo",
+      "newDir": "Nova pasta",
+      "addToChat": "Adicionar ao chat",
+      "copyRelativePath": "Copiar caminho relativo",
+      "copyAbsolutePath": "Copiar caminho absoluto"
+    },
+    "namePlaceholder": "Nome",
+    "deleteConfirm": "Excluir “{{name}}”? Isso não pode ser desfeito.",
+    "renameFailed": "Não foi possível renomear",
+    "newFileFailed": "Não foi possível criar o arquivo",
+    "newDirFailed": "Não foi possível criar a pasta",
+    "tabs": {
+      "files": "Arquivos",
+      "changes": "Alterações"
+    },
+    "addedToChat": "{{name}} adicionado ao chat",
+    "imported": "{{count}} arquivo(s) importado(s)",
+    "importPartialFailed": "{{copied}} copiado(s), {{failed}} com falha (conflitos de nome ou não suportados)",
+    "importFailed": "Falha ao importar os arquivos",
+    "copyNodeFailed": "Falha ao copiar",
+    "moveNodeFailed": "Falha ao mover",
+    "search": {
+      "placeholder": "Buscar arquivos por nome",
+      "searching": "Buscando…",
+      "empty": "Nenhum arquivo corresponde",
+      "limitReached": "Mostrando os primeiros {{count}} — refine a busca"
+    },
+    "scm": {
+      "notARepository": "Esta pasta não está sob controle de versão",
+      "noChanges": "Nenhuma alteração",
+      "loading": "Carregando alterações…",
+      "loadFailed": "Não foi possível carregar as alterações",
+      "groups": {
+        "staged": "Alterações preparadas",
+        "unstaged": "Alterações",
+        "changes": "Alterações",
+        "blocked": "Precisa ser resolvido"
+      },
+      "sections": {
+        "repositories": "Repositórios",
+        "changes": "Alterações"
+      },
+      "viewAsTree": "Ver como árvore",
+      "viewAsList": "Ver como lista",
+      "worktree": "Árvore de trabalho",
+      "expandWorktrees": "Mostrar árvores de trabalho",
+      "collapseWorktrees": "Ocultar árvores de trabalho",
+      "state": {
+        "created": "Adicionado",
+        "modified": "Modificado",
+        "deleted": "Excluído",
+        "renamed": "Renomeado",
+        "conflicted": "Conflito",
+        "unknown": "Estado não reconhecido"
+      },
+      "badge": {
+        "created": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "conflicted": "!",
+        "unknown": "?"
+      },
+      "conflictedHint": "Resolva este conflito fora do AIPM工作台 primeiro",
+      "opaqueHint": "Este estado vem de um backend mais novo — exibido somente leitura",
+      "degraded": "A atualização está em modo mais lento porque o índice do git não pode ser gravado",
+      "truncated": "Alterações demais para listar — mostrando apenas a primeira parte",
+      "renamedFrom": "{{from}} → {{to}}",
+      "diff": {
+        "loading": "Carregando diferenças…",
+        "failed": "Não foi possível carregar as diferenças",
+        "binary": "Arquivo binário — sem diferenças de texto",
+        "truncated": "Diferenças truncadas (arquivo grande)",
+        "empty": "Nenhuma alteração de texto",
+        "close": "Fechar diferenças"
+      },
+      "actions": {
+        "stage": "Preparar alterações",
+        "unstage": "Retirar da preparação",
+        "discard": "Descartar alterações",
+        "stageAll": "Preparar tudo",
+        "unstageAll": "Retirar tudo da preparação",
+        "blockedHint": "Resolva o conflito fora do AIPM工作台 antes de preparar ou descartar",
+        "confirmDiscardTitle": "Descartar alterações?",
+        "confirmDiscardTracked": "As edições em {{count}} arquivos serão perdidas. Isso não pode ser desfeito.",
+        "confirmDiscardUntracked": "{{count}} novos arquivos serão movidos para a lixeira.",
+        "confirmDiscardMixed": "As edições em {{tracked}} arquivo(s) serão perdidas de forma irreversível; {{untracked}} novo(s) arquivo(s) vão para a lixeira.",
+        "discardConfirmButton": "Descartar",
+        "okStage": "{{count}} arquivos preparados",
+        "okStage_one": "{{count}} arquivo preparado",
+        "okStage_other": "{{count}} arquivos preparados",
+        "okUnstage": "{{count}} arquivos retirados da preparação",
+        "okUnstage_one": "{{count}} arquivo retirado da preparação",
+        "okUnstage_other": "{{count}} arquivos retirados da preparação",
+        "okDiscard": "{{count}} arquivos descartados",
+        "okDiscard_one": "{{count}} arquivo descartado",
+        "okDiscard_other": "{{count}} arquivos descartados",
+        "partial": "{{succeeded}} de {{total}} concluídos —— {{failed}} não foi possível concluir",
+        "partialDetail": "Não concluídos: {{files}}",
+        "rejectedBlocked": "Nada foi alterado —— resolva o conflito primeiro",
+        "rejectedUnsupported": "Este repositório não suporta essa ação",
+        "rejectedFailed": "Não foi possível concluir a ação",
+        "retry": "Tentar novamente",
+        "notSent": "A solicitação não chegou ao backend — nada foi alterado. Você pode tentar novamente.",
+        "outcomeUnknown": "A conexão foi reiniciada antes da resposta — esta ação pode ou não ter sido concluída. Atualize e confira a lista de arquivos antes de tentar de novo.",
+        "allFailed": "Nenhum dos {{count}} arquivo(s) pôde ser processado",
+        "allFailed_one": "Não foi possível processar {{count}} arquivo",
+        "allFailed_other": "Nenhum dos {{count}} arquivos pôde ser processado"
+      }
+    },
+    "pathCopied": "Caminho copiado",
+    "copyFailed": "Falha ao copiar o caminho"
+  },
+  "terminal": {
+    "running": "Executando",
+    "stopped": "Parado",
+    "exited": "Saída {{code}}",
+    "stop": "Parar",
+    "truncated": "(saída anterior truncada)"
+  },
+  "emptyState": {
+    "greeting": "Olá! Diga o que você precisa e eu já começo."
+  },
+  "crossSession": {
+    "mentionAgain": "Mencionar a conversa {{name}} na caixa de mensagem",
+    "mentionAgainHint": "Clique para mencionar esta conversa na caixa de mensagem",
+    "mentionUnavailable": "Essa conversa não pode mais ser mencionada.",
+    "mentionFailed": "Não foi possível mencionar essa conversa.",
+    "fromBadge": "Da conversa {{name}}",
+    "otherWorkspace": "espaço de trabalho diferente",
+    "rateLimitedTitle": "As mensagens entre conversas podem estar em loop",
+    "rateLimited": "As mensagens automáticas entre \"{{from}}\" e \"{{to}}\" estão excepcionalmente frequentes e podem estar em loop.",
+    "stopBoth": "Parar as duas conversas",
+    "disableFeature": "Desativar mensagens entre conversas"
+  },
+  "planBar": {
+    "title": "Plano",
+    "progress": "{{completed}}/{{total}}",
+    "expand": "Expandir plano",
+    "collapse": "Recolher plano"
+  }
+}

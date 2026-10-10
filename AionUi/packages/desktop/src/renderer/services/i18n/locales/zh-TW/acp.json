@@ -1,0 +1,32 @@
+{
+  "auth": {
+    "failed": "{{backend}} 認證失敗：\n\n{{error}}\n\n請檢查本地CLI工具的認證狀態",
+    "console_error": "ACP authentication error details:",
+    "failed_confirm": "ACP {{backend}} 身份驗證失敗：\n\n{{error}}\n\n是否立即前往設定頁面進行配置？"
+  },
+  "send": {
+    "failed": "發送訊息失敗：{{error}}"
+  },
+  "sendbox": {
+    "placeholder": "發送訊息到 {{backend}}..."
+  },
+  "image": {
+    "download": "下載",
+    "download_aria": "下載圖片",
+    "download_success": "下載成功",
+    "download_error": "下載失敗",
+    "generated_alt": "生成的圖片"
+  },
+  "status": {
+    "connecting": "正在連線至 {{agent}}...",
+    "connected": "已連線至 {{agent}}",
+    "authenticated": "已通過 {{agent}} 身份驗證",
+    "session_active": "{{agent}} 工作階段進行中",
+    "error": "連線錯誤",
+    "unknown": "未知狀態"
+  },
+  "config": {
+    "reasoning_effort": "推理深度",
+    "default": "預設"
+  }
+}

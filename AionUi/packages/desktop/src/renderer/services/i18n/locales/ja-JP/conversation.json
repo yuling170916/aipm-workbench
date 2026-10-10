@@ -1,0 +1,786 @@
+{
+  "welcome": {
+    "title": "Hi、今日の予定は何ですか？",
+    "placeholder": "メッセージの送信、ファイルの追加、フォルダーの追加、スケジュールタスクの作成、または / でコマンド呼び出し...",
+    "linkFolder": "フォルダを追加",
+    "newConversation": "新しい会話",
+    "selectModel": "モデルを選択",
+    "useCliModel": "モデルを選択",
+    "modelSwitchNotSupported": "初回接続後に利用可能なモデルリストが表示されます。まずメッセージを送信して接続し、利用可能なモデルを読み込んでください。",
+    "specifyWorkspace": "プロジェクトを選択",
+    "currentWorkspace": "現在のプロジェクト",
+    "clearWorkspace": "プロジェクトを解除",
+    "openFolder": "Open Folder",
+    "none": "None",
+    "quickActionsTitle": "AIPM工作台 で何ができる？",
+    "quickActionFeedback": "問題を報告",
+    "quickActionStar": "気に入った？スターをください！",
+    "skillsMarket": "AIPM工作台 Skills Market",
+    "skillsMarketDesc": "コミュニティ Skills をオンデマンドで検索・有効化。一度設定すれば、すべてのAgentで利用可能。",
+    "skillsMarketDetails": "詳細 >>"
+  },
+  "history": {
+    "recents": "最近",
+    "today": "今日",
+    "yesterday": "昨日",
+    "recent7Days": "過去7日間",
+    "earlier": "それ以前",
+    "noHistory": "チャット履歴はありません",
+    "deleteTitle": "削除",
+    "deleteConfirm": "このチャットを削除してもよろしいですか？",
+    "confirmDelete": "削除",
+    "cancelDelete": "キャンセル",
+    "editName": "名前を編集",
+    "saveName": "保存",
+    "cancelEdit": "キャンセル",
+    "rename": "名前を変更",
+    "createCronTask": "スケジュールタスクを作成",
+    "renameTitle": "チャット名を変更",
+    "renamePlaceholder": "新しい名前を入力してください",
+    "renameSuccess": "名前を変更しました",
+    "renameFailed": "名前の変更に失敗しました",
+    "batchManage": "Batch Manage",
+    "batchModeExit": "Exit Batch Mode",
+    "selectAll": "Select All",
+    "selectedCount": "{{count}} selected",
+    "batchExport": "Batch Export",
+    "batchExportConfirm": "Export {{count}} selected topics?",
+    "batchDelete": "Batch Delete",
+    "batchDeleteConfirm": "Delete {{count}} selected topics?",
+    "batchDeleteConfirm_one": "Delete {{count}} selected topics?",
+    "batchDeleteConfirm_other": "Delete {{count}} selected topics?",
+    "batchDeleteSuccess": "{{count}} topics deleted",
+    "batchDeleteSuccess_one": "{{count}} topics deleted",
+    "batchDeleteSuccess_other": "{{count}} topics deleted",
+    "batchNoSelection": "Please select topics first",
+    "export": "Export",
+    "exportDialogTitle": "Export Topics",
+    "exportDialogSingleDescription": "Export current topic conversation records (JSON + Markdown) and project files into a ZIP package.",
+    "exportDialogBatchDescription": "Export {{count}} selected topics' conversation records (JSON + Markdown) and project files into one ZIP package.",
+    "exportTargetFolder": "Export To Folder",
+    "exportSelectFolder": "Please select an export folder",
+    "exportDialogHint": "Folder selection follows the same interaction as changing the project.",
+    "exporting": "Exporting...",
+    "exportSuccess": "Export succeeded",
+    "exportCanceled": "Export canceled",
+    "exportFailed": "Export failed",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "markAsUnread": "未読にする",
+    "markAsRead": "既読にする",
+    "pinned": "Pinned",
+    "pinFailed": "Pin operation failed",
+    "pinnedSection": "Pinned",
+    "deleteSuccess": "削除しました",
+    "deleteFailed": "削除に失敗しました",
+    "projectsSection": "プロジェクト",
+    "conversationsSection": "会話",
+    "newConversationInProject": "このプロジェクト内で新しい会話",
+    "deleting": "削除中...",
+    "reorderPinned": "ドラッグしてピン留め会話の順序を変更",
+    "forkedFrom": "「{{name}}」から分岐",
+    "forkedConversation": "分岐した会話",
+    "archive": "アーカイブ",
+    "archiveSuccess": "アーカイブしました",
+    "archiveFailed": "アーカイブに失敗しました",
+    "batchArchive": "Batch archive",
+    "batchArchiveConfirm": "Archive {{count}} selected topics? You can restore or delete them from Archived in Settings.",
+    "batchArchiveSuccess": "Archived {{count}} topics",
+    "archiveProject": "Archive project",
+    "archiveProjectTitle": "Archive project",
+    "archiveProjectConfirm": "Archive project \"{{name}}\"? Its {{count}} conversation(s) will be archived too. You can restore or delete them from Archived in Settings.",
+    "archiving": "Archiving..."
+  },
+  "historySearch": {
+    "tooltip": "メッセージを検索",
+    "title": "会話内容を検索",
+    "shortTitle": "検索",
+    "description": "キーワードで履歴メッセージを検索し、スクロールでさらに読み込み、クリックで該当メッセージにジャンプします。",
+    "placeholder": "メッセージ内容を検索...",
+    "idle": "キーワードを入力してメッセージを検索",
+    "empty": "一致するメッセージが見つかりません",
+    "loadingMore": "さらに読み込み中...",
+    "untitled": "無題の会話"
+  },
+  "dropdown": {
+    "cliAgents": "CLI Agents",
+    "presetAssistants": "プリセットアシスタント"
+  },
+  "noAgentsAvailable": "利用可能なエージェントはありません",
+  "noModelConfigured": "モデルが設定されていません。設定ページで設定してください。",
+  "createFailed": "会話の作成に失敗しました",
+  "createError": {
+    "pathVariants": {
+      "WORKSPACE_PATH_UNAVAILABLE": "選択したワークスペースパスは利用できません。ワークスペースパス「{{workspacePath}}」が実在し、アクセス可能であることを確認してください。"
+    },
+    "codes": {
+      "TEAM_ASSISTANT_ID_REQUIRED": "Please select an assistant before creating the team.",
+      "TEAM_ASSISTANT_NOT_FOUND": "Assistant {{assistantId}} is no longer available. Refresh the assistant list and choose another one.",
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": "Use assistant_id instead of {{field}}."
+    }
+  },
+  "agentError": {
+    "fallbackTitle": "エージェントが応答できませんでした",
+    "errorCode": "エラーコード",
+    "retryable": "再試行できます",
+    "notRetryable": "設定の確認が必要です",
+    "resolutionPrefix": "提案: ",
+    "resolution": {
+      "retry": "しばらく待ってから再試行するか、このメッセージをもう一度送信してください。",
+      "wait_for_current_response": "現在の応答が完了してから、次のメッセージを送信してください。",
+      "start_new_session": "新しい会話を開始してから続行してください。",
+      "reconnect_agent": "選択したエージェントを再起動または再接続してから再試行してください。",
+      "check_agent_login": "選択したエージェントにログインするか、認証情報を更新してください。",
+      "check_agent_installation": "エージェントのインストール状態とローカルコマンド設定を確認してください。",
+      "check_agent_version": "エージェントのプロトコルとバージョンの互換性を確認してください。",
+      "check_local_command": "不足しているコマンドをインストールするか、PATH に追加されていることを確認してください。",
+      "check_provider_credentials": "設定でモデルプロバイダーの API キーまたはアカウント認証情報を確認してください。",
+      "check_provider_billing": "モデルプロバイダーの残高、クレジット、またはクォータを確認してください。",
+      "check_provider_base_url": "モデルプロバイダーの Base URL、API パス、プロキシ、API 互換性を確認してください。",
+      "change_model": "現在のアカウントで利用でき、このリクエストをサポートするモデルを選択してください。",
+      "reduce_context": "メッセージ内容、参照ファイル、またはコンテキストサイズを減らしてから再試行してください。",
+      "send_feedback": "チームが調査できるよう、ログを添えてフィードバックを送信してください。"
+    },
+    "ownership": {
+      "aionui": "アプリ",
+      "user_agent": "エージェント",
+      "user_llm_provider": "モデルプロバイダー",
+      "unknown_upstream": "上流"
+    },
+    "codes": {
+      "AIONUI_STREAM_BROKEN": {
+        "title": "応答ストリームが中断されました",
+        "body": "アプリはメッセージを受け付けましたが、応答ストリームが予期せず終了しました。再試行してください。繰り返し発生する場合はフィードバックを送信してください。"
+      },
+      "AIONUI_STATE_INCONSISTENT": {
+        "title": "会話状態が同期していません",
+        "body": "会話の状態が同期していません。このチャットを再開するか、アプリを再読み込みしてから再試行してください。"
+      },
+      "AIONUI_PERMISSION_ERROR": {
+        "title": "必要なリソースにアクセスできませんでした",
+        "body": "ローカル権限またはファイルシステムの確認に失敗しました。プロジェクトパスとアプリの権限を確認してから再試行してください。"
+      },
+      "AIONUI_INTERNAL_ERROR": {
+        "title": "アプリ内でリクエストに失敗しました",
+        "body": "アプリが処理している間にリクエストが失敗しました。一度再試行してください。繰り返し発生する場合はフィードバックを送信してください。"
+      },
+      "AIONUI_CONVERSATION_BUSY": {
+        "title": "会話は処理中です",
+        "body": "別の応答がまだ実行中です。完了してから新しいメッセージを送信してください。"
+      },
+      "USER_AGENT_NOT_INSTALLED": {
+        "title": "選択したエージェントがインストールされていません",
+        "body": "このエージェントに必要な CLI またはアプリをインストールしてから、設定で再接続してください。"
+      },
+      "USER_AGENT_STARTUP_FAILED": {
+        "title": "選択したエージェントの起動に失敗しました",
+        "body": "準備が完了する前にエージェントプロセスが終了しました。インストール、ログイン状態、ローカルコマンド設定を確認してください。"
+      },
+      "USER_AGENT_OPENCLAW_GATEWAY_UNREACHABLE": {
+        "title": "OpenClaw Gateway に接続できません",
+        "body": "OpenClaw Gateway が実行されていないか、127.0.0.1:18789 に接続できません。\n\nOpenClaw Gateway を起動してから再試行してください。次のコマンドを実行できます:\nopenclaw gateway status\nopenclaw gateway start"
+      },
+      "USER_AGENT_DISCONNECTED": {
+        "title": "選択したエージェントが切断されました",
+        "body": "このメッセージの処理中にエージェント接続が閉じられました。エージェントを再起動または再接続してから再試行してください。"
+      },
+      "USER_AGENT_AUTH_REQUIRED": {
+        "title": "選択したエージェントで認証が必要です",
+        "body": "選択したエージェントにログインするか認証情報を更新してから、メッセージを再送信してください。"
+      },
+      "USER_AGENT_SESSION_NOT_FOUND": {
+        "title": "エージェントセッションが失われました",
+        "body": "エージェントは、このセッションが見つからない、または認識されていないと報告しました。"
+      },
+      "USER_AGENT_UNSUPPORTED_METHOD": {
+        "title": "選択したエージェントはこの操作に対応していません",
+        "body": "エージェントは、要求された ACP メソッドがサポートされていない、または利用できないと報告しました。"
+      },
+      "USER_AGENT_INVALID_PARAMS": {
+        "title": "選択したエージェントがリクエストを拒否しました",
+        "body": "エージェントはリクエストパラメータが無効だと報告しました。"
+      },
+      "USER_AGENT_HANDSHAKE_FAILED": {
+        "title": "エージェントのハンドシェイクに失敗しました",
+        "body": "選択したエージェントは起動時のハンドシェイクを完了できませんでした。エージェントを再起動または再接続してから再試行してください。"
+      },
+      "USER_AGENT_HANDSHAKE_TIMEOUT": {
+        "title": "エージェントのハンドシェイクがタイムアウトしました",
+        "body": "選択したエージェントは起動時のハンドシェイクを時間内に完了しませんでした。まだ起動中またはブロックされていないか確認してから再試行してください。"
+      },
+      "USER_AGENT_ACP_INIT_FAILED": {
+        "title": "エージェントプロトコルの初期化に失敗しました",
+        "body": "アプリはこのエージェントとの Agent Client Protocol セッションを初期化できませんでした。"
+      },
+      "USER_AGENT_PROTOCOL_PARSE_ERROR": {
+        "title": "Agent がプロトコル解析エラーを報告しました",
+        "body": "選択した Agent は、ACP/JSON-RPC メッセージを解析できなかったと報告しました。"
+      },
+      "USER_AGENT_INVALID_REQUEST": {
+        "title": "Agent が無効なプロトコルリクエストを報告しました",
+        "body": "選択した Agent は、ACP/JSON-RPC リクエストオブジェクトが無効だと報告しました。"
+      },
+      "USER_AGENT_RESOURCE_NOT_FOUND": {
+        "title": "Agent が必要なリソースを見つけられません",
+        "body": "選択した Agent は、ファイルなどの必要なリソースが見つからないと報告しました。"
+      },
+      "USER_AGENT_PROTOCOL_ERROR": {
+        "title": "Agent がプロトコルエラーを返しました",
+        "body": "選択した Agent は非標準の ACP エラーコードを返しました。"
+      },
+      "USER_AGENT_PROTOCOL_MISMATCH": {
+        "title": "エージェントプロトコルのバージョンに互換性がありません",
+        "body": "アプリと選択したエージェントは互換性のある ACP プロトコルバージョンを使用できませんでした。"
+      },
+      "USER_AGENT_NO_PREVIOUS_SESSION": {
+        "title": "以前のエージェントセッションを利用できません",
+        "body": "エージェントは以前のセッションを再開できません。続行するには新しい会話を開始してください。"
+      },
+      "USER_AGENT_COMMAND_NOT_FOUND": {
+        "title": "エージェントコマンドが見つかりません",
+        "body": "設定されたエージェントコマンドが見つかりませんでした。インストールするか、設定でコマンドパスを更新してください。"
+      },
+      "USER_AGENT_MISSING_ENV": {
+        "title": "エージェントに必要な環境変数が不足しています",
+        "body": "エージェントに必要な環境変数が設定されていません。設定またはシェル環境に追加してから再接続してください。"
+      },
+      "USER_LLM_PROVIDER_AUTH_FAILED": {
+        "title": "モデルプロバイダーの認証に失敗しました",
+        "body": "選択したプロバイダーが API キーまたはアカウント認証情報を拒否しました。プロバイダー設定を確認してから再試行してください。"
+      },
+      "USER_LLM_PROVIDER_AWS_SSO_EXPIRED": {
+        "title": "AWS SSO セッションの有効期限が切れています",
+        "body": "AWS SSO セッションの有効期限が切れています。対応する profile で 'aws sso login' を実行してから、もう一度メッセージを送信してください。"
+      },
+      "USER_LLM_PROVIDER_CONFIG_ERROR": {
+        "title": "モデルプロバイダーの設定が無効です",
+        "body": "現在の設定からプロバイダーリクエストを構築できませんでした。認証情報、リージョン、Base URL、プロバイダー固有の設定を確認してから再試行してください。"
+      },
+      "USER_LLM_PROVIDER_MODEL_NOT_FOUND": {
+        "title": "選択したモデルが見つかりませんでした",
+        "body": "プロバイダーはこのモデル名を認識していません。設定で利用可能なモデルを選択してから再試行してください。"
+      },
+      "USER_LLM_PROVIDER_RATE_LIMITED": {
+        "title": "モデルプロバイダーのレート制限に達しました",
+        "body": "プロバイダーが一時的にリクエストを制限しています。少し待つか、リクエスト頻度を下げるか、モデルを切り替えてください。"
+      },
+      "USER_LLM_PROVIDER_TIMEOUT": {
+        "title": "モデルプロバイダーのリクエストがタイムアウトしました",
+        "body": "プロバイダーが時間内に応答しませんでした。後でもう一度試すか、より安定したプロバイダーに切り替えてください。"
+      },
+      "USER_LLM_PROVIDER_NETWORK_ERROR": {
+        "title": "モデルプロバイダーに接続できませんでした",
+        "body": "ネットワークまたは DNS エラーによりプロバイダーにアクセスできませんでした。ネットワーク、プロキシ、Base URL を確認してください。"
+      },
+      "USER_LLM_PROVIDER_GATEWAY_ERROR": {
+        "title": "モデルプロバイダーのサービスを利用できません",
+        "body": "プロバイダーがゲートウェイまたはサービスエラーを返しました。後でもう一度試すか、別のプロバイダーを使用してください。"
+      },
+      "USER_LLM_PROVIDER_PERMISSION_DENIED": {
+        "title": "モデルプロバイダーで権限が拒否されました",
+        "body": "プロバイダーアカウントには、このモデルまたは操作を実行する権限がありません。アカウント権限を確認するか、別のモデルを選択してください。"
+      },
+      "USER_LLM_PROVIDER_BILLING_REQUIRED": {
+        "title": "モデルプロバイダーで請求設定が必要です",
+        "body": "選択したプロバイダーでこのリクエストを完了するには、有効な請求、クレジット、またはクォータが必要です。"
+      },
+      "USER_LLM_PROVIDER_UNSUPPORTED_MODEL": {
+        "title": "モデルはこのリクエストに対応していません",
+        "body": "選択したモデルは利用できないか、要求された機能に対応していません。対応しているモデルを選択して再試行してください。"
+      },
+      "USER_LLM_PROVIDER_ENDPOINT_NOT_FOUND": {
+        "title": "モデルプロバイダーのエンドポイントが見つかりませんでした",
+        "body": "プロバイダーのエンドポイントまたは API パスが見つかりませんでした。Base URL、デプロイ名、API 互換性を確認してください。"
+      },
+      "USER_LLM_PROVIDER_INVALID_REQUEST": {
+        "title": "モデルプロバイダーがリクエストを拒否しました",
+        "body": "プロバイダーはリクエストが無効だと報告しました。メッセージを簡略化するか、モデルやプロバイダー設定を確認してください。"
+      },
+      "USER_LLM_PROVIDER_INVALID_TOOL_SCHEMA": {
+        "title": "ツールスキーマがプロバイダーに拒否されました",
+        "body": "プロバイダーはこのリクエスト内のツール定義を拒否しました。エージェントを更新するか、互換性のないツールを無効にしてから再試行してください。"
+      },
+      "USER_LLM_PROVIDER_CONTEXT_TOO_LARGE": {
+        "title": "コンテキストがモデルの上限を超えています",
+        "body": "リクエストがモデルのコンテキスト上限を超えています。メッセージ内容、参照ファイル、または会話履歴を減らしてから再試行してください。"
+      },
+      "USER_LLM_PROVIDER_EMPTY_RESPONSE": {
+        "title": "モデルプロバイダーが空の応答を返しました",
+        "body": "プロバイダーはリクエストを完了しましたが、利用可能な内容を返しませんでした。一度再試行し、繰り返す場合はプロバイダーを切り替えてください。"
+      },
+      "WORKSPACE_PATH_RUNTIME_UNAVAILABLE": {
+        "title": "現在の Agent はこのワークスペースパスで実行に失敗しました",
+        "body": "現在のワークスペースパスが実在することを確認してください。",
+        "bodyWithPath": "現在の Agent はワークスペースパス「{{workspacePath}}」で実行に失敗しました。ワークスペースパスが実在することを確認してください。"
+      },
+      "UNKNOWN_UPSTREAM_ERROR": {
+        "title": "上流のエージェントまたはプロバイダーで失敗しました",
+        "body": "アプリは上流エラーを受け取りましたが、エージェント、プロバイダー、ネットワーク、ローカル環境のどこから来たかを判定できませんでした。"
+      },
+      "MCP_HTTP_RESPONSE_READ_FAILED": {
+        "title": "Failed to read the team helper response",
+        "body": "AIPM工作台 could not read the local team helper response. Retry once, and if it keeps happening, restart the app."
+      },
+      "MCP_TOOL_REMOTE_ERROR": {
+        "title": "The local team helper rejected the request",
+        "body": "The local team helper returned an error while processing this request. Review the details below and retry after adjusting the team action."
+      },
+      "MCP_TOOL_RESPONSE_UNEXPECTED": {
+        "title": "The team helper returned an unexpected response",
+        "body": "AIPM工作台 received an unexpected response from the local team helper. Retry once, and report it if the problem persists."
+      },
+      "MCP_TCP_READ_FAILED": {
+        "title": "Failed to read from the local team helper",
+        "body": "AIPM工作台 could not read the local team helper TCP response. Retry once, and restart the app if it keeps failing."
+      },
+      "TEAM_SERVICE_UNAVAILABLE": {
+        "title": "Team service is not ready yet",
+        "body": "The local team session is still starting or has been interrupted. Wait a moment and retry."
+      },
+      "TEAM_ASSISTANT_ID_REQUIRED": {
+        "title": "A teammate assistant must be selected",
+        "body": "Choose a real assistant from the available assistant catalog before creating or spawning a teammate."
+      },
+      "TEAM_ASSISTANT_NOT_FOUND": {
+        "title": "The selected assistant is no longer available",
+        "body": "Refresh the assistant catalog, then choose another assistant for this teammate."
+      },
+      "TEAM_ASSISTANT_FIELD_UNSUPPORTED": {
+        "title": "The request used a legacy team identity field",
+        "body": "This team action must use assistant_id instead of legacy backend or agent fields."
+      }
+    }
+  },
+  "workspace": {
+    "title": "プロジェクト",
+    "pasteConfirm_title": "ファイルを貼り付け",
+    "pasteConfirm_message": "'{{name}}' を選択したフォルダー ({{target}}) に貼り付けてもよろしいですか？",
+    "pasteConfirm_paste": "貼り付け",
+    "pasteConfirm_cancel": "キャンセル",
+    "pasteConfirm_noAsk": "次回から表示しない",
+    "pasteConfirm_fileName": "ファイル名",
+    "pasteConfirm_targetFolder": "ターゲットフォルダー",
+    "pasteConfirm_multipleFiles": "{{count}} 個のファイル",
+    "empty": "プロジェクトが空です",
+    "emptyDescription": "ファイルをアップロードするか、またはフォルダーを開くと、ここにファイルが表示されます",
+    "searchPlaceholder": "ファイルを検索...",
+    "createNewConversation": "現在のプロジェクトで新しいチャットを作成",
+    "search.empty": "検索結果は空です",
+    "addFile": "ファイルを追加",
+    "refresh": "更新",
+    "temporarySpace": "一時スペース",
+    "dragOverlayTitle": "ドラッグして取り込み",
+    "dragOverlayDesc": "ここにファイルやフォルダーをドロップすると、このプロジェクトにコピーされます。",
+    "dragOverlayHint": "ヒント：フォルダー選択中は、そのフォルダーに直接取り込まれます。",
+    "dragNoFiles": "有効なファイルやフォルダーが見つかりませんでした。Explorer/Finder からドラッグしてください。",
+    "dragFailed": "ファイルの取り込みに失敗しました。",
+    "contextMenu": {
+      "open": "開く",
+      "openLocation": "ファイルの場所を開く",
+      "preview": "プレビュー",
+      "previewFailed": "プレビューに失敗しました",
+      "deleteTitle": "ファイルを削除",
+      "deleteConfirm": "この操作はシステム上のファイルを削除します。削除しますか？",
+      "deleteSuccess": "削除しました",
+      "deleteFailed": "削除に失敗しました",
+      "rename": "名前を変更",
+      "renameTitle": "名前を変更",
+      "renamePlaceholder": "新しい名前を入力してください",
+      "renameSuccess": "名前を変更しました",
+      "renameFailed": "名前の変更に失敗しました",
+      "renameEmpty": "名前を入力してください",
+      "renameTimeout": "名前の変更リクエストがタイムアウトしました。再試行してください",
+      "addToChat": "チャットに追加",
+      "addedToChat": "チャットに追加しました",
+      "openFailed": "開けませんでした",
+      "revealFailed": "フォルダーを開けませんでした",
+      "download": "ダウンロード",
+      "downloadSuccess": "ダウンロードしました",
+      "downloadFailed": "ダウンロードに失敗しました"
+    },
+    "preview": {
+      "errors": {
+        "outsideSandbox": "ファイルがプロジェクトのサンドボックス外にあるため、プレビューできません。",
+        "notFound": "ファイルが存在しないか、削除されています。",
+        "timeout": "ファイルの読み込みがタイムアウトしました。再試行してください。"
+      }
+    },
+    "changes": {
+      "tab": "変更",
+      "filesTab": "ファイル",
+      "currentBranchLabel": "現在のブランチ",
+      "summary": "{{count}} 個のファイルが変更されました",
+      "insertions": "+{{count}} 行追加",
+      "deletions": "-{{count}} 行削除",
+      "empty": "変更はまだありません",
+      "emptyDescription": "AIがファイルを変更すると、変更内容がここに表示されます",
+      "refresh": "更新",
+      "staged": "ステージ済みの変更",
+      "unstaged": "変更",
+      "changedFiles": "変更されたファイル",
+      "stage": "ステージ",
+      "stageAll": "すべての変更をステージ",
+      "unstage": "ステージ解除",
+      "unstageAll": "すべてのステージを解除",
+      "discard": "変更を破棄",
+      "reset": "変更を元に戻す",
+      "noUnstaged": "ステージされていない変更はありません",
+      "noStaged": "ステージ済みの変更はありません"
+    },
+    "openWorkspace": "プロジェクトフォルダを開く",
+    "openWith": {
+      "vscode": "VS Code",
+      "terminal": "ターミナル",
+      "explorer": "エクスプローラー",
+      "browser": "ブラウザ"
+    }
+  },
+  "minimap": {
+    "searchAria": "会話を検索",
+    "searchHint": "ここをクリックしてキーワードを検索",
+    "empty": "まだQ&Aがありません",
+    "noMatch": "一致する内容が見つかりません",
+    "count": "{{count}} 件",
+    "count_one": "{{count}} 件",
+    "count_other": "{{count}} 件"
+  },
+  "chat": {
+    "noModelSelected": "現在のセッションでモデルが選択されていないため、メッセージを送信できません",
+    "sendMessageTo": "{{model}}にメッセージを送信",
+    "processing": "処理中……",
+    "quotaExceededTitle": "モデルの上限に達しました",
+    "quotaExceededBody": "現在のモデルの上限に達しました。{{model}}に切り替えて続行しますか？",
+    "quotaExceededNoFallback": "現在のモデルの上限に達しました。別の利用可能なモデルに切り替えてください。",
+    "quotaSwitched": "{{model}}に切り替えました。",
+    "apiErrorNoCli": "APIエラーが発生しました。フォールバック用のCLIエージェントがありません。",
+    "apiErrorSwitchFailed": "フォールバック会話の作成に失敗しました。",
+    "apiErrorSwitched": "APIエラー、{{cli}} CLIに自動切り替えしました",
+    "confirmationLoadError": "確認ダイアログの読み込みに失敗しました",
+    "tryAnotherAgent": "別のエージェントを試す：",
+    "switchAgentFailed": "エージェントの切り替えに失敗しました",
+    "speech": {
+      "recordTooltip": "音声入力を開始",
+      "recordTooltipWithShortcut": "音声入力 cmd+M",
+      "pickFileTooltip": "音声ファイルを選択",
+      "stopTooltip": "録音を停止",
+      "processing": "音声を文字起こし中...",
+      "unsupported": "この環境では音声入力を利用できません",
+      "startShort": "音声",
+      "stopShort": "停止",
+      "transcribingShort": "...",
+      "audioCaptureError": "利用可能なマイクが見つかりません",
+      "emptyTranscript": "音声内容を認識できませんでした",
+      "fileTooLarge": "音声ファイルが大きすぎます",
+      "networkError": "音声の文字起こし中にネットワークエラーが発生しました",
+      "notConfigured": "音声文字起こしがまだ設定されていません",
+      "permissionDenied": "マイク権限が拒否されました",
+      "recordingUnsupported": "この環境では直接録音できません。音声ファイルをアップロードしてください",
+      "transcriptionFailed": "音声の文字起こしに失敗しました",
+      "genericError": "音声入力に失敗しました。もう一度お試しください"
+    }
+  },
+  "sideQuestion": {
+    "title": "ちょっと質問",
+    "description": "現在の会話について短い補足質問をする",
+    "started": "補足質問を開始しています...",
+    "answered": "補足質問に回答しました。",
+    "noAnswer": "現在の会話コンテキストには明確な答えがありません。",
+    "loading": "考え中...",
+    "parentTaskRunning": "メインのタスクはバックグラウンドで実行中です。",
+    "dismissHint": "Escape、Enter、Space で閉じる",
+    "unsupported": "この会話では補足質問を利用できません。",
+    "alreadyRunning": "補足質問はすでに実行中です。",
+    "attachmentsNotAllowed": "補足質問にはファイルや DOM スニペットを含められません。",
+    "emptyQuestion": "/btw の後に質問を入力してください。",
+    "toolsRequired": "/btw はこの会話にすでにある内容に基づいてのみ回答できます。検索や閲覧、新しい情報の取得はできません。",
+    "error": "補足質問への回答に失敗しました。"
+  },
+  "commandQueue": {
+    "title": "ドラフトボックス",
+    "clear": "ドラフトボックスをクリア",
+    "edit": "編集",
+    "editing": "編集中",
+    "editPlaceholder": "実行される前に、この待機中の指示を修正できます。",
+    "cancelEdit": "キャンセル",
+    "saveEdit": "保存",
+    "moreActions": "その他の操作",
+    "reorder": "ドラッグしてキュー内コマンドの順序を変更",
+    "remove": "削除",
+    "files": "{{count}} 個のファイル",
+    "files_one": "{{count}} 個のファイル",
+    "files_other": "{{count}} 個のファイル",
+    "pausedAfterFailure": "次のキュー中の指示を開始できませんでした。編集、並べ替え、または削除して続行してください。",
+    "emptyInput": "キュー中の指示を空にはできません。",
+    "queueFull": "キューがいっぱいです。追加する前にいくつか削除してください。",
+    "inputTooLong": "キューに追加する指示が長すぎます。短くしてから送信してください。",
+    "tooManyFiles": "このキュー中の指示にはファイルが多すぎます。",
+    "queueTooLarge": "キューのデータが大きすぎて安全に保持できません。いくつか削除してください。",
+    "sendNow": "今すぐ送信",
+    "modeToggle": "送信モードを切り替え",
+    "help": "使い方",
+    "helpIntro": "AI の返信中に送信したメッセージはここに一時保存されます。",
+    "helpAuto": "：各返信が終わるたびに自動で順番に送信します。",
+    "helpManual": "：自動送信せず保管し、各メッセージを「今すぐ送信」で送ります。",
+    "clearConfirmTitle": "送信ドラフトボックスをクリアしますか？",
+    "clearConfirmContent": "保留中のメッセージはすべて削除され、元に戻せません。",
+    "mode": {
+      "auto": "自動送信",
+      "manual": "手動送信"
+    },
+    "addToQueue": "下書きボックスに追加",
+    "addToQueueShortcut": "⌘ + Enter / Ctrl + Enter",
+    "midturnBlocked": "このエージェントが応答中は割り込みができません。「下書きボックスに追加」をご利用ください。",
+    "enterShortcut": "Enter",
+    "actionMode": "Choose send action",
+    "midturnBlockedSendHint": "This agent is still working, so the message can’t be sent directly. Save it to Draft box and send it later.",
+    "addToQueueBusyHint": "Save to Draft box and send it later."
+  },
+  "contextUsage": {
+    "contextUsed": "コンテキスト使用量",
+    "tokensUsed": "{{tokens}} トークン使用済み",
+    "windowUnknown": "コンテキストウィンドウのサイズは不明",
+    "sessionCost": "セッションコスト",
+    "input": "入力",
+    "output": "出力",
+    "thought": "思考",
+    "cachedRead": "キャッシュ読み取り",
+    "cachedWrite": "キャッシュ書き込み"
+  },
+  "skill_generator": {
+    "title": "Generate Skill/Rule",
+    "generate": "Generate",
+    "description": "Analyze conversation history to generate:",
+    "type_skill": "Skill (Python)",
+    "type_rule": "Rule (JSON/MD)",
+    "name_label": "Agent Name:",
+    "name_placeholder": "e.g. Excel Translator",
+    "menu_generate": "Generate from History",
+    "menu_load": "Load Rule/Skill",
+    "load_title": "Load Rule/Skill",
+    "load_error": "Failed to load files",
+    "no_files": "プロジェクトに該当するファイルがありません",
+    "read_error": "Failed to read file",
+    "rule_loaded": "Rule loaded successfully",
+    "no_workspace": "プロジェクトが設定されていません",
+    "name_required": "Please enter a name for the preset",
+    "no_history": "No conversation history found",
+    "request_sent": "Request sent to agent",
+    "failed": "Failed to generate",
+    "preset_registered": "Agent preset registered successfully!"
+  },
+  "thinking": {
+    "complete": "思考完了",
+    "label": "思考中..."
+  },
+  "skills": {
+    "loaded": "ロード済みスキル",
+    "slashHint": "スキル"
+  },
+  "mcp": {
+    "loaded": "ロード済み MCP",
+    "managementHint": "MCP が異常に見える場合、通常は MCP JSON 設定が原因です。ツール設定で確認し、手動で検査してください。",
+    "openSettings": "ツール設定を開く",
+    "status": {
+      "loaded": "読み込み済み",
+      "failed": "失敗",
+      "unsupported": "非対応"
+    },
+    "selected": "選択済み MCP"
+  },
+  "runtimePreparing": {
+    "sendboxHint": "実行環境を準備しています。初回起動は少し時間がかかる場合があります。"
+  },
+  "sendbox": {
+    "hint": "/ でコマンド、@ でファイルを参照、↑/↓ でメッセージ履歴",
+    "mediaPathFallback": "このエージェントはこのファイル形式をネイティブに扱えないため、ファイルパスとして送信されます。",
+    "hintWithSessions": "/ でコマンド、@ でファイル、@@ で会話を参照、↑/↓ で履歴"
+  },
+  "agentTip": {
+    "codes": {
+      "ACP_EMPTY_TURN": {
+        "body": "このリクエストでは、表示できる返信はありませんでした。"
+      },
+      "ACP_EMPTY_TURN_NEEDS_AUTH": {
+        "body": "このリクエストは可視的な応答を生成しませんでした。すでにサインインしている場合は、バックエンドの一時的な問題や接続の問題の可能性があります。再試行するか、新しい会話を開始してください。まだサインインしていない場合は、サインインできます：{{hint}}。"
+      },
+      "ACP_EMPTY_TURN_TOKEN_LIMIT": {
+        "body": "このリクエストは可視的な応答を生成しませんでした。現在の会話がコンテキスト長の上限に近づいている可能性があります。再試行するか、新しい会話を開始してからもう一度お試しください。"
+      },
+      "ACP_EMPTY_TURN_MAX_TOKENS": {
+        "body": "このリクエストは、表示できる返信が生成される前にモデルの出力トークン上限に達しました。"
+      },
+      "ACP_EMPTY_TURN_MAX_TURN_REQUESTS": {
+        "body": "このリクエストは、表示できる返信が生成される前にモデルのリクエスト上限に達しました。"
+      },
+      "ACP_EMPTY_TURN_REFUSAL": {
+        "body": "モデルは、表示できる返信を生成する前にこのリクエストを拒否しました。"
+      },
+      "ANTIGRAVITY_STEPS_FAILED": {
+        "body": "このターンで {{count}} 件のステップが失敗し、実行されませんでした。agy はこうしたターンも成功として終了するため、返答ではなく実際の結果を確認してください。"
+      },
+      "CLI_VERSION_OLDER": {
+        "body": "インストール済みの {{cli}} は、AIPM工作台 が検証したバージョンより古いため、一部の機能が使えない可能性があります。{{cli}} の更新を検討してください。 （インストール済み {{reported}} / AIPM工作台 検証済み {{verified}}）"
+      },
+      "CLI_VERSION_NEWER": {
+        "body": "インストール済みの {{cli}} は、AIPM工作台 が検証したバージョンより新しいです。通常は動作しますが、不審な挙動があればご報告ください。 （インストール済み {{reported}} / AIPM工作台 検証済み {{verified}}）"
+      },
+      "CODEX_RETRYING": {
+        "body": "{{detail}}（累計 {{attempts}} 回目の再試行、経過 {{elapsed}} — エージェントの提供元が接続を切断し続けており、AIPM工作台 は再接続を待っています。）"
+      }
+    }
+  },
+  "notFound": "会話が存在しないか、削除されました",
+  "explorer": {
+    "addFolder": "Add folder to project",
+    "refreshFiles": "ファイルを更新",
+    "refreshChanges": "変更を更新",
+    "collapseAll": "すべて折りたたむ",
+    "removeFolder": "Remove from project",
+    "attachDuplicate": "This folder is already in the project",
+    "attachOverlap": "This folder overlaps a folder already in the project",
+    "attachFailed": "Couldn't add the folder",
+    "removeFailed": "Couldn't remove the folder",
+    "contextMenu": {
+      "rename": "名前を変更",
+      "addToChat": "チャットに追加",
+      "copyRelativePath": "相対パスをコピー",
+      "copyAbsolutePath": "絶対パスをコピー",
+      "newFile": "新規ファイル",
+      "newDir": "新規フォルダー"
+    },
+    "namePlaceholder": "名前",
+    "deleteConfirm": "「{{name}}」を削除しますか？この操作は取り消せません。",
+    "renameFailed": "名前の変更に失敗しました",
+    "newFileFailed": "ファイルの作成に失敗しました",
+    "newDirFailed": "フォルダーの作成に失敗しました",
+    "tabs": {
+      "files": "ファイル",
+      "changes": "変更"
+    },
+    "addedToChat": "{{name}} をチャットに追加しました",
+    "imported": "{{count}} 件のファイルをインポートしました",
+    "importPartialFailed": "{{copied}} 件コピー、{{failed}} 件失敗（名前の重複または非対応）",
+    "importFailed": "ファイルのインポートに失敗しました",
+    "copyNodeFailed": "コピーに失敗しました",
+    "moveNodeFailed": "移動に失敗しました",
+    "search": {
+      "placeholder": "ファイル名で検索",
+      "searching": "検索中…",
+      "empty": "一致するファイルがありません",
+      "limitReached": "最初の {{count}} 件を表示 — 絞り込んでください"
+    },
+    "scm": {
+      "notARepository": "このフォルダーはバージョン管理されていません",
+      "noChanges": "変更はありません",
+      "loading": "変更を読み込み中…",
+      "loadFailed": "変更を読み込めませんでした",
+      "groups": {
+        "staged": "ステージ済みの変更",
+        "unstaged": "変更",
+        "changes": "変更",
+        "blocked": "要解決"
+      },
+      "sections": {
+        "repositories": "リポジトリ",
+        "changes": "変更"
+      },
+      "viewAsTree": "ツリー表示",
+      "viewAsList": "リスト表示",
+      "worktree": "ワークツリー",
+      "expandWorktrees": "ワークツリーを表示",
+      "collapseWorktrees": "ワークツリーを非表示",
+      "state": {
+        "created": "追加",
+        "modified": "変更",
+        "deleted": "削除",
+        "renamed": "名前変更",
+        "conflicted": "競合",
+        "unknown": "未知の状態"
+      },
+      "badge": {
+        "created": "A",
+        "modified": "M",
+        "deleted": "D",
+        "renamed": "R",
+        "conflicted": "!",
+        "unknown": "?"
+      },
+      "conflictedHint": "この競合は AIPM工作台 の外で解決してください",
+      "opaqueHint": "この状態は新しいバックエンドのものです — 読み取り専用で表示",
+      "degraded": "git のインデックスを更新できないため、低速モードで更新しています",
+      "truncated": "変更が多すぎるため、先頭部分のみ表示しています",
+      "renamedFrom": "{{from}} → {{to}}",
+      "diff": {
+        "loading": "差分を読み込み中…",
+        "failed": "差分を読み込めませんでした",
+        "binary": "バイナリファイル — テキスト差分なし",
+        "truncated": "差分は切り詰められました（大きいファイル）",
+        "empty": "テキストの変更はありません",
+        "close": "差分を閉じる"
+      },
+      "actions": {
+        "stage": "変更をステージ",
+        "unstage": "ステージを取り消す",
+        "discard": "変更を破棄",
+        "stageAll": "すべてステージ",
+        "unstageAll": "すべてステージ解除",
+        "blockedHint": "ステージや破棄の前に、AIPM工作台 の外で競合を解決してください",
+        "confirmDiscardTitle": "変更を破棄しますか？",
+        "confirmDiscardTracked": "{{count}} 個のファイルの編集は失われ、元に戻せません。",
+        "confirmDiscardUntracked": "{{count}} 個の新規ファイルがゴミ箱に移動されます。",
+        "confirmDiscardMixed": "{{tracked}} 個のファイルの編集は失われ元に戻せません。{{untracked}} 個の新規ファイルはゴミ箱に移動されます。",
+        "discardConfirmButton": "破棄",
+        "okStage": "{{count}} 個のファイルをステージしました",
+        "okStage_one": "{{count}} 個のファイルをステージしました",
+        "okStage_other": "{{count}} 個のファイルをステージしました",
+        "okUnstage": "{{count}} 個のファイルのステージを解除しました",
+        "okUnstage_one": "{{count}} 個のファイルのステージを解除しました",
+        "okUnstage_other": "{{count}} 個のファイルのステージを解除しました",
+        "okDiscard": "{{count}} 個のファイルを破棄しました",
+        "okDiscard_one": "{{count}} 個のファイルを破棄しました",
+        "okDiscard_other": "{{count}} 個のファイルを破棄しました",
+        "partial": "{{total}} 件のうち {{succeeded}} 件完了 —— {{failed}} 件は未完了",
+        "partialDetail": "未完了: {{files}}",
+        "rejectedBlocked": "何も変更されていません —— まず競合を解決してください",
+        "rejectedUnsupported": "このリポジトリはその操作に対応していません",
+        "rejectedFailed": "操作を完了できませんでした",
+        "retry": "再試行",
+        "notSent": "リクエストがバックエンドに届かず、何も変更されていません。再試行できます。",
+        "outcomeUnknown": "応答が届く前に接続がリセットされました——この操作は完了した可能性も、していない可能性もあります。再試行の前に更新してファイル一覧を確認してください。",
+        "allFailed": "{{count}} 個のファイルはいずれも処理できませんでした",
+        "allFailed_one": "{{count}} 個のファイルはいずれも処理できませんでした",
+        "allFailed_other": "{{count}} 個のファイルはいずれも処理できませんでした"
+      }
+    },
+    "pathCopied": "パスをコピーしました",
+    "copyFailed": "パスのコピーに失敗しました"
+  },
+  "terminal": {
+    "running": "実行中",
+    "stopped": "停止済み",
+    "exited": "終了コード {{code}}",
+    "stop": "停止",
+    "truncated": "(以前の出力は切り捨て)"
+  },
+  "emptyState": {
+    "greeting": "こんにちは！ご要望を教えてください。すぐに取りかかります。"
+  },
+  "crossSession": {
+    "mentionAgain": "入力欄で会話 {{name}} にメンション",
+    "mentionAgainHint": "クリックしてこの会話を入力欄でメンション",
+    "mentionUnavailable": "この会話はメンションできなくなりました",
+    "mentionFailed": "この会話にメンションできませんでした",
+    "fromBadge": "会話「{{name}}」から",
+    "otherWorkspace": "別のワークスペース",
+    "rateLimitedTitle": "会話間メッセージが空転している可能性があります",
+    "rateLimited": "「{{from}}」と「{{to}}」の間の自動メッセージが異常に頻繁で、空転している可能性があります。",
+    "stopBoth": "両方の会話を停止",
+    "disableFeature": "会話間メッセージをオフにする"
+  },
+  "planBar": {
+    "title": "プラン",
+    "progress": "{{completed}}/{{total}}",
+    "expand": "プランを展開",
+    "collapse": "プランを折りたたむ"
+  }
+}
